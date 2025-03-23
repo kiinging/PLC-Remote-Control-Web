@@ -1,0 +1,50 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 400px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    color: #333;
+}
+
+.status {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+#status-indicator {
+    font-weight: bold;
+    color: red;
+}
+
+.controls button {
+    font-size: 18px;
+    padding: 10px;
+    margin: 10px;
+    width: 100px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+#start-btn {
+    background-color: green;
+    color: white;
+}
+
+#stop-btn {
+    background-color: red;
+    color: white;
+}
