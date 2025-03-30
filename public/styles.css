@@ -3,53 +3,48 @@ body {
     text-align: center;
     background-color: #f4f4f4;
     margin: 0;
-    padding: 0;
+    padding: 20px;
 }
 
 .container {
-    width: 80%;
-    max-width: 500px;
-    margin: 50px auto;
+    max-width: 400px;
+    margin: auto;
+    background: white;
     padding: 20px;
     border-radius: 10px;
-    background: url("https://upload.wikimedia.org/wikipedia/en/b/b6/Ne_Zha_2_poster.jpg") no-repeat center center;
-    background-size: cover;
-    color: white;
-    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-    position: relative;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
-    font-size: 24px;
-    background-color: rgba(0, 0, 0, 0.6); /* Adds contrast */
-    padding: 10px;
-    border-radius: 5px;
+    color: #333;
 }
 
 .status {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+#status-indicator {
+    font-weight: bold;
+    color: red;
+}
+
+.controls button {
     font-size: 18px;
-    margin: 10px 0;
-    background-color: rgba(0, 0, 0, 0.6);
-    padding: 5px;
-    border-radius: 5px;
-}
-
-.controls {
-    margin-top: 15px;
-}
-
-button {
-    padding: 10px 20px;
-    font-size: 16px;
+    padding: 10px;
+    margin: 10px;
+    width: 100px;
     border: none;
-    border-radius: 5px;
     cursor: pointer;
-    background-color: #ff4500;
-    color: white;
-    margin: 5px;
-    transition: 0.3s;
+    border-radius: 5px;
 }
 
-button:hover {
-    background-color: #ff6347;
+#start-btn {
+    background-color: green;
+    color: white;
+}
+
+#stop-btn {
+    background-color: red;
+    color: white;
 }
