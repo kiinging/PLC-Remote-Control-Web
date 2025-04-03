@@ -8,6 +8,9 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
+    // Introduce a delay (e.g., 3 seconds) before forwarding the request
+    await new Promise(resolve => setTimeout(resolve, 3000)); 
+
     // Handle /start (maps to Flask's /led/on)
     if (url.pathname === '/start') {
       const response = await fetch("https://plc-web.online/led/on", {
@@ -34,7 +37,6 @@ export default {
       });
     }
 
-    // Default 404 response
     return new Response('Not Found', { status: 404 });
   }
 };

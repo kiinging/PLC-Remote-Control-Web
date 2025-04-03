@@ -1,5 +1,5 @@
 document.getElementById('start-btn').addEventListener('click', async () => {
-    const response = await fetch('https://your-worker-url.workers.dev/start', {
+    const response = await fetch('https://cloud-worker.wongkiinging.workers.dev/start', {
         method: 'POST',
     });
     const text = await response.text();
@@ -7,9 +7,10 @@ document.getElementById('start-btn').addEventListener('click', async () => {
 });
 
 document.getElementById('stop-btn').addEventListener('click', async () => {
-    const response = await fetch('https://your-worker-url.workers.dev/stop', {
+    const response = await fetch('https://cloud-worker.wongkiinging.workers.dev/stop', {
         method: 'POST',
     });
     const text = await response.text();
     document.getElementById('status-indicator').innerText = text.includes("OFF") ? "OFF" : "ON";
 });
+
