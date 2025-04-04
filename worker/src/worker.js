@@ -13,7 +13,7 @@ export default {
 
     // Handle /start (maps to Flask's /led/on)
     if (url.pathname === '/start') {
-      const response = await fetch("https://plc-web.online/led/on", {
+      const response = await fetch("https://orangepi.plc-web.online/led/on", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -26,7 +26,7 @@ export default {
 
     // Handle /stop (maps to Flask's /led/off)
     if (url.pathname === '/stop') {
-      const response = await fetch("https://plc-web.online/led/off", {
+      const response = await fetch("https://orangepi.plc-web.online/led/off", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
