@@ -166,3 +166,9 @@ The system architecture involves:
    ```sh
    sudo apt-get update
    sudo apt-get install python3-flask
+
+   https://cloud-worker.wongkiinging.workers.dev/start
+
+   https://cloud-worker.wongkiinging.workers.dev/stop
+
+   https://cloud-worker.wongkiinging.workers.dev/temp
