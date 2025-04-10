@@ -8,29 +8,36 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // Introduce a delay (e.g., 3 seconds) before forwarding the request
-    await new Promise(resolve => setTimeout(resolve, 3000)); 
+    // Simulate delay (optional, can be removed)
+    await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Handle /start (maps to Flask's /led/on)
+    // Control LED ON
     if (url.pathname === '/start') {
       const response = await fetch("https://orangepi.plc-web.online/led/on", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-
       return new Response(await response.text(), {
         status: response.status,
         headers: corsHeaders,
       });
     }
 
-    // Handle /stop (maps to Flask's /led/off)
+    // Control LED OFF
     if (url.pathname === '/stop') {
       const response = await fetch("https://orangepi.plc-web.online/led/off", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
 
+    // Get Temperature
+    if (url.pathname === '/temp') {
+      const response = await fetch("https://orangepi.plc-web.online/temp");
       return new Response(await response.text(), {
         status: response.status,
         headers: corsHeaders,

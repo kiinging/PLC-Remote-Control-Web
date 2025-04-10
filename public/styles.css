@@ -48,3 +48,11 @@ h1 {
     background-color: red;
     color: white;
 }
+.temp-data {
+    margin-top: 30px;
+    font-size: 18px;
+    text-align: left;
+}
+.temp-data p {
+    margin: 5px 0;
+}

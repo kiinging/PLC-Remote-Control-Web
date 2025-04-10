@@ -1,32 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PLC Remote Control</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PLC Remote Control</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Omron PLC Remote Control</h1>
-        
-        <!-- Na Zha 2 Image
-        <div class="image-container">
-            <img src="https://upload.wikimedia.org/wikipedia/en/b/b6/Ne_Zha_2_poster.jpg" 
-                 alt="Na Zha 2 Poster" width="300">
-        </div> -->
+  <div class="container">
+    <h1>Omron PLC Remote Control</h1>
 
-        <div class="status">
-            <span>Status:</span>
-            <span id="status-indicator">OFF</span>
-        </div>
-        
-        <div class="controls">
-            <button id="start-btn">Start</button>
-            <button id="stop-btn">Stop</button>
-        </div>
+    <div class="status">
+      <span>Status:</span>
+      <span id="status-indicator">OFF</span>
     </div>
 
-    <script src="script.js"></script>
+    <div class="controls">
+      <button id="start-btn">Start</button>
+      <button id="stop-btn">Stop</button>
+    </div>
+
+    <div class="temp-data">
+      <h2>Temperature Data</h2>
+      <p>RTD Temp: <span id="rtd-temp">--</span> °C</p>
+      <p>Thermocouple Temp: <span id="thermo-temp">--</span> °C</p>
+      <p>Internal Temp: <span id="internal-temp">--</span> °C</p>
+      <p>Last Update: <span id="last-update">--</span></p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
