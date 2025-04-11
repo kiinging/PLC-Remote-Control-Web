@@ -1,5 +1,5 @@
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://cloud-ui-4ws.pages.dev',
+  'Access-Control-Allow-Origin': 'https://plc-web.online',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
