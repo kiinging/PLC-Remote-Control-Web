@@ -5,31 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PLC Remote Control</title>
   <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Inline styles added for demonstration; you can move these to your CSS file */
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      align-items: flex-start;
+    }
+    .controls-panel, .video-panel {
+      flex: 1;
+      min-width: 300px;
+      margin: 10px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+    }
+    .video-panel img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Omron PLC Remote Control</h1>
+    <!-- Controls and Temperature Data Panel -->
+    <div class="controls-panel">
+      <h1>Omron PLC Remote Control</h1>
 
-    <div class="status">
-      <strong>Status:</strong> <span id="status-indicator">OFF</span>
+      <div class="status">
+        <strong>Status:</strong> <span id="status-indicator">OFF</span>
+      </div>
+
+      <div class="controls">
+        <button id="start-btn">Start</button>
+        <button id="stop-btn">Stop</button>
+      </div>
+
+      <div class="temp-data">
+        <h2>Temperature Data</h2>
+        <p>RTD Temp: <span id="rtd-temp">--</span> °C</p>
+        <p>Thermocouple Temp: <span id="thermo-temp">--</span> °C</p>
+        <p>Internal Temp: <span id="internal-temp">--</span> °C</p>
+        <p>Fault: <span id="fault">--</span></p>
+        <p>Last Update: <span id="last-update">--</span></p>
+      </div>
     </div>
 
-    <div class="controls">
-      <button id="start-btn">Start</button>
-      <button id="stop-btn">Stop</button>
-    </div>
-
-    <div class="temp-data">
-      <h2>Temperature Data</h2>
-      <p>RTD Temp: <span id="rtd-temp">--</span> °C</p>
-      <p>Thermocouple Temp: <span id="thermo-temp">--</span> °C</p>
-      <p>Internal Temp: <span id="internal-temp">--</span> °C</p>
-      <p>Fault: <span id="fault">--</span></p>
-      <p>Last Update: <span id="last-update">--</span></p>
+    <!-- Video Streaming Panel -->
+    <div class="video-panel">
+      <h2>Live Video Feed</h2>
+      <!-- The image source uses Flask's url_for to call the video_feed route -->
+      <img src="{{ url_for('video_feed') }}" alt="Live Video Feed">
     </div>
   </div>
 
   <script>
+    // Your existing control panel and temperature fetching script
     const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
 
     document.getElementById('start-btn').addEventListener('click', async () => {
