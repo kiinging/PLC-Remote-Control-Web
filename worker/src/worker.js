@@ -44,6 +44,18 @@ export default {
       });
     }
 
+    if (url.pathname === '/video') {
+      const response = await fetch("https://zero2w.plc-web.online/video_feed");
+      return new Response(response.body, {
+        status: response.status,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': response.headers.get('Content-Type') || 'multipart/x-mixed-replace; boundary=frame',
+        },
+      });
+    }
+    
+
     return new Response('Not Found', { status: 404 });
   }
 };
