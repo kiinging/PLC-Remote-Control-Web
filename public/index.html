@@ -6,7 +6,6 @@
   <title>PLC Remote Control</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    /* Inline styles added for demonstration; you can move these to your CSS file */
     .container {
       display: flex;
       flex-wrap: wrap;
@@ -21,10 +20,37 @@
       border: 1px solid #ccc;
       box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
     }
-    .video-panel img {
+    .video-container {
+      position: relative;
+      width: 100%;
+    }
+    #video-feed {
       width: 100%;
       height: auto;
+      max-width: 640px;
       display: block;
+    }
+    .refresh-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      padding: 5px 10px;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .status {
+      margin: 10px 0;
+    }
+    .controls button {
+      padding: 8px 15px;
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    .temp-data p {
+      margin: 5px 0;
     }
   </style>
 </head>
@@ -56,17 +82,40 @@
     <!-- Video Streaming Panel -->
     <div class="video-panel">
       <h2>Live Video Feed</h2>
-      <!-- The image source uses Flask's url_for to call the video_feed route -->
-      <img src="https://your-worker-name.workers.dev/video" width="640" height="480" />
-
-      <!-- <img src="{{ url_for('video_feed') }}" alt="Live Video Feed"> -->
+      <div class="video-container">
+        <img id="video-feed" src="" alt="Live Video Feed" width="640" height="480">
+        <button class="refresh-btn" id="refresh-video">Refresh</button>
+      </div>
     </div>
   </div>
 
   <script>
     // Your existing control panel and temperature fetching script
     const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
+    
+    // Video streaming functionality
+    const videoElement = document.getElementById('video-feed');
+    let lastUpdate = 0;
+    const refreshInterval = 1000; // 1 second between updates
 
+    function updateVideo() {
+      const now = Date.now();
+      if (now - lastUpdate >= refreshInterval) {
+        videoElement.src = `${workerBase}/snapshot?t=${now}`;
+        lastUpdate = now;
+      }
+    }
+
+    // Manual refresh button
+    document.getElementById('refresh-video').addEventListener('click', () => {
+      videoElement.src = `${workerBase}/snapshot?t=${Date.now()}`;
+    });
+
+    // Start automatic video updates
+    setInterval(updateVideo, refreshInterval);
+    updateVideo(); // Initial load
+
+    // Original control functions
     document.getElementById('start-btn').addEventListener('click', async () => {
       const response = await fetch(`${workerBase}/start`, { method: 'POST' });
       const text = await response.text();
