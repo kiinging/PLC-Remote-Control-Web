@@ -83,7 +83,7 @@
     <div class="video-panel">
       <h2>Live Video Feed</h2>
       <div class="video-container">
-        <img id="video-feed" src="" alt="Live Video Feed" width="640" height="480">
+        <img id="snapshot" src="" alt="Live Video Feed" width="640" height="480">
         <button class="refresh-btn" id="refresh-video">Refresh</button>
       </div>
     </div>
@@ -94,7 +94,7 @@
     const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
     
     // Video streaming functionality
-    const videoElement = document.getElementById('video-feed');
+    const videoElement = document.getElementById('snapshot');
     let lastUpdate = 0;
     const refreshInterval = 1000; // 1 second between updates
 

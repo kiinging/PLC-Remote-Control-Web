@@ -47,22 +47,16 @@ export default {
     // Get Video Snapshot
     if (url.pathname === '/snapshot') {
       const response = await fetch("https://zero2w.plc-web.online/snapshot");
-      return new Response(await response.blob(), {
+
+      return new Response(response.body, {
         status: response.status,
         headers: {
           ...corsHeaders,
           'Content-Type': 'image/jpeg',
-          'Cache-Control': 'no-store, max-age=0' // Prevent caching
-        },
-        cf: {
-          cacheEverything: false,
-          cacheTtl: 0
+          'Cache-Control': 'no-store, max-age=0'
         }
       });
     }
-
-    
-
     return new Response('Not Found', { status: 404 });
   }
 };
