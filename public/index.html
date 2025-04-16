@@ -24,7 +24,7 @@
       position: relative;
       width: 100%;
     }
-    #video-feed {
+    #snapshot {
       width: 100%;
       height: auto;
       max-width: 640px;
@@ -90,13 +90,12 @@
   </div>
 
   <script>
-    // Your existing control panel and temperature fetching script
     const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
-    
+
     // Video streaming functionality
     const videoElement = document.getElementById('snapshot');
     let lastUpdate = 0;
-    const refreshInterval = 1000; // 1 second between updates
+    const refreshInterval = 1000; // 1 second
 
     function updateVideo() {
       const now = Date.now();
@@ -106,16 +105,18 @@
       }
     }
 
-    // Manual refresh button
     document.getElementById('refresh-video').addEventListener('click', () => {
       videoElement.src = `${workerBase}/snapshot?t=${Date.now()}`;
     });
 
-    // Start automatic video updates
+    videoElement.onerror = () => {
+      console.error("Snapshot image failed to load.");
+    };
+
     setInterval(updateVideo, refreshInterval);
     updateVideo(); // Initial load
 
-    // Original control functions
+    // Start/Stop buttons
     document.getElementById('start-btn').addEventListener('click', async () => {
       const response = await fetch(`${workerBase}/start`, { method: 'POST' });
       const text = await response.text();
@@ -128,6 +129,7 @@
       document.getElementById('status-indicator').innerText = text.includes("OFF") ? "OFF" : "ON";
     });
 
+    // Temperature data
     async function fetchTemperature() {
       try {
         const res = await fetch(`${workerBase}/temp`);

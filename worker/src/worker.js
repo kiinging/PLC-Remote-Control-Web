@@ -8,8 +8,8 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // Simulate delay (optional, can be removed)
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Optional delay (for testing)
+    // await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Control LED ON
     if (url.pathname === '/start') {
@@ -44,19 +44,18 @@ export default {
       });
     }
 
-    // Get Video Snapshot
+    // Get Video Snapshot (supports ?t=timestamp)
     if (url.pathname === '/snapshot') {
-      const response = await fetch("https://zero2w.plc-web.online/snapshot");
-
+      const backendSnapshotUrl = "https://zero2w.plc-web.online/snapshot";
+      const response = await fetch(backendSnapshotUrl); // we don't forward `?t`, just use it to bypass browser cache
       return new Response(response.body, {
         status: response.status,
         headers: {
           ...corsHeaders,
           'Content-Type': 'image/jpeg',
-          'Cache-Control': 'no-store, max-age=0'
-        }
+          'Cache-Control': 'no-store, max-age=0',
+        },
       });
     }
-    return new Response('Not Found', { status: 404 });
-  }
-};
+
+    // Handle preflight OPTIONS request
