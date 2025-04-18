@@ -83,38 +83,13 @@
     <div class="video-panel">
       <h2>Live Video Feed</h2>
       <div class="video-container">
-        <img id="video_feed" src="" alt="Live Video Feed" width="640" height="480">
-        <button class="refresh-btn" id="refresh-video">Refresh</button>
+        <img id="video_feed" src="https://cloud-worker.wongkiinging.workers.dev/video_feed" alt="Live MJPEG Feed" width="640" height="480">
       </div>
     </div>
   </div>
 
   <script>
     const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
-
-    // Video streaming functionality
-    const videoElement = document.getElementById('video_feed');
-    let lastUpdate = 0;
-    const refreshInterval = 1000; // 1 second
-
-    function updateVideo() {
-      const now = Date.now();
-      if (now - lastUpdate >= refreshInterval) {
-        videoElement.src = `${workerBase}/video_feed?t=${now}`;
-        lastUpdate = now;
-      }
-    }
-
-    document.getElementById('refresh-video').addEventListener('click', () => {
-      videoElement.src = `${workerBase}/video_feed?t=${Date.now()}`;
-    });
-
-    videoElement.onerror = () => {
-      console.error("video_feed image failed to load.");
-    };
-
-    setInterval(updateVideo, refreshInterval);
-    updateVideo(); // Initial load
 
     // Start/Stop buttons
     document.getElementById('start-btn').addEventListener('click', async () => {
