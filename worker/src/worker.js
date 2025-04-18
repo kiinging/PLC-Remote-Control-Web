@@ -44,17 +44,13 @@ export default {
       });
     }
 
-    // Get Video Snapshot (supports ?t=timestamp)
-    if (url.pathname === '/snapshot') {
-      const backendSnapshotUrl = "https://zero2w.plc-web.online/snapshot";
+    // Get Video video_feed (supports ?t=timestamp)
+    if (url.pathname === '/video_feed') {
+      const backendSnapshotUrl = "https://zero2w.plc-web.online/video_feed";
       const response = await fetch(backendSnapshotUrl); // we don't forward `?t`, just use it to bypass browser cache
       return new Response(response.body, {
         status: response.status,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'image/jpeg',
-          'Cache-Control': 'no-store, max-age=0',
-        },
+        headers: { 'Content-Type': 'multipart/x-mixed-replace; boundary=frame' },
       });
     }
 
