@@ -1,77 +1,17 @@
 body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background-color: #f4f4f4;
-    margin: 0;
-    padding: 20px;
-  }
-  
-  .container {
-    max-width: 500px;
-    margin: auto;
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 0 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  h1 {
-    color: #333;
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-  }
-  
-  .status {
-    font-size: 1rem;
-    margin-bottom: 1.5rem;
-  }
-  
-  #status-indicator {
-    font-weight: bold;
-    color: red;
-  }
-  
-  .controls button {
-    font-size: 1rem;
-    padding: 10px 20px;
-    margin: 10px 5px;
-    width: 100px;
-    border: none;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background-color 0.3s;
-  }
-  
-  #start-btn {
-    background-color: #28a745;
-    color: white;
-  }
-  
-  #start-btn:hover {
-    background-color: #218838;
-  }
-  
-  #stop-btn {
-    background-color: #dc3545;
-    color: white;
-  }
-  
-  #stop-btn:hover {
-    background-color: #c82333;
-  }
-  
-  .temp-data {
-    margin-top: 20px;
-    font-size: 0.95rem;
-    text-align: left;
-  }
-  
-  .temp-data h2 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .temp-data p {
-    margin: 5px 0;
-  }
-  
+  background-color: #f4f4f4; /* Optional: Bootstrap uses white by default */
+}
+
+#status-indicator {
+  font-weight: bold;
+  color: red; /* Optional: Bootstrap can color with classes like text-danger */
+}
+
+.temp-data h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.temp-data p {
+  margin: 5px 0;
+}
