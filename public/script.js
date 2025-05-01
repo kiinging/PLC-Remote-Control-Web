@@ -68,7 +68,9 @@ async function fetchTrendData() {
           scales: {
             y: {
               type: 'linear',
-              position: 'left',
+              position: 'right',
+              min: 0,       // fixed minimum
+              max: 150,     // fixed maximum
               title: {
                 display: true,
                 text: 'PV (°C)'
@@ -76,7 +78,9 @@ async function fetchTrendData() {
             },
             y1: {
               type: 'linear',
-              position: 'right',
+              position: 'left',
+              min: 0,       // fixed minimum
+              max: 100,     // fixed maximum
               title: {
                 display: true,
                 text: 'MV (%)'
