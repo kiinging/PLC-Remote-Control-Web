@@ -45,14 +45,14 @@ async function fetchTrendData() {
             {
               label: 'PV (°C)',
               data: pvData,
-              borderColor: 'blue',
+              borderColor: 'red',
               yAxisID: 'y',
               tension: 0.3,
             },
             {
               label: 'MV (%)',
               data: mvData,
-              borderColor: 'red',
+              borderColor: 'blue',
               yAxisID: 'y1',
               tension: 0.3,
             }
@@ -68,9 +68,13 @@ async function fetchTrendData() {
           scales: {
             y: {
               type: 'linear',
-              position: 'right',
+              position: 'left',
               min: 0,       // fixed minimum
               max: 150,     // fixed maximum
+              beginAtZero: true, // extra safety
+              ticks: {
+                stepSize: 25,   // optional, cleaner grid
+              },
               title: {
                 display: true,
                 text: 'PV (°C)'
@@ -78,9 +82,16 @@ async function fetchTrendData() {
             },
             y1: {
               type: 'linear',
-              position: 'left',
+              position: 'right',
               min: 0,       // fixed minimum
               max: 100,     // fixed maximum
+              beginAtZero: true,
+              ticks: {
+                stepSize: 20,
+              },
+              grid: {
+                drawOnChartArea: false,
+              },
               title: {
                 display: true,
                 text: 'MV (%)'
