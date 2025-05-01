@@ -54,6 +54,15 @@ export default {
       });
     }
 
+    // Get trend data (PV + MV time series)
+    if (url.pathname === '/trend') {
+      const response = await fetch("https://orangepi.plc-web.online/trend");
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
     // Handle preflight OPTIONS request
     if (request.method === 'OPTIONS') {
       return new Response(null, {
