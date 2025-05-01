@@ -16,13 +16,6 @@ body {
   margin: 5px 0;
 }
 
-.video-container img {
-  width: 80%; /* changed from 100% to 80% */
-  max-width: 512px; /* optional: to shrink max size */
-  height: auto;
-  border-radius: 0.5rem;
-}
-
 .video-container {
   display: flex;
   justify-content: center;
