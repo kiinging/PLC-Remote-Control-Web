@@ -72,7 +72,9 @@ async function fetchTrendData() {
               title: {
                 display: true,
                 text: 'PV (°C)'
-              }
+              },
+              min: 0,
+              max: 150
             },
             y1: {
               type: 'linear',
@@ -81,6 +83,8 @@ async function fetchTrendData() {
                 display: true,
                 text: 'MV (%)'
               },
+              min: 0,
+              max: 100,
               grid: {
                 drawOnChartArea: false,
               }
