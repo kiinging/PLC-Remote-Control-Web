@@ -1,5 +1,7 @@
 const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
 
+let chart; // Global chart instance
+
 document.getElementById('start-btn').addEventListener('click', async () => {
   try {
     const response = await fetch(`${workerBase}/start`, { method: 'POST' });
@@ -24,85 +26,82 @@ document.getElementById('stop-btn').addEventListener('click', async () => {
   }
 });
 
-async function fetchTemperature() {
-  let chart; // Global chart instance
+async function fetchTrendData() {
+  try {
+    const res = await fetch(`${workerBase}/trend`);
+    const trend = await res.json();
 
-  async function fetchTrendData() {
-    try {
-      const res = await fetch(`${workerBase}/trend`);
-      const trend = await res.json();
+    const labels = trend.map(d => d.time);
+    const pvData = trend.map(d => d.pv);
+    const mvData = trend.map(d => d.mv);
 
-      const labels = trend.map(d => d.time);
-      const pvData = trend.map(d => d.pv);
-      const mvData = trend.map(d => d.mv);
-
-      if (!chart) {
-        const ctx = document.getElementById('trendChart').getContext('2d');
-        chart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [
-              {
-                label: 'PV (°C)',
-                data: pvData,
-                borderColor: 'blue',
-                yAxisID: 'y',
-                tension: 0.3,
-              },
-              {
-                label: 'MV (%)',
-                data: mvData,
-                borderColor: 'red',
-                yAxisID: 'y1',
-                tension: 0.3,
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            interaction: {
-              mode: 'index',
-              intersect: false,
+    if (!chart) {
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'PV (°C)',
+              data: pvData,
+              borderColor: 'blue',
+              yAxisID: 'y',
+              tension: 0.3,
             },
-            stacked: false,
-            scales: {
-              y: {
-                type: 'linear',
-                position: 'left',
-                title: {
-                  display: true,
-                  text: 'PV (°C)'
-                }
+            {
+              label: 'MV (%)',
+              data: mvData,
+              borderColor: 'red',
+              yAxisID: 'y1',
+              tension: 0.3,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          stacked: false,
+          scales: {
+            y: {
+              type: 'linear',
+              position: 'left',
+              title: {
+                display: true,
+                text: 'PV (°C)'
+              }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              title: {
+                display: true,
+                text: 'MV (%)'
               },
-              y1: {
-                type: 'linear',
-                position: 'right',
-                title: {
-                  display: true,
-                  text: 'MV (%)'
-                },
-                grid: {
-                  drawOnChartArea: false,
-                }
+              grid: {
+                drawOnChartArea: false,
               }
             }
           }
-        });
-      } else {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = pvData;
-        chart.data.datasets[1].data = mvData;
-        chart.update();
-      }
-
-    } catch (error) {
-      console.error("Failed to fetch trend data:", error);
+        }
+      });
+    } else {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = pvData;
+      chart.data.datasets[1].data = mvData;
+      chart.update();
     }
+
+  } catch (error) {
+    console.error("Failed to fetch trend data:", error);
   }
+}
 
 
-
+async function fetchTemperature() {
   try {
     const res = await fetch(`${workerBase}/temp`);
     const data = await res.json();
