@@ -27,3 +27,7 @@ body {
   display: flex;
   justify-content: center;
 }
+
+#trendChart {
+  width: 100% !important;
+}
