@@ -5,8 +5,10 @@ let chart; // Global chart instance
 document.getElementById('start-btn').addEventListener('click', async () => {
   try {
     const response = await fetch(`${workerBase}/start`, { method: 'POST' });
-    const text = await response.text();
-    console.log("Start response:", text);
+    const data = await response.json(); // <- Always handle as JSON
+    console.log("Start response:", data);
+    const indicator = document.getElementById("status-indicator");
+    indicator.textContent = data.status;
     // Immediately fetch updated state
     fetchTemperature();
   } catch (err) {
@@ -14,11 +16,14 @@ document.getElementById('start-btn').addEventListener('click', async () => {
   }
 });
 
+
 document.getElementById('stop-btn').addEventListener('click', async () => {
   try {
     const response = await fetch(`${workerBase}/stop`, { method: 'POST' });
-    const text = await response.text();
-    console.log("Stop response:", text);
+    const text = await response.json();
+    console.log("Stop response:", data);
+    const indicator = document.getElementById("status-indicator");
+    indicator.textContent = data.status;
     // Immediately fetch updated state
     fetchTemperature();
   } catch (err) {
