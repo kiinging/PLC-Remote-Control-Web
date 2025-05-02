@@ -35,7 +35,7 @@ body {
 
 
 #trendChart {
-  width: 100% !important;
-  height: 300px !important;
+  width: 1000% !important;
+  height: 500px !important;
   display: block;
 }
