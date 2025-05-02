@@ -64,7 +64,7 @@ async function fetchTrendData() {
           ]
         },
         options: {
-          responsive: false,
+          responsive: true,
           maintainAspectRatio: false,
           interaction: {
             mode: 'index',

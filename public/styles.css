@@ -28,3 +28,13 @@ body {
   justify-content: center;
 }
 
+.chart-container {
+  width: 100%;
+  min-height: 300px;
+}
+
+#trendChart {
+  width: 100% !important;
+  height: 300px !important;
+}
+
