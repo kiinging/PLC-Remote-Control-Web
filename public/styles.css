@@ -40,3 +40,28 @@ body {
   height: 500px !important;
   display: block;
 }
+
+
+/* Dark mode styles */
+body.dark-mode {
+  background-color: #121212;
+  color: #f8f9fa;
+}
+
+body.dark-mode .panel {
+  background-color: #1e1e1e;
+  border-color: #333;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+body.dark-mode .temp-data,
+body.dark-mode h3, 
+body.dark-mode h4,
+body.dark-mode h6 {
+  color: #f8f9fa;
+}
+
+/* Chart.js dark mode adaptation */
+body.dark-mode .chartjs-render-monitor {
+  filter: invert(90%) hue-rotate(180deg);
+}

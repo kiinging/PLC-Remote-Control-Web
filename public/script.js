@@ -153,3 +153,40 @@ fetchTemperature();
 
 setInterval(fetchTrendData, 5000);  // update every 5 seconds
 fetchTrendData(); // initial fetch
+
+// Dark Mode Toggle Functionality
+document.addEventListener('DOMContentLoaded', function() {
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  const icon = darkModeToggle.querySelector('i');
+  
+  // Check for saved user preference
+  const savedMode = localStorage.getItem('darkMode');
+  if (savedMode === 'enabled') {
+    document.body.classList.add('dark-mode');
+    icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+    darkModeToggle.textContent = ' Light Mode';
+    darkModeToggle.prepend(icon);
+  }
+
+  // Toggle dark mode
+  darkModeToggle.addEventListener('click', function() {
+    document.body.classList.toggle('dark-mode');
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    
+    if (isDarkMode) {
+      icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+      darkModeToggle.textContent = ' Light Mode';
+      localStorage.setItem('darkMode', 'enabled');
+    } else {
+      icon.classList.replace('bi-sun-fill', 'bi-moon-fill');
+      darkModeToggle.textContent = ' Dark Mode';
+      localStorage.setItem('darkMode', 'disabled');
+    }
+    darkModeToggle.prepend(icon);
+    
+    // Update chart colors if needed
+    if (chart) {
+      chart.update();
+    }
+  });
+});
