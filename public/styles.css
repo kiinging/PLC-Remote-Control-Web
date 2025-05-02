@@ -28,14 +28,15 @@ body {
   justify-content: center;
 }
 
+
 .chart-container {
-  width: 1000%;
+  width: 100%;
   min-height: 500px;
+  max-height: 600px; /* Added for better control */
 }
 
-
 #trendChart {
-  width: 1000% !important;
+  width: 100% !important;
   height: 500px !important;
   display: block;
 }
