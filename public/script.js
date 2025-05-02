@@ -162,31 +162,40 @@ document.addEventListener('DOMContentLoaded', function() {
   // Check for saved user preference
   const savedMode = localStorage.getItem('darkMode');
   if (savedMode === 'enabled') {
-    document.body.classList.add('dark-mode');
-    icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
-    darkModeToggle.textContent = ' Light Mode';
-    darkModeToggle.prepend(icon);
+    enableDarkMode();
   }
 
   // Toggle dark mode
   darkModeToggle.addEventListener('click', function() {
-    document.body.classList.toggle('dark-mode');
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    
-    if (isDarkMode) {
-      icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
-      darkModeToggle.textContent = ' Light Mode';
-      localStorage.setItem('darkMode', 'enabled');
+    if (document.body.classList.contains('dark-mode')) {
+      disableDarkMode();
     } else {
-      icon.classList.replace('bi-sun-fill', 'bi-moon-fill');
-      darkModeToggle.textContent = ' Dark Mode';
-      localStorage.setItem('darkMode', 'disabled');
+      enableDarkMode();
     }
-    darkModeToggle.prepend(icon);
     
-    // Update chart colors if needed
+    // Update chart if it exists
     if (chart) {
       chart.update();
     }
   });
+
+  function enableDarkMode() {
+    document.body.classList.add('dark-mode');
+    icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
+    darkModeToggle.textContent = ' Light Mode';
+    darkModeToggle.classList.remove('btn-secondary');
+    darkModeToggle.classList.add('btn-light');
+    localStorage.setItem('darkMode', 'enabled');
+    darkModeToggle.prepend(icon);
+  }
+
+  function disableDarkMode() {
+    document.body.classList.remove('dark-mode');
+    icon.classList.replace('bi-sun-fill', 'bi-moon-fill');
+    darkModeToggle.textContent = ' Dark Mode';
+    darkModeToggle.classList.remove('btn-light');
+    darkModeToggle.classList.add('btn-secondary');
+    localStorage.setItem('darkMode', 'disabled');
+    darkModeToggle.prepend(icon);
+  }
 });
