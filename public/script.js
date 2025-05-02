@@ -137,9 +137,6 @@ async function fetchTemperature() {
     document.getElementById('fault').innerText = data.fault ? "Yes" : "No";
     document.getElementById('last-update').innerText = data.last_update;
 
-    // Update LED/status indicator
-    document.getElementById('status-indicator').innerText = data.status;
-
     // Update power_on label
     const powerElem = document.getElementById('power_on');
     powerElem.innerText = data.power_on ? "ON" : "OFF";
