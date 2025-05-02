@@ -30,4 +30,5 @@ body {
 
 #trendChart {
   width: 100% !important;
+  height: 300px !important; /* same height you wanted */
 }
