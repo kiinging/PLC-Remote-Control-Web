@@ -20,7 +20,7 @@ document.getElementById('start-btn').addEventListener('click', async () => {
 document.getElementById('stop-btn').addEventListener('click', async () => {
   try {
     const response = await fetch(`${workerBase}/stop`, { method: 'POST' });
-    const text = await response.json();
+    const data = await response.json();
     console.log("Stop response:", data);
     const indicator = document.getElementById("status-indicator");
     indicator.textContent = data.status;
