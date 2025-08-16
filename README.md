@@ -3,6 +3,21 @@
 This project provides a web-based remote control system for a PLC using **Cloudflare Pages** (frontend), **Cloudflare Workers** (backend API), and optionally **Cloudflare D1** (database) for logging actions. The system allows users to start/stop the PLC remotely and view status updates in real time.
 
 ---
+## 🔄 How Requests Flow
+
+1. **Frontend (Browser → Worker)**
+   - Always calls `https://plc-web.online` with a specific **pathname**.
+   - Example:
+     - `/start` → Start PLC
+     - `/stop` → Stop PLC
+     - `/temp` → Get temperature
+     - `/video_feed` → Get camera stream
+
+2. **Worker (Proxy → Backends)**
+   - Based on the pathname, the Worker forwards the request to the right backend:
+     - `orangepi.plc-web.online` → PLC commands + temperature
+     - `cam.plc-web.online` → Live camera feed
+---
 
 ## 📌 Features
 - **Web Interface**: Simple UI for remote control (HTML, CSS, JavaScript)
