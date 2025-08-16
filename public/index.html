@@ -49,18 +49,22 @@
           <h6 class="mb-3">Control Panel</h6>
 
           <!-- Light Control -->
-          <div class="mb-3">
-            <small class="fw-bold">Light Control</small>
-            <div class="d-flex align-items-center gap-2 mt-1">
-              <div class="btn-group btn-group-sm">
-                <button id="light-start-btn" class="btn btn-success btn-sm">
-                  <i class="bi bi-lightbulb"></i> Start
-                </button>
-                <button id="light-stop-btn" class="btn btn-danger btn-sm">
-                  <i class="bi bi-lightbulb-off"></i> Stop
-                </button>
-              </div>
-              <span id="light-status" class="badge bg-secondary">OFF</span>
+          <div class="mb-2 d-flex align-items-center justify-content-between">
+            <small class="fw-bold me-2">Light Control</small>
+
+            <!-- Buttons -->
+            <div class="btn-group btn-group-sm me-2">
+              <button id="light-start-btn" class="btn btn-success btn-sm">
+                <i class="bi bi-lightbulb"></i> Start
+              </button>
+              <button id="light-stop-btn" class="btn btn-danger btn-sm">
+                <i class="bi bi-lightbulb-off"></i> Stop
+              </button>
+            </div>
+
+            <!-- Round Indicator -->
+            <div id="light-indicator" 
+                style="width: 16px; height: 16px; border-radius: 50%; background-color: red;">
             </div>
           </div>
 
