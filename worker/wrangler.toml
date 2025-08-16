@@ -6,3 +6,4 @@ preview_urls = false
 
 [observability]
 enabled = true
+
