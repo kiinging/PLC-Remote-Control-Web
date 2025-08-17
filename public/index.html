@@ -41,80 +41,117 @@
 </head>
 <body>
 
-  <div class="container py-4">
-    <div class="row g-4">
-      <!-- Controls Panel -->
-      <div class="col-md-6">
-        <div class="panel">
-          <h6 class="mb-3">Control Panel</h6>
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Controls Panel -->
+    <div class="col-md-6">
+      <div class="panel">
+        <h6 class="mb-3 text-center">Control Panel</h6>
 
-          <!-- Light Control -->
-          <div class="mb-2 d-flex align-items-center justify-content-between">
-            <small class="fw-bold me-2">Light Control</small>
+        <!-- Light Control -->
+        <div class="mb-2 d-flex align-items-center justify-content-between">
+          <small class="fw-bold me-2">Light Control</small>
 
-            <!-- Buttons -->
-            <div class="btn-group btn-group-sm me-2">
-              <button id="light-start-btn" class="btn btn-success btn-sm">
-                <i class="bi bi-lightbulb"></i> Start
-              </button>
-              <button id="light-stop-btn" class="btn btn-danger btn-sm">
-                <i class="bi bi-lightbulb-off"></i> Stop
-              </button>
-            </div>
-
-            <!-- Round Indicator -->
-            <div id="light-indicator" 
-                style="width: 16px; height: 16px; border-radius: 50%; background-color: red;">
-            </div>
+          <!-- Buttons -->
+          <div class="btn-group btn-group-sm me-2">
+            <button id="light-start-btn" class="btn btn-success btn-sm">
+              <i class="bi bi-lightbulb"></i> Start
+            </button>
+            <button id="light-stop-btn" class="btn btn-danger btn-sm">
+              <i class="bi bi-lightbulb-off"></i> Stop
+            </button>
           </div>
 
-          <!-- PLC Heater Control -->
-          <div class="mb-4">
-            <h6>PLC Heater Control</h6>
-            <div class="d-flex align-items-center gap-3">
-              <div class="btn-group">
-                <button id="plc-start-btn" class="btn btn-success btn-sm">
-                  <i class="bi bi-play-fill"></i> Start
-                </button>
-                <button id="plc-stop-btn" class="btn btn-danger">
-                  <i class="bi bi-stop-fill"></i> Stop
-                </button>
-              </div>
-              <span id="plc-status" class="indicator-light bg-danger rounded-circle" 
-                    style="width:20px; height:20px; display:inline-block;"></span>
-            </div>
+          <!-- Round Indicator -->
+          <div id="light-indicator" 
+              style="width: 14px; height: 14px; border-radius: 50%; background-color: red;">
           </div>
-
-          <!-- Mode Selection -->
-          <div class="mb-2 d-flex align-items-center gap-2">
-            <small class="fw-bold">Mode</small>
-
-            <div class="btn-group btn-group-sm" role="group" aria-label="Mode toggle">
-              <input type="radio" class="btn-check" name="mode" id="manual-mode" autocomplete="off" checked>
-              <label class="btn btn-outline-primary btn-sm" for="manual-mode">
-                <i class="bi bi-hand-index"></i> Manual
-              </label>
-
-              <input type="radio" class="btn-check" name="mode" id="auto-mode" autocomplete="off">
-              <label class="btn btn-outline-primary btn-sm" for="auto-mode">
-                <i class="bi bi-cpu"></i> Auto
-              </label>
-            </div>
-          </div>
-
-          <!-- Temperature & Info -->
-          <div class="temp-data">
-            <h6 class="mb-1">Process Data</h6>
-            <p class="mb-1 small">RTD Temp: 
-              <span id="rtd-temp" class="fw-bold text-primary">--</span> °C
-            </p>
-            <p class="text-muted small">Last Update: 
-              <span id="last-update">--</span>
-            </p>
-          </div>
-          
         </div>
-      </div>     
+
+        <!-- PLC Heater Control -->
+        <div class="mb-3">
+          <small class="fw-bold">PLC Heater</small>
+          <div class="d-flex align-items-center gap-2 mt-1">
+            <div class="btn-group btn-group-sm">
+              <button id="plc-start-btn" class="btn btn-success btn-sm">
+                <i class="bi bi-play-fill"></i> Start
+              </button>
+              <button id="plc-stop-btn" class="btn btn-danger btn-sm">
+                <i class="bi bi-stop-fill"></i> Stop
+              </button>
+            </div>
+            <!-- Round Status Light -->
+            <div id="plc-status" 
+                style="width: 14px; height: 14px; border-radius: 50%; background-color: red;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode Selection -->
+        <div class="mb-3 d-flex align-items-center justify-content-between">
+          <small class="fw-bold">Mode</small>
+          <div class="btn-group btn-group-sm" role="group" aria-label="Mode toggle">
+            <input type="radio" class="btn-check" name="mode" id="manual-mode" autocomplete="off" checked>
+            <label class="btn btn-outline-primary btn-sm" for="manual-mode">
+              <i class="bi bi-hand-index"></i> Manual
+            </label>
+
+            <input type="radio" class="btn-check" name="mode" id="auto-mode" autocomplete="off">
+            <label class="btn btn-outline-primary btn-sm" for="auto-mode">
+              <i class="bi bi-cpu"></i> Auto
+            </label>
+          </div>
+        </div>
+
+        <!-- Set Point & PID Parameters -->
+        <div class="mb-3">
+          <h6 class="mb-2">PID Settings</h6>
+          <form>
+            <!-- Set Point -->
+            <div class="input-group input-group-sm mb-2">
+              <span class="input-group-text">Set Point (°C)</span>
+              <input type="number" id="setpoint" class="form-control" placeholder="e.g. 100">
+            </div>
+            <div class="row g-2">
+              <!-- Kp -->
+              <div class="col-4">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">Kp</span>
+                  <input type="number" id="kp" class="form-control" placeholder="0.0">
+                </div>
+              </div>
+              <!-- Ti -->
+              <div class="col-4">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">Ti</span>
+                  <input type="number" id="ti" class="form-control" placeholder="0.0">
+                </div>
+              </div>
+              <!-- Td -->
+              <div class="col-4">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">Td</span>
+                  <input type="number" id="td" class="form-control" placeholder="0.0">
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Temperature & Info -->
+        <div class="temp-data">
+          <h6 class="mb-1">Process Data</h6>
+          <p class="mb-1 small">RTD Temp: 
+            <span id="rtd-temp" class="fw-bold text-primary">--</span> °C
+          </p>
+          <p class="text-muted small">Last Update: 
+            <span id="last-update">--</span>
+          </p>
+        </div>
+        
+      </div>
+    </div>
+ 
       
       <!-- Video Panel -->
       <div class="col-md-6">
