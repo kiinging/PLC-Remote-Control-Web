@@ -8,12 +8,18 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // Optional delay (for testing)
-    // await new Promise(resolve => setTimeout(resolve, 3000));
+    // Handle preflight OPTIONS request
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: corsHeaders,
+      });
+    }
 
-    // Control LED ON
-    if (url.pathname === '/start') {
-      const response = await fetch("https://orangepi.plc-web.online/led/on", {
+
+    // ------------------ Light Control ------------------
+    if (url.pathname === '/start_light') {
+      const response = await fetch("https://orangepi.plc-web.online/light/on", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -23,9 +29,9 @@ export default {
       });
     }
 
-    // Control LED OFF
-    if (url.pathname === '/stop') {
-      const response = await fetch("https://orangepi.plc-web.online/led/off", {
+    // Control light OFF
+    if (url.pathname === '/stop_light') {
+      const response = await fetch("https://orangepi.plc-web.online/light/off", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -35,7 +41,30 @@ export default {
       });
     }
 
-    // Get Temperature
+    // ------------------ PLC Control ------------------
+    if (url.pathname === '/start_plc') {
+      const response = await fetch("https://orangepi.plc-web.online/plc/on", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+    if (url.pathname === '/stop_plc') {
+      const response = await fetch("https://orangepi.plc-web.online/plc/off", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+    // ------------------ Temperature ------------------
     if (url.pathname === '/temp') {
       const response = await fetch("https://orangepi.plc-web.online/temp");
       return new Response(await response.text(), {
@@ -44,6 +73,7 @@ export default {
       });
     }
 
+    // ------------------ Video Feed ------------------
     // Get Video video_feed (supports ?t=timestamp)
     if (url.pathname === '/video_feed') {
       const backendSnapshotUrl = "https://cam.plc-web.online/video_feed";
@@ -54,6 +84,7 @@ export default {
       });
     }
 
+    // ------------------ Trend Data ------------------
     // Get trend data (PV + MV time series)
     if (url.pathname === '/trend') {
       const response = await fetch("https://orangepi.plc-web.online/trend");
@@ -63,10 +94,29 @@ export default {
       });
     }
 
-    // Handle preflight OPTIONS request
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        status: 204,
+    // ------------------ PID & Setpoint ------------------
+    if (url.pathname === '/setpoint' && request.method === 'POST') {
+      const body = await request.json();
+      const response = await fetch("https://orangepi.plc-web.online/setpoint", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+    if (url.pathname === '/pid' && request.method === 'POST') {
+      const body = await request.json();
+      const response = await fetch("https://orangepi.plc-web.online/pid", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return new Response(await response.text(), {
+        status: response.status,
         headers: corsHeaders,
       });
     }

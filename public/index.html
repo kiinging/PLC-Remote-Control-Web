@@ -63,9 +63,7 @@
               </button>
             </div>
             <!-- Round Indicator -->
-            <div id="light-indicator" 
-                style="width: 14px; height: 14px; border-radius: 50%; background-color: red;">
-            </div>
+            <div id="light-indicator" class="indicator"></div>
           </div>
         </div>
 
@@ -83,10 +81,8 @@
                 <i class="bi bi-stop-fill"></i> Stop
               </button>
             </div>
-            <!-- Round Status Light -->
-            <div id="plc-status" 
-                style="width: 14px; height: 14px; border-radius: 50%; background-color: red;">
-            </div>
+            <!-- Round Indicator -->
+            <div id="plc-indicator" class="indicator"></div>
           </div>
         </div>
 
@@ -113,7 +109,8 @@
             <!-- Set Point -->
             <div class="input-group input-group-sm mb-2">
               <span class="input-group-text">Set Point (°C)</span>
-              <input type="number" id="setpoint" class="form-control" placeholder="e.g. 100">
+              <input type="number" id="setpoint" class="form-control" placeholder="e.g. 70">
+              <button id="send-setpoint-btn" type="button" class="btn btn-primary btn-sm">Send</button>
             </div>
             <div class="row g-2">
               <!-- Kp -->
@@ -138,6 +135,13 @@
                 </div>
               </div>
             </div>
+            
+            <!-- One button for all PID params -->
+            <div class="mt-2 text-end">
+              <button id="send-pid-btn" type="button" class="btn btn-primary btn-sm">
+                <i class="bi bi-save"></i> Send PID
+              </button>
+            </div>
           </form>
         </div>
 
@@ -150,8 +154,7 @@
           <p class="text-muted small">Last Update: 
             <span id="last-update">--</span>
           </p>
-        </div>
-        
+        </div>        
       </div>
     </div>
  

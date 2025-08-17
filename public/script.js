@@ -2,35 +2,36 @@ const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
 
 let chart; // Global chart instance
 
-document.getElementById('start-btn').addEventListener('click', async () => {
-  try {
-    const response = await fetch(`${workerBase}/start`, { method: 'POST' });
-    const data = await response.json(); // <- Always handle as JSON
-    console.log("Start response:", data);
-    const indicator = document.getElementById("status-indicator");
-    indicator.textContent = data.status;
-    // Immediately fetch updated state
-    fetchTemperature();
-  } catch (err) {
-    console.error("Error starting:", err);
-  }
+// -------------------- Light Control --------------------
+document.getElementById('light-start-btn').addEventListener('click', async () => {
+  const res = await fetch(`${workerBase}/start_light`, { method: 'POST' });
+  updateIndicator("light-indicator", res.ok);
+});
+
+document.getElementById('light-stop-btn').addEventListener('click', async () => {
+  const res = await fetch(`${workerBase}/stop_light`, { method: 'POST' });
+  updateIndicator("light-indicator", !res.ok);
+});
+
+// -------------------- PLC Heater Control (future API needed) --------------------
+document.getElementById('plc-start-btn').addEventListener('click', async () => {
+  const res = await fetch(`${workerBase}/start_plc`, { method: 'POST' });
+  updateIndicator("plc-status", res.ok);
+});
+
+document.getElementById('plc-stop-btn').addEventListener('click', async () => {
+  const res = await fetch(`${workerBase}/stop_plc`, { method: 'POST' });
+  updateIndicator("plc-status", !res.ok);
 });
 
 
-document.getElementById('stop-btn').addEventListener('click', async () => {
-  try {
-    const response = await fetch(`${workerBase}/stop`, { method: 'POST' });
-    const data = await response.json();
-    console.log("Stop response:", data);
-    const indicator = document.getElementById("status-indicator");
-    indicator.textContent = data.status;
-    // Immediately fetch updated state
-    fetchTemperature();
-  } catch (err) {
-    console.error("Error stopping:", err);
-  }
-});
+// -------------------- Indicator Helper --------------------
+function updateIndicator(id, isOn) {
+  const el = document.getElementById(id);
+  el.style.backgroundColor = isOn ? "green" : "red";
+}
 
+// -------------------- Trend Chart --------------------
 async function fetchTrendData() {
   try {
     const res = await fetch(`${workerBase}/trend`);
@@ -75,36 +76,19 @@ async function fetchTrendData() {
             y: {
               type: 'linear',
               position: 'left',
-              min: 0,       // fixed minimum
-              max: 150,     // fixed maximum
-              beginAtZero: true, // extra safety
-              ticks: {
-                stepSize: 25,   // optional, cleaner grid
-              },
-              title: {
-                display: true,
-                text: 'PV (°C)'
-              },
+              min: 0,
+              max: 150,
+              ticks: { stepSize: 25 },
+              title: { display: true, text: 'PV (°C)' },
             },
             y1: {
               type: 'linear',
               position: 'right',
-              min: 0,       // fixed minimum
-              max: 100,     // fixed maximum
-              beginAtZero: true,
-              ticks: {
-                stepSize: 20,
-              },
-              grid: {
-                drawOnChartArea: false,
-              },
-              title: {
-                display: true,
-                text: 'MV (%)'
-              },
-              grid: {
-                drawOnChartArea: false,
-              }
+              min: 0,
+              max: 100,
+              ticks: { stepSize: 20 },
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: 'MV (%)' },
             }
           }
         }
@@ -113,10 +97,6 @@ async function fetchTrendData() {
       chart.data.labels = labels;
       chart.data.datasets[0].data = pvData;
       chart.data.datasets[1].data = mvData;
-      chart.options.scales.y.min = 0;
-      chart.options.scales.y.max = 150;
-      chart.options.scales.y1.min = 0;
-      chart.options.scales.y1.max = 100;
       chart.update();
     }
 
@@ -125,77 +105,57 @@ async function fetchTrendData() {
   }
 }
 
-
+// -------------------- Temperature Fetch --------------------
 async function fetchTemperature() {
   try {
     const res = await fetch(`${workerBase}/temp`);
     const data = await res.json();
 
     document.getElementById('rtd-temp').innerText = data.rtd_temp.toFixed(2);
-    document.getElementById('thermo-temp').innerText = data.thermo_temp.toFixed(2);
-    document.getElementById('internal-temp').innerText = data.internal_temp.toFixed(2);
-    document.getElementById('fault').innerText = data.fault ? "Yes" : "No";
     document.getElementById('last-update').innerText = data.last_update;
-
-    // Update power_on label
-    const powerElem = document.getElementById('power_on');
-    powerElem.innerText = data.power_on ? "ON" : "OFF";
-    powerElem.classList.toggle('text-success', data.power_on);
-    powerElem.classList.toggle('text-danger', !data.power_on);
 
   } catch (error) {
     console.error("Failed to fetch temperature:", error);
   }
 }
 
+// ---- Send Setpoint ----
+document.getElementById("send-setpoint-btn").addEventListener("click", async () => {
+  const setpoint = document.getElementById("setpoint").value;
+  try {
+    const res = await fetch(`${workerBase}/setpoint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ setpoint })
+    });
+    console.log("Setpoint update response:", await res.text());
+  } catch (err) {
+    console.error("Error sending setpoint:", err);
+  }
+});
+
+// ---- Send PID Parameters (Kp, Ti, Td) ----
+document.getElementById("send-pid-btn").addEventListener("click", async () => {
+  const kp = document.getElementById("kp").value;
+  const ti = document.getElementById("ti").value;
+  const td = document.getElementById("td").value;
+
+  try {
+    const res = await fetch(`${workerBase}/pid`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kp, ti, td })
+    });
+    console.log("PID update response:", await res.text());
+  } catch (err) {
+    console.error("Error sending PID params:", err);
+  }
+});
+
+
+// -------------------- Auto Fetch Loops --------------------
 setInterval(fetchTemperature, 3000);
 fetchTemperature();
 
-setInterval(fetchTrendData, 5000);  // update every 5 seconds
-fetchTrendData(); // initial fetch
-
-// Dark Mode Toggle Functionality
-document.addEventListener('DOMContentLoaded', function() {
-  const darkModeToggle = document.getElementById('dark-mode-toggle');
-  const icon = darkModeToggle.querySelector('i');
-  
-  // Check for saved user preference
-  const savedMode = localStorage.getItem('darkMode');
-  if (savedMode === 'enabled') {
-    enableDarkMode();
-  }
-
-  // Toggle dark mode
-  darkModeToggle.addEventListener('click', function() {
-    if (document.body.classList.contains('dark-mode')) {
-      disableDarkMode();
-    } else {
-      enableDarkMode();
-    }
-    
-    // Update chart if it exists
-    if (chart) {
-      chart.update();
-    }
-  });
-
-  function enableDarkMode() {
-    document.body.classList.add('dark-mode');
-    icon.classList.replace('bi-moon-fill', 'bi-sun-fill');
-    darkModeToggle.textContent = ' Light Mode';
-    darkModeToggle.classList.remove('btn-secondary');
-    darkModeToggle.classList.add('btn-light');
-    localStorage.setItem('darkMode', 'enabled');
-    darkModeToggle.prepend(icon);
-  }
-
-  function disableDarkMode() {
-    document.body.classList.remove('dark-mode');
-    icon.classList.replace('bi-sun-fill', 'bi-moon-fill');
-    darkModeToggle.textContent = ' Dark Mode';
-    darkModeToggle.classList.remove('btn-light');
-    darkModeToggle.classList.add('btn-secondary');
-    localStorage.setItem('darkMode', 'disabled');
-    darkModeToggle.prepend(icon);
-  }
-});
+setInterval(fetchTrendData, 5000);
+fetchTrendData();
