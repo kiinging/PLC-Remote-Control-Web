@@ -50,28 +50,31 @@
 
         <!-- Light Control -->
         <div class="mb-2 d-flex align-items-center justify-content-between">
-          <small class="fw-bold me-2">Light Control</small>
+          <small class="fw-bold me-2">Light Control:</small>
 
-          <!-- Buttons -->
-          <div class="btn-group btn-group-sm me-2">
-            <button id="light-start-btn" class="btn btn-success btn-sm">
-              <i class="bi bi-lightbulb"></i> Start
-            </button>
-            <button id="light-stop-btn" class="btn btn-danger btn-sm">
-              <i class="bi bi-lightbulb-off"></i> Stop
-            </button>
-          </div>
-
-          <!-- Round Indicator -->
-          <div id="light-indicator" 
-              style="width: 14px; height: 14px; border-radius: 50%; background-color: red;">
+          <!-- Buttons + Indicator in one row -->
+          <div class="d-flex align-items-center gap-2">
+            <div class="btn-group btn-group-sm">
+              <button id="light-start-btn" class="btn btn-success btn-sm">
+                <i class="bi bi-lightbulb"></i> Start
+              </button>
+              <button id="light-stop-btn" class="btn btn-danger btn-sm">
+                <i class="bi bi-lightbulb-off"></i> Stop
+              </button>
+            </div>
+            <!-- Round Indicator -->
+            <div id="light-indicator" 
+                style="width: 14px; height: 14px; border-radius: 50%; background-color: red;">
+            </div>
           </div>
         </div>
 
         <!-- PLC Heater Control -->
-        <div class="mb-3">
-          <small class="fw-bold">PLC Heater</small>
-          <div class="d-flex align-items-center gap-2 mt-1">
+        <div class="mb-2 d-flex align-items-center justify-content-between">
+          <small class="fw-bold me-2">Heater Control:</small>      
+
+          <!-- Buttons + Indicator in one row -->
+          <div class="d-flex align-items-center gap-2">
             <div class="btn-group btn-group-sm">
               <button id="plc-start-btn" class="btn btn-success btn-sm">
                 <i class="bi bi-play-fill"></i> Start
