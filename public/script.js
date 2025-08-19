@@ -2,6 +2,32 @@ const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
 
 let chart; // Global chart instance
 
+// -------------------- Fetch Initial Setpoint & PID --------------------
+async function fetchInitialParams() {
+  try {
+    // Get setpoint
+    const setRes = await fetch(`${workerBase}/setpoint_status`);
+    const setData = await setRes.json();
+    document.getElementById("setpoint").value = setData.setpoint;
+
+    // Get PID params
+    const pidRes = await fetch(`${workerBase}/pid_status`);
+    const pidData = await pidRes.json();
+    document.getElementById("kp").value = pidData.kp;
+    document.getElementById("ti").value = pidData.ti;
+    document.getElementById("td").value = pidData.td;
+
+    console.log("Fetched initial setpoint & PID:", { setData, pidData });
+  } catch (err) {
+    console.error("Failed to fetch initial params:", err);
+  }
+}
+
+// Run this once on page load
+fetchInitialParams();
+
+
+
 // -------------------- Light Control --------------------
 document.getElementById('light-start-btn').addEventListener('click', async () => {
   const res = await fetch(`${workerBase}/start_light`, { method: 'POST' });
@@ -13,7 +39,7 @@ document.getElementById('light-stop-btn').addEventListener('click', async () => 
   updateIndicator("light-indicator", !res.ok);
 });
 
-// -------------------- PLC Heater Control (future API needed) --------------------
+// -------------------- PLC Heater Control --------------------
 document.getElementById('plc-start-btn').addEventListener('click', async () => {
   const res = await fetch(`${workerBase}/start_plc`, { method: 'POST' });
   updateIndicator("plc-status", res.ok);

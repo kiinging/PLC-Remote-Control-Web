@@ -1,17 +1,36 @@
 # PLC Remote Control Web
 
-This project provides a web-based remote control system for a PLC using **Cloudflare Pages** (frontend), **Cloudflare Workers** (backend API), and optionally **Cloudflare D1** (database) for logging actions. The system allows users to start/stop the PLC remotely and view status updates in real time.
+This project provides a **web-based PID heater control system** for a PLC using:
+
+* **Cloudflare Pages** → Frontend (HTML, JS, Bootstrap, Chart.js)
+* **Cloudflare Workers** → Backend API & proxy
+* **OrangePi/Raspberry Pi (Flask API)** → PLC hardware interface
+* **Optional Cloudflare D1** → Store logs or historical data
+
+Users can **start/stop lights & PLC**, send **setpoints and PID parameters**, and monitor **real-time temperature and trends**.
 
 ---
 ## 🔄 How Requests Flow
 
 1. **Frontend (Browser → Worker)**
-   - Always calls `https://plc-web.online` with a specific **pathname**.
-   - Example:
-     - `/start` → Start PLC
-     - `/stop` → Stop PLC
-     - `/temp` → Get temperature
-     - `/video_feed` → Get camera stream
+   The browser always talks to:
+
+   ```
+   https://cloud-worker.wongkiinging.workers.dev
+   ```
+   with a specific **pathname**.
+
+   Example:
+
+   * `/start_light` → Turn on light
+   * `/stop_light` → Turn off light
+   * `/start_plc` → Start PLC heater
+   * `/stop_plc` → Stop PLC heater
+   * `/setpoint` → Send new temperature setpoint
+   * `/pid` → Send new PID parameters
+   * `/temp` → Get current RTD temperature
+   * `/trend` → Get PV/MV trend data
+   * `/video_feed` → Live MJPEG camera feed
 
 2. **Worker (Proxy → Backends)**
    - Based on the pathname, the Worker forwards the request to the right backend:
@@ -20,10 +39,24 @@ This project provides a web-based remote control system for a PLC using **Cloudf
 ---
 
 ## 📌 Features
-- **Web Interface**: Simple UI for remote control (HTML, CSS, JavaScript)
-- **Cloudflare Worker API**: Backend logic for handling PLC commands
-- **Database (Optional)**: Cloudflare D1 for logging actions
-- **Secure & Scalable**: Hosted on Cloudflare’s global network
+
+* **Web Interface**
+
+  * Start/stop PLC and light
+  * Manual/Auto mode selection
+  * Send **setpoint** and **PID parameters (Kp, Ti, Td)**
+  * View **real-time temperature** and **update timestamps**
+  * Display **PV (°C)** and **MV (%)** trends in Chart.js
+  * Live video stream of the system
+
+* **Cloudflare Worker API**
+
+  * Secure proxy between web frontend and backend servers
+  * Adds CORS headers for browser requests
+
+* **Optional Database**
+
+  * Use Cloudflare D1 to log operator actions or temperature history
 
 ---
 
@@ -51,9 +84,16 @@ This project provides a web-based remote control system for a PLC using **Cloudf
 ## 🚀 Getting Started
 
 ### 1️⃣ **Set Up Cloudflare Pages (Frontend)**
+
 1. Go to [Cloudflare Pages](https://pages.cloudflare.com/)
-2. Connect your GitHub repository
-3. Deploy the frontend
+2. Connect your **GitHub repository** containing `index.html`, `script.js`, and other static files
+3. Cloudflare Pages will automatically build and deploy your frontend
+4. **Updating the frontend:**
+
+   * Make changes locally (e.g., edit `index.html` in VS Code)
+   * Run `git commit` and `git push`
+   * Cloudflare Pages will automatically detect the push and redeploy the site — no manual action required
+
 
 ### 2️⃣ **Deploy Cloudflare Worker (Backend API)**
 1. Install [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/):
@@ -78,7 +118,7 @@ This project provides a web-based remote control system for a PLC using **Cloudf
    npx wrangler deploy
    ```
 
-### 3️⃣ **Set Up Cloudflare D1 (Database) [Optional]**
+### 3️⃣ **Set Up Cloudflare D1 (Database) [underconstruction]**
 1. Create a new D1 database:
    ```sh
    npx wrangler d1 create plc-db
@@ -88,35 +128,38 @@ This project provides a web-based remote control system for a PLC using **Cloudf
    npx wrangler d1 execute plc-db --file=database/schema.sql
    ```
 
----
+### 4️⃣ **Backend (OrangePi / Raspberry Pi)**
 
-## ⚡ API Endpoints (Cloudflare Worker)
-| Endpoint        | Method | Description         |
-|---------------|--------|---------------------|
-| `/start`      | POST   | Starts the PLC      |
-| `/stop`       | POST   | Stops the PLC       |
-
-Example usage:
-```sh
-curl -X POST https://cloud-worker.wongkiinging.workers.dev/start
-```
+Run a Flask (or similar) HTTP API to actually control PLC hardware.
 
 ---
 
+## ⚡ API Endpoints
+
+| Endpoint       | Method | Description                    |
+| -------------- | ------ | ------------------------------ |
+| `/start_light` | POST   | Turn on the light              |
+| `/stop_light`  | POST   | Turn off the light             |
+| `/start_plc`   | POST   | Start PLC heater               |
+| `/stop_plc`    | POST   | Stop PLC heater                |
+| `/temp`        | GET    | Get RTD temperature            |
+| `/trend`       | GET    | Get PV/MV historical data      |
+| `/setpoint`    | POST   | Update setpoint (°C)           |
+| `/pid`         | POST   | Update PID params (Kp, Ti, Td) |
+| `/video_feed`  | GET    | Live MJPEG camera feed         |
+
+---
 ## 🖥️ Web Interface
-- **index.html**: Basic UI with Start/Stop buttons
-- **script.js**: Fetches API endpoints to control the PLC
 
-```js
-document.getElementById("start-btn").addEventListener("click", () => {
-    fetch("https://cloud-worker.wongkiinging.workers.dev/start", { method: "POST" })
-        .then(response => response.json())
-        .then(data => document.getElementById("status").textContent = data.message)
-        .catch(err => console.error(err));
-});
-```
+The frontend uses **Bootstrap 5 + Chart.js** for a responsive UI.
+
+* Control panel with Start/Stop buttons and mode selection
+* Input fields for Setpoint, Kp, Ti, Td
+* Trend chart showing **PV vs MV**
+* Live video feed
 
 ---
+
 
 ## 💀 Useful Wrangler CLI Commands
 | Command | Description |

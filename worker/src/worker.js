@@ -16,6 +16,25 @@ export default {
       });
     }
 
+    // ------------------ Get Current Setpoint ------------------
+    if (url.pathname === '/setpoint_status') {
+      const response = await fetch("https://orangepi.plc-web.online/setpoint");
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+    // ------------------ Get Current PID Params ------------------
+    if (url.pathname === '/pid_status') {
+      const response = await fetch("https://orangepi.plc-web.online/pid");
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+
 
     // ------------------ Light Control ------------------
     if (url.pathname === '/start_light') {
