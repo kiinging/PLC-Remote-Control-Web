@@ -175,8 +175,6 @@ The frontend uses **Bootstrap 5 + Chart.js** for a responsive UI.
 ---
 
 ## 💪 Next Steps
-- ✅ Improve UI with Bootstrap or TailwindCSS
-- ✅ Add real-time status updates from PLC
 - ✅ Secure API endpoints with authentication
 - ✅ Store logs in Cloudflare D1
 
@@ -202,31 +200,3 @@ If you have questions or suggestions, feel free to open an issue on GitHub!
 This guide provides a novice-friendly approach to remotely control a Programmable Logic Controller (PLC) using a Raspberry Pi as an intermediary. By implementing an HTTP server on the Raspberry Pi with Flask and integrating it with Cloudflare Workers, you can securely send start and stop commands to your PLC from a web interface.
 
 ---
-
-## 📌 Overview
-
-The system architecture involves:
-
-1. **Flask HTTP Server on Raspberry Pi**: Handles incoming HTTP requests and communicates with the PLC.
-2. **Cloudflare Workers**: Forwards commands from the web interface to the Raspberry Pi.
-3. **Web Interface**: Provides user controls to initiate start and stop commands.
-
----
-
-## 🚀 Getting Started
-
-### 1️⃣ Implement an HTTP Server on the Raspberry Pi
-
-1. **Install Flask**:
-
-   Begin by installing Flask on your Raspberry Pi. Flask is a lightweight web framework for Python that simplifies the creation of web servers.
-
-   ```sh
-   sudo apt-get update
-   sudo apt-get install python3-flask
-
-   https://cloud-worker.wongkiinging.workers.dev/start
-
-   https://cloud-worker.wongkiinging.workers.dev/stop
-
-   https://cloud-worker.wongkiinging.workers.dev/temp
