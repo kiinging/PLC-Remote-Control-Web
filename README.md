@@ -1,13 +1,23 @@
+
 # PLC Remote Control Web
 
-This project provides a **web-based PID heater control system** for a PLC using:
+This project provides a **web-based PID heater control and monitoring system** for a PLC, built with:
 
-* **Cloudflare Pages** → Frontend (HTML, JS, Bootstrap, Chart.js)
-* **Cloudflare Workers** → Backend API & proxy
-* **OrangePi/Raspberry Pi (Flask API)** → PLC hardware interface
-* **Optional Cloudflare D1** → Store logs or historical data
+* **Cloudflare Pages** → Frontend (HTML, JavaScript, Bootstrap, Chart.js)
+* **Cloudflare Workers** → Backend API & proxy layer
+* **Orange Pi Zero 3 (1GB)** → Runs the Flask API and handles all PLC control & monitoring
+* **Optional Cloudflare D1** → For logging and storing historical data
+* **Raspberry Pi Zero 2 W Security Camera** → Separate [camera repo](https://github.com/kiinging/flask_cam) (Flask + Picamera2) used for **live video streaming**
 
-Users can **start/stop lights & PLC**, send **setpoints and PID parameters**, and monitor **real-time temperature and trends**.
+### ✨ Features
+
+* Start/stop PLC and lights
+* Send setpoints and PID parameters
+* Real-time temperature monitoring
+* Historical trend visualization
+* Optional secure live camera feed (via Pi Zero 2 W + Cloudflare Tunnel)
+
+---
 
 ---
 ## 🔄 How Requests Flow
