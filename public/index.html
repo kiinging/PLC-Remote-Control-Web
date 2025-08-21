@@ -46,7 +46,7 @@
     <!-- Controls Panel -->
     <div class="col-md-6">
       <div class="panel">
-        <h6 class="mb-3 text-center">Control Panel</h6>
+        <h6 class="fw-bold mb-3 text-center">Control Panel</h6>
 
         <!-- Light Control -->
         <div class="mb-2 d-flex align-items-center justify-content-between">
@@ -88,7 +88,7 @@
 
         <!-- Mode Selection -->
         <div class="mb-3 d-flex align-items-center justify-content-between">
-          <small class="fw-bold">Mode</small>
+          <small class="fw-bold me-2">Mode:</small>
           <div class="btn-group btn-group-sm" role="group" aria-label="Mode toggle">
             <input type="radio" class="btn-check" name="mode" id="manual-mode" autocomplete="off" checked>
             <label class="btn btn-outline-primary btn-sm" for="manual-mode">
@@ -104,7 +104,7 @@
 
         <!-- Set Point & PID Parameters -->
         <div class="mb-3">
-          <h6 class="mb-2">PID Settings</h6>
+          <small class="fw-bold me-2">PID Setting:</small>   
           <form>
             <!-- Set Point -->
             <div class="input-group input-group-sm mb-2">
@@ -172,7 +172,7 @@
       <!-- Trend and chart -->
       <div class="container-fluid">
         <div class="panel mt-4">
-          <h6 class="mb-3">MV and PV Trends</h6>
+          <h6 class="fw-bold mb-3 text-center">MV and PV Trends</h6>
           <div class="chart-container" style="width: 100%; height: 50vh;">
             <canvas id="trendChart"></canvas>
           </div>
