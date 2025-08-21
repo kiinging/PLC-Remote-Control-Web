@@ -91,4 +91,13 @@ body.dark-mode .chart-container {
   height: 14px;
   border-radius: 50%;
   background-color: red; /* default OFF */
+  display: inline-block;  /* 🔑 ensures it’s always rendered */
+}
+
+.indicator {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background-color: red; /* default OFF */
+  display: inline-block;
 }

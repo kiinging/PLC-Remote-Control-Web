@@ -42,12 +42,12 @@ document.getElementById('light-stop-btn').addEventListener('click', async () => 
 // -------------------- PLC Heater Control --------------------
 document.getElementById('plc-start-btn').addEventListener('click', async () => {
   const res = await fetch(`${workerBase}/start_plc`, { method: 'POST' });
-  updateIndicator("plc-status", res.ok);
+  updateIndicator("plc-indicator", res.ok);
 });
 
 document.getElementById('plc-stop-btn').addEventListener('click', async () => {
   const res = await fetch(`${workerBase}/stop_plc`, { method: 'POST' });
-  updateIndicator("plc-status", !res.ok);
+  updateIndicator("plc-indicator", !res.ok);
 });
 
 

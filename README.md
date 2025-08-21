@@ -120,7 +120,7 @@ This project provides a **web-based PID heater control and monitoring system** f
    ```
 4. Navigate to the worker directory:
    ```sh
-   cd plc-worker
+   cd worker
    ```
 5. Update `worker.js` with API logic
 6. Deploy the worker:
