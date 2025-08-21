@@ -60,10 +60,12 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background-color: red;    /* default OFF */
+  background-color: red; /* default OFF */
   display: inline-block;
-  margin-left: 6px;         /* spacing from button group */
+  margin-left: 6px;
+  border: 1px solid black;   /* DEBUG ONLY */
 }
+
 
 /* ================================
    Button Groups
