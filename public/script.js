@@ -34,13 +34,13 @@ fetchInitialParams();
 
 // -------------------- Light Control --------------------
 document.getElementById('light-start-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/light/on`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/start_light`, { method: 'POST' });
   const data = await res.json();
   updateIndicator("light-indicator", data.light === 1);
 });
 
 document.getElementById('light-stop-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/light/off`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/stop_light`, { method: 'POST' });
   const data = await res.json();
   updateIndicator("light-indicator", data.light === 1);
 });
