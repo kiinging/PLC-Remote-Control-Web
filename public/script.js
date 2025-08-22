@@ -23,7 +23,7 @@ async function fetchInitialParams() {
     updateIndicator("light-indicator", statusData.light === 1);
     updateIndicator("plc-indicator", statusData.plc === 1);
 
-    console.log("Fetched initial setpoint & PID:", { setData, pidData });
+    console.log("Fetched initial setpoint & PID:", { setData, pidData,  statusData });
   } catch (err) {
     console.error("Failed to fetch initial params:", err);
   }
