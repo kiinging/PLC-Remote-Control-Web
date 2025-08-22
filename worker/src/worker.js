@@ -34,14 +34,20 @@ export default {
       });
     }
 
-    // ------------------ Get Light & plc Params ------------------
+    // ------------------ Get Light & plc status ------------------
+
     if (url.pathname === '/light_plc_status') {
       const response = await fetch("https://orangepi.plc-web.online/light_plc_status");
-      return new Response(await response.text(), {
+      const data = await response.text();
+      return new Response(data, {
         status: response.status,
-        headers: corsHeaders,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
       });
     }
+
 
     // ------------------ Light Control ------------------
     if (url.pathname === '/start_light') {
