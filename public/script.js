@@ -26,8 +26,6 @@ async function fetchInitialParams() {
 // Run this once on page load
 fetchInitialParams();
 
-
-
 // -------------------- Light Control --------------------
 document.getElementById('light-start-btn').addEventListener('click', async () => {
   const res = await fetch(`${workerBase}/start_light`, { method: 'POST' });
@@ -131,7 +129,7 @@ async function fetchTrendData() {
   }
 }
 
-// -------------------- Temperature Fetch --------------------
+// -------------------- Temperature and control status Fetch --------------------
 async function fetchTemperature() {
   try {
     const res = await fetch(`${workerBase}/temp`);
