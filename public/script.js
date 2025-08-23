@@ -65,6 +65,27 @@ function updateIndicator(id, isOn) {
   el.style.backgroundColor = isOn ? "green" : "red";
 }
 
+// -------------------- Mode Control --------------------
+document.querySelectorAll('input[name="mode"]').forEach(radio => {
+  radio.addEventListener('change', async (event) => {
+    const selectedMode = event.target.id === "manual-mode" ? "manual" : "auto";
+    console.log("Selected mode:", selectedMode);
+
+    try {
+      const res = await fetch(`${workerBase}/mode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: selectedMode })
+      });
+      console.log("Mode update response:", await res.text());
+    } catch (err) {
+      console.error("Error sending mode:", err);
+    }
+  });
+});
+
+
+
 // -------------------- Trend Chart --------------------
 async function fetchTrendData() {
   try {
