@@ -45,6 +45,20 @@ document.getElementById('light-stop-btn').addEventListener('click', async () => 
   updateIndicator("light-indicator", data.light === 1);
 });
 
+// -------------------- Web Control --------------------
+document.getElementById('web-start-btn').addEventListener('click', async () => {
+  const res = await fetch(`${workerBase}/start_plc`, { method: 'POST' });
+  const data = await res.json();
+  updateIndicator("web-indicator", data.web === 1);
+});
+
+document.getElementById('web-stop-btn').addEventListener('click', async () => {
+  const res = await fetch(`${workerBase}/stop_plc`, { method: 'POST' });
+  const data = await res.json();
+  updateIndicator("web-indicator", data.web === 1);
+});
+
+
 // -------------------- PLC Heater Control --------------------
 document.getElementById('plc-start-btn').addEventListener('click', async () => {
   const res = await fetch(`${workerBase}/start_plc`, { method: 'POST' });
