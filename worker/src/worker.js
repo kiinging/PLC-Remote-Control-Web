@@ -80,6 +80,32 @@ export default {
       });
     }
 
+    // ------------------ Web Control ------------------
+    // Control Web ON
+    if (url.pathname === '/start_web') {
+      const response = await fetch("https://orangepi.plc-web.online/web/on", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+    // Control Web OFF
+    if (url.pathname === '/stop_web') {
+      const response = await fetch("https://orangepi.plc-web.online/web/off", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+
     // ------------------ PLC Control ------------------
     if (url.pathname === '/start_plc') {
       const response = await fetch("https://orangepi.plc-web.online/plc/on", {
