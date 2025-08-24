@@ -47,13 +47,13 @@ document.getElementById('light-stop-btn').addEventListener('click', async () => 
 
 // -------------------- Web Control --------------------
 document.getElementById('web-start-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/start_plc`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/start_web`, { method: 'POST' });
   const data = await res.json();
   updateIndicator("web-indicator", data.web === 1);
 });
 
 document.getElementById('web-stop-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/stop_plc`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/stop_web`, { method: 'POST' });
   const data = await res.json();
   updateIndicator("web-indicator", data.web === 1);
 });
