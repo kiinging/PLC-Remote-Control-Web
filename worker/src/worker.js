@@ -129,6 +129,34 @@ export default {
       });
     }
 
+    // ------------------ Mode Control ------------------
+    if (url.pathname === '/manual_mode') {
+      const response = await fetch("https://orangepi.plc-web.online/mode/manual", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+    if (url.pathname === '/auto_mode') {
+      const response = await fetch("https://orangepi.plc-web.online/mode/auto", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
+
+
+
+
+
     // ------------------ Temperature ------------------
     if (url.pathname === '/temp') {
       const response = await fetch("https://orangepi.plc-web.online/temp");

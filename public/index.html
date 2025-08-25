@@ -71,18 +71,19 @@
         </div>
 
         <!-- Mode Selection -->
-        <div class="mb-3 d-flex align-items-center justify-content-between">
+        <div class="mb-2 d-flex align-items-center justify-content-between">
           <small class="fw-bold me-2">Mode:</small>
-          <div class="btn-group btn-group-sm" role="group" aria-label="Mode toggle">
-            <input type="radio" class="btn-check" name="mode" id="manual-mode" autocomplete="off" checked>
-            <label class="btn btn-outline-primary btn-sm" for="manual-mode">
+          <div class="d-flex align-items-center gap-2">
+            <!-- Manual Button -->
+            <button id="manual-btn" class="btn btn-success btn-sm">
               <i class="bi bi-hand-index"></i> Manual
-            </label>
-
-            <input type="radio" class="btn-check" name="mode" id="auto-mode" autocomplete="off">
-            <label class="btn btn-outline-primary btn-sm" for="auto-mode">
+            </button>
+            <!-- Auto Button -->
+            <button id="auto-btn" class="btn btn-danger btn-sm">
               <i class="bi bi-cpu"></i> Auto
-            </label>
+            </button>
+            <!-- Indicator -->
+            <div id="mode-indicator" class="indicator"></div>
           </div>
         </div>
 
