@@ -37,14 +37,6 @@ export default {
     // ------------------ Get Light & plc Params ------------------
     if (url.pathname === '/light_plc_status') {
       const response = await fetch("https://orangepi.plc-web.online/light_plc_status");
-      return new Response(await response.text(), {  
-        status: response.status,
-        headers: corsHeaders,
-      });
-    }
-
-    if (url.pathname === '/light_plc_status') {
-      const response = await fetch("https://orangepi.plc-web.online/light_plc_status");
       const data = await response.text();
       return new Response(data, {
         status: response.status,
@@ -151,10 +143,6 @@ export default {
         headers: corsHeaders,
       });
     }
-
-
-
-
 
 
     // ------------------ Temperature ------------------
