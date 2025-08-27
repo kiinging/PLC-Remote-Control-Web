@@ -23,6 +23,8 @@ async function fetchInitialParams() {
     updateIndicator("light-indicator", statusData.light === 1);
     updateIndicator("plc-indicator", statusData.plc === 1);
     updateIndicator("web-indicator", statusData.plc === 1);
+    updateIndicator("mode-indicator", statusData.plc === 1);
+
 
     console.log("Fetched setpoint, PID and status:", { setData, pidData,  statusData });
   } catch (err) {
