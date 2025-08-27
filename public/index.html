@@ -88,14 +88,15 @@
           </div>
         </div>
 
-        <!-- Set Point & PID Parameters -->
-        <div class="mb-3">
+        
+        <!-- PID Setting Group -->
+        <div id="pid-setting-group" class="mb-3">
           <small class="fw-bold me-2">PID Setting:</small>   
           <form>
             <!-- Set Point -->
             <div class="input-group input-group-sm mb-2">
               <span class="input-group-text">Set Point (°C)</span>
-              <input type="number" id="setpoint" class="form-control" placeholder="e.g. 70"  max="80">
+              <input type="number" id="setpoint" class="form-control" placeholder="e.g. 70" max="80">
               <button id="send-setpoint-btn" type="button" class="btn btn-primary btn-sm">Send</button>
             </div>
             <div class="row g-2">
@@ -130,6 +131,19 @@
             </div>
           </form>
         </div>
+
+        <!-- Manual Setting Group -->
+        <div id="manual-setting-group" class="mb-3" style="display:none;">
+          <small class="fw-bold me-2">Manual Setting:</small>   
+          <form>
+            <div class="input-group input-group-sm mb-2">
+              <span class="input-group-text">MV (%)</span>
+              <input type="number" id="manual-mv" class="form-control" placeholder="0–100" min="0" max="100">
+              <button id="send-manual-btn" type="button" class="btn btn-primary btn-sm">Send</button>
+            </div>
+          </form>
+        </div>
+
 
         <!-- Temperature & Info -->
         <div class="temp-data">

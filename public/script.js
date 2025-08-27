@@ -88,13 +88,22 @@ document.getElementById("manual-btn").addEventListener("click", async () => {
   const res = await fetch(`${workerBase}/manual_mode`, { method: 'POST' });
   const data = await res.json();
   updateIndicator("mode-indicator", data.mode === 1);
+
+  // Show manual group, hide PID group
+  document.getElementById("pid-setting-group").style.display = "none";
+  document.getElementById("manual-setting-group").style.display = "block";
 });
 
 document.getElementById("auto-btn").addEventListener("click", async () => {
   const res = await fetch(`${workerBase}/auto_mode`, { method: 'POST' });
   const data = await res.json();
   updateIndicator("mode-indicator", data.mode === 1);
+
+  // Show PID group, hide manual group
+  document.getElementById("pid-setting-group").style.display = "block";
+  document.getElementById("manual-setting-group").style.display = "none";
 });
+
 
 
 // -------------------- Trend Chart --------------------
