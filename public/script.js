@@ -10,6 +10,11 @@ async function fetchInitialParams() {
     const setData = await setRes.json();
     document.getElementById("setpoint").value = setData.setpoint;
 
+    // Get MV
+    const mvRes = await fetch(`${workerBase}/mv_status`);
+    const mvData = await mvRes.json();
+    document.getElementById("mv").value = mvData.mv;
+
     // Get PID params
     const pidRes = await fetch(`${workerBase}/pid_status`);
     const pidData = await pidRes.json();
@@ -236,6 +241,22 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
     console.error("Error sending PID params:", err);
   }
 });
+
+// ---- Send MV values ----
+document.getElementById("send-manual-btn").addEventListener("click", async () => {
+  const mv = document.getElementById("mv").value;
+  try {
+    const res = await fetch(`${workerBase}/mv`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mv })
+    });
+    console.log("Manual MV update response:", await res.text());
+  } catch (err) {
+    console.error("Error sending manual MV:", err);
+  }
+});
+
 
 
 // -------------------- Auto Fetch Loops --------------------

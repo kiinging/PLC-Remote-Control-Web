@@ -201,7 +201,21 @@ export default {
         headers: corsHeaders,
       });
     }
-
+    
+    if (url.pathname === '/mv' && request.method === 'POST') {
+      const body = await request.json();
+      const response = await fetch("https://orangepi.plc-web.online/mv", {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+    
+    // If no route matched, return 404
     return new Response('Not Found', { status: 404 });
   }
 };
