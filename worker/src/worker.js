@@ -25,6 +25,15 @@ export default {
       });
     }
 
+    // ------------------ Get Current mv ------------------
+    if (url.pathname === '/mv_status') {
+      const response = await fetch("https://orangepi.plc-web.online/mv_status");
+      return new Response(await response.text(), {
+        status: response.status,
+        headers: corsHeaders,
+      });
+    }
+
     // ------------------ Get Current PID Params ------------------
     if (url.pathname === '/pid_status') {
       const response = await fetch("https://orangepi.plc-web.online/pid_status");

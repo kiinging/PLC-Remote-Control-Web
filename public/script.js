@@ -11,9 +11,9 @@ async function fetchInitialParams() {
     document.getElementById("setpoint").value = setData.setpoint;
 
     // Get MV
-    const mvRes = await fetch(`${workerBase}/mv_status`);
+    const mvRes = await fetch(`${workerBase}/mv_manual_status`);
     const mvData = await mvRes.json();
-    document.getElementById("mv").value = mvData.mv;
+    document.getElementById("mv_manual").value = mvData.mv_manual;
 
     // Get PID params
     const pidRes = await fetch(`${workerBase}/pid_status`);
@@ -242,14 +242,14 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
   }
 });
 
-// ---- Send MV values ----
+// ---- Send mv_manual values ----
 document.getElementById("send-manual-btn").addEventListener("click", async () => {
-  const mv = document.getElementById("mv").value;
+  const mv_manual = document.getElementById("mv_manual").value;
   try {
-    const res = await fetch(`${workerBase}/mv`, {
+    const res = await fetch(`${workerBase}/mv_manual`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mv })
+      body: JSON.stringify({ mv_manual })
     });
     console.log("Manual MV update response:", await res.text());
   } catch (err) {
