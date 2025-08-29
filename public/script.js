@@ -17,8 +17,8 @@ async function fetchInitialParams() {
     document.getElementById("ti").value = pidData.ti;
     document.getElementById("td").value = pidData.td;
 
-    //GET ligth & plc status
-    const statusRes = await fetch(`${workerBase}/light_plc_status`);
+    //GET control status
+    const statusRes = await fetch(`${workerBase}/control_status`);
     const statusData = await statusRes.json();
     updateIndicator("light-indicator", statusData.light === 1);
     updateIndicator("plc-indicator", statusData.plc === 1);
