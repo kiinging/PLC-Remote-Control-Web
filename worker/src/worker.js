@@ -26,8 +26,8 @@ export default {
     }
 
     // ------------------ Get Current mv ------------------
-    if (url.pathname === '/mv_status') {
-      const response = await fetch("https://orangepi.plc-web.online/mv_status");
+    if (url.pathname === '/mv_manual_status') {
+      const response = await fetch("https://orangepi.plc-web.online/mv_manual_status");
       return new Response(await response.text(), {
         status: response.status,
         headers: corsHeaders,
@@ -210,10 +210,10 @@ export default {
         headers: corsHeaders,
       });
     }
-    
-    if (url.pathname === '/mv' && request.method === 'POST') {
+
+    if (url.pathname === '/mv_manual' && request.method === 'POST') {
       const body = await request.json();
-      const response = await fetch("https://orangepi.plc-web.online/mv", {
+      const response = await fetch("https://orangepi.plc-web.online/mv_manual", {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
