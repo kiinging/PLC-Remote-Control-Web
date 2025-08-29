@@ -20,11 +20,20 @@ async function fetchInitialParams() {
     //GET control status
     const statusRes = await fetch(`${workerBase}/control_status`);
     const statusData = await statusRes.json();
+    
     updateIndicator("light-indicator", statusData.light === 1);
     updateIndicator("plc-indicator", statusData.plc === 1);
-    updateIndicator("web-indicator", statusData.plc === 1);
-    updateIndicator("mode-indicator", statusData.plc === 1);
+    updateIndicator("web-indicator", statusData.web === 1);
+    updateIndicator("mode-indicator", statusData.mode === 1);
 
+    // Show/hide PID vs Manual groups
+    if (statusData.mode === 0) {
+      document.getElementById("pid-setting-group").style.display = "none";
+      document.getElementById("manual-setting-group").style.display = "block";
+    } else {
+      document.getElementById("pid-setting-group").style.display = "block";
+      document.getElementById("manual-setting-group").style.display = "none";
+    }
 
     console.log("Fetched setpoint, PID and status:", { setData, pidData,  statusData });
   } catch (err) {
