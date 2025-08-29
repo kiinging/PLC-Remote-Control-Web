@@ -33,12 +33,11 @@ async function fetchInitialParams() {
 
     // Show/hide PID vs Manual groups
     if (statusData.mode === 0) {
-      document.getElementById("pid-setting-group").style.display = "block";
-      document.getElementById("manual-setting-group").style.display = "none";
+      document.getElementById("pid-setting-group").style.display = "none";     //to hide
+      document.getElementById("manual-setting-group").style.display = "block"; //to show
     } else {
-      document.getElementById("pid-setting-group").style.display = "none";
-      document.getElementById("manual-setting-group").style.display = "block";
-
+      document.getElementById("pid-setting-group").style.display = "block";   //to show
+      document.getElementById("manual-setting-group").style.display = "none";  //to hide
     }
 
     console.log("Fetched setpoint, PID and status:", { setData, pidData,  statusData });
