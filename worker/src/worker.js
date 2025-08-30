@@ -3,12 +3,18 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+const SESSION_COOKIE = "plc_session";
+
+// Helper to set a secure cookie
+function setCookie(value) {
+  return `plc_session=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+}
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    // Handle preflight OPTIONS request
+    // ---- Handle preflight OPTIONS ----
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
@@ -16,6 +22,66 @@ export default {
       });
     }
 
+    // ---- Login Route ----
+    if (url.pathname === "/login" && request.method === "POST") {
+      const { username, password } = await request.json();
+
+      const userData = await env.USERS.get(`user:${username}`);
+      if (!userData) {
+        return new Response("Invalid user", { status: 401 });
+      }
+
+      const { password: storedPass } = JSON.parse(userData);
+      if (storedPass !== password) {
+        return new Response("Invalid password", { status: 401 });
+      }
+
+      // Create session token
+      const token = crypto.randomUUID();
+      await env.USERS.put(`session:${token}`, username, { expirationTtl: 3600 }); // 1h expiry
+
+      return new Response("OK", {
+        headers: {
+          "Set-Cookie": setCookie(token),
+          ...corsHeaders,
+        }
+      });
+    }
+
+
+    // ------------------ CHECK SESSION ------------------
+    if (
+      url.pathname === "/" ||
+      url.pathname.startsWith("/control") ||
+      url.pathname.startsWith("/start") ||
+      url.pathname.startsWith("/stop") ||
+      url.pathname.startsWith("/setpoint") ||
+      url.pathname.startsWith("/pid") ||
+      url.pathname.startsWith("/mv_manual") ||
+      url.pathname.startsWith("/manual_mode") ||
+      url.pathname.startsWith("/auto_mode") ||
+      url.pathname.startsWith("/temp") ||
+      url.pathname.startsWith("/trend")
+    ) {
+      const cookie = request.headers.get("Cookie") || "";
+      const match = cookie.match(/plc_session=([^;]+)/);
+      if (!match) {
+        return fetch("https://plc-web.online/login.html");
+      }
+
+      const token = match[1];
+      const sessionUser = await env.USERS.get(`session:${token}`);
+      if (!sessionUser) {
+        return fetch("https://plc-web.online/login.html");
+      }
+
+      // ✅ Refresh session TTL (idle timeout reset)
+      await env.USERS.put(`session:${token}`, sessionUser, { expirationTtl: 3600 });
+    }
+
+
+    // ------------------ ROUTES ------------------
+    
     // ------------------ Get Current Setpoint ------------------
     if (url.pathname === '/setpoint_status') {
       const response = await fetch("https://orangepi.plc-web.online/setpoint_status");
