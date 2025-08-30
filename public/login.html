@@ -20,26 +20,8 @@
     <div id="error" class="text-danger small mt-2 text-center"></div>
   </div>
 
-<script src="script.js?v=12">
-document.getElementById("login-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-
-  const res = await fetch("/login", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({username, password}),
-    credentials: "include"   // ✅ this tells browser to save the session cookie
-  });
-
-  if (res.ok) {
-    window.location.href = "/index.html"; // ✅ redirect explicitly to index.html
-  } else {
-    document.getElementById("error").innerText = "Invalid credentials";
-  }
-});
-</script>
+<!-- ✅ only include the shared script -->
+<script src="script.js?v=14"></script>
 
 </body>
 </html>
