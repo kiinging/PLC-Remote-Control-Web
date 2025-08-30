@@ -20,7 +20,7 @@
     <div id="error" class="text-danger small mt-2 text-center"></div>
   </div>
 
-<script>
+<script src="script.js?v=8">
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const username = document.getElementById("username").value;
@@ -28,16 +28,18 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
 
   const res = await fetch("/login", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({username, password})
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({username, password}),
+    credentials: "include"   // ✅ this tells browser to save the session cookie
   });
 
   if (res.ok) {
-    window.location.href = "/"; // redirect to main page
+    window.location.href = "/index.html"; // ✅ redirect explicitly to index.html
   } else {
     document.getElementById("error").innerText = "Invalid credentials";
   }
 });
 </script>
+
 </body>
 </html>

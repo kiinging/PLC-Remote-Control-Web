@@ -6,24 +6,24 @@ let chart; // Global chart instance
 async function fetchInitialParams() {
   try {
     // Get setpoint
-    const setRes = await fetch(`${workerBase}/setpoint_status`);
+    const setRes = await fetch(`${workerBase}/setpoint_status`, { credentials: "include" });
     const setData = await setRes.json();
     document.getElementById("setpoint").value = setData.setpoint;
 
     // Get MV
-    const mvRes = await fetch(`${workerBase}/mv_manual_status`);
+    const mvRes = await fetch(`${workerBase}/mv_manual_status`, { credentials: "include" });
     const mvData = await mvRes.json();
     document.getElementById("mv_manual").value = mvData.mv_manual;
 
     // Get PID params
-    const pidRes = await fetch(`${workerBase}/pid_status`);
+    const pidRes = await fetch(`${workerBase}/pid_status`, { credentials: "include" });
     const pidData = await pidRes.json();
     document.getElementById("kp").value = pidData.kp;
     document.getElementById("ti").value = pidData.ti;
     document.getElementById("td").value = pidData.td;
 
-    //GET control status
-    const statusRes = await fetch(`${workerBase}/control_status`);
+    // GET control status
+    const statusRes = await fetch(`${workerBase}/control_status`, { credentials: "include" });
     const statusData = await statusRes.json();
 
     updateIndicator("light-indicator", statusData.light === 1);
@@ -40,7 +40,7 @@ async function fetchInitialParams() {
       document.getElementById("manual-setting-group").style.display = "none";  //to hide
     }
 
-    console.log("Fetched setpoint, PID and status:", { setData, pidData,  statusData });
+    console.log("Fetched setpoint, PID and status:", { setData, pidData, statusData });
   } catch (err) {
     console.error("Failed to fetch initial params:", err);
   }
@@ -51,44 +51,42 @@ fetchInitialParams();
 
 // -------------------- Light Control --------------------
 document.getElementById('light-start-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/start_light`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/start_light`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("light-indicator", data.light === 1);
 });
 
 document.getElementById('light-stop-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/stop_light`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/stop_light`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("light-indicator", data.light === 1);
 });
 
 // -------------------- Web Control --------------------
 document.getElementById('web-start-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/start_web`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/start_web`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("web-indicator", data.web === 1);
 });
 
 document.getElementById('web-stop-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/stop_web`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/stop_web`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("web-indicator", data.web === 1);
 });
 
-
 // -------------------- PLC Heater Control --------------------
 document.getElementById('plc-start-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/start_plc`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/start_plc`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("plc-indicator", data.plc === 1);
 });
 
 document.getElementById('plc-stop-btn').addEventListener('click', async () => {
-  const res = await fetch(`${workerBase}/stop_plc`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/stop_plc`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("plc-indicator", data.plc === 1);
 });
-
 
 // -------------------- Indicator Helper --------------------
 function updateIndicator(id, isOn) {
@@ -96,10 +94,9 @@ function updateIndicator(id, isOn) {
   el.style.backgroundColor = isOn ? "green" : "red";
 }
 
-
 // -------------------- Mode Control --------------------
 document.getElementById("manual-btn").addEventListener("click", async () => {
-  const res = await fetch(`${workerBase}/manual_mode`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/manual_mode`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("mode-indicator", data.mode === 1);
 
@@ -109,7 +106,7 @@ document.getElementById("manual-btn").addEventListener("click", async () => {
 });
 
 document.getElementById("auto-btn").addEventListener("click", async () => {
-  const res = await fetch(`${workerBase}/auto_mode`, { method: 'POST' });
+  const res = await fetch(`${workerBase}/auto_mode`, { method: 'POST', credentials: "include" });
   const data = await res.json();
   updateIndicator("mode-indicator", data.mode === 1);
 
@@ -118,12 +115,10 @@ document.getElementById("auto-btn").addEventListener("click", async () => {
   document.getElementById("manual-setting-group").style.display = "none";
 });
 
-
-
 // -------------------- Trend Chart --------------------
 async function fetchTrendData() {
   try {
-    const res = await fetch(`${workerBase}/trend`);
+    const res = await fetch(`${workerBase}/trend`, { credentials: "include" });
     const trend = await res.json();
 
     const labels = trend.map(d => d.time);
@@ -197,7 +192,7 @@ async function fetchTrendData() {
 // -------------------- Temperature Fetch --------------------
 async function fetchTemperature() {
   try {
-    const res = await fetch(`${workerBase}/temp`);
+    const res = await fetch(`${workerBase}/temp`, { credentials: "include" });
     const data = await res.json();
 
     document.getElementById('rtd-temp').innerText = data.rtd_temp.toFixed(2);
@@ -215,6 +210,7 @@ document.getElementById("send-setpoint-btn").addEventListener("click", async () 
     const res = await fetch(`${workerBase}/setpoint`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ setpoint })
     });
     console.log("Setpoint update response:", await res.text());
@@ -233,6 +229,7 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
     const res = await fetch(`${workerBase}/pid`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ kp, ti, td })
     });
     console.log("PID update response:", await res.text());
@@ -248,6 +245,7 @@ document.getElementById("send-manual-btn").addEventListener("click", async () =>
     const res = await fetch(`${workerBase}/mv_manual`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ mv_manual })
     });
     console.log("Manual MV update response:", await res.text());
@@ -255,8 +253,6 @@ document.getElementById("send-manual-btn").addEventListener("click", async () =>
     console.error("Error sending manual MV:", err);
   }
 });
-
-
 
 // -------------------- Auto Fetch Loops --------------------
 setInterval(fetchTemperature, 3000);
