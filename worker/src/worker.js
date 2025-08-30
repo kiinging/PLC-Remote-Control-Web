@@ -1,7 +1,8 @@
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://plc-web.online',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  "Access-Control-Allow-Origin": "https://plc-web.online", // ✅ restrict to your domain
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Credentials": "true" // ✅ allow cookies/sessions
 };
 const SESSION_COOKIE = "plc_session";
 
@@ -9,9 +10,22 @@ function setCookie(value) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`;
 }
 
+// ✅ Helper: always attach CORS
+function withCors(body, status = 200, extraHeaders = {}) {
+  return new Response(body, {
+    status,
+    headers: { ...corsHeaders, ...extraHeaders }
+  });
+}
+
 // Serve static assets from /public
 async function serveStaticAsset(env, path) {
-  return env.ASSETS.fetch(new Request(`https://fake/${path}`));
+  const res = await env.ASSETS.fetch(new Request(`https://fake/${path}`));
+  // ✅ clone with CORS
+  return new Response(res.body, {
+    status: res.status,
+    headers: { ...Object.fromEntries(res.headers), ...corsHeaders }
+  });
 }
 
 export default {
@@ -19,25 +33,23 @@ export default {
     const url = new URL(request.url);
 
     // ---- OPTIONS (CORS preflight) ----
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders });
+    if (request.method === "OPTIONS") {
+      return withCors(null, 204);
     }
 
     // ---- LOGIN ----
     if (url.pathname === "/login" && request.method === "POST") {
       const { username, password } = await request.json();
       const userData = await env.USERS.get(`user:${username}`);
-      if (!userData) return new Response("Invalid user", { status: 401 });
+      if (!userData) return withCors("Invalid user", 401);
 
       const { password: storedPass } = JSON.parse(userData);
-      if (storedPass !== password) return new Response("Invalid password", { status: 401 });
+      if (storedPass !== password) return withCors("Invalid password", 401);
 
       const token = crypto.randomUUID();
       await env.USERS.put(`session:${token}`, username, { expirationTtl: 3600 });
 
-      return new Response("OK", {
-        headers: { "Set-Cookie": setCookie(token), ...corsHeaders },
-      });
+      return withCors("OK", 200, { "Set-Cookie": setCookie(token) });
     }
 
     // ---- ROOT PAGE ----
@@ -80,215 +92,129 @@ export default {
     }
 
     // ---- Your PLC routes below ----  
-    // ------------------ Get Current Setpoint ------------------
-    if (url.pathname === '/setpoint_status') {
+    if (url.pathname === "/setpoint_status") {
       const response = await fetch("https://orangepi.plc-web.online/setpoint_status");
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
 
-    // ------------------ Get Current mv ------------------
-    if (url.pathname === '/mv_manual_status') {
+    if (url.pathname === "/mv_manual_status") {
       const response = await fetch("https://orangepi.plc-web.online/mv_manual_status");
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
 
-    // ------------------ Get Current PID Params ------------------
-    if (url.pathname === '/pid_status') {
+    if (url.pathname === "/pid_status") {
       const response = await fetch("https://orangepi.plc-web.online/pid_status");
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
 
-    // ------------------ Get Control Status Params ------------------
-    if (url.pathname === '/control_status') {
+    if (url.pathname === "/control_status") {
       const response = await fetch("https://orangepi.plc-web.online/control_status");
-      const data = await response.text();
-      return new Response(data, {
-        status: response.status,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+      return withCors(await response.text(), response.status, {
+        "Content-Type": "application/json"
       });
     }
-
 
     // ------------------ Light Control ------------------
-    if (url.pathname === '/start_light') {
-      const response = await fetch("https://orangepi.plc-web.online/light/on", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/start_light") {
+      const response = await fetch("https://orangepi.plc-web.online/light/on", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
 
-    // Control light OFF
-    if (url.pathname === '/stop_light') {
-      const response = await fetch("https://orangepi.plc-web.online/light/off", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/stop_light") {
+      const response = await fetch("https://orangepi.plc-web.online/light/off", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
 
     // ------------------ Web Control ------------------
-    // Control Web ON
-    if (url.pathname === '/start_web') {
-      const response = await fetch("https://orangepi.plc-web.online/web/on", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/start_web") {
+      const response = await fetch("https://orangepi.plc-web.online/web/on", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
 
-    // Control Web OFF
-    if (url.pathname === '/stop_web') {
-      const response = await fetch("https://orangepi.plc-web.online/web/off", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/stop_web") {
+      const response = await fetch("https://orangepi.plc-web.online/web/off", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
-
 
     // ------------------ PLC Control ------------------
-    if (url.pathname === '/start_plc') {
-      const response = await fetch("https://orangepi.plc-web.online/plc/on", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/start_plc") {
+      const response = await fetch("https://orangepi.plc-web.online/plc/on", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
 
-    if (url.pathname === '/stop_plc') {
-      const response = await fetch("https://orangepi.plc-web.online/plc/off", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/stop_plc") {
+      const response = await fetch("https://orangepi.plc-web.online/plc/off", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
 
     // ------------------ Mode Control ------------------
-    if (url.pathname === '/manual_mode') {
-      const response = await fetch("https://orangepi.plc-web.online/mode/manual", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/manual_mode") {
+      const response = await fetch("https://orangepi.plc-web.online/mode/manual", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
 
-    if (url.pathname === '/auto_mode') {
-      const response = await fetch("https://orangepi.plc-web.online/mode/auto", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+    if (url.pathname === "/auto_mode") {
+      const response = await fetch("https://orangepi.plc-web.online/mode/auto", { method: "POST" });
+      return withCors(await response.text(), response.status);
     }
-
 
     // ------------------ Temperature ------------------
-    if (url.pathname === '/temp') {
+    if (url.pathname === "/temp") {
       const response = await fetch("https://orangepi.plc-web.online/temp");
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
 
     // ------------------ Video Feed ------------------
-    // Get Video video_feed (supports ?t=timestamp)
-    if (url.pathname === '/video_feed') {
+    if (url.pathname === "/video_feed") {
       const backendSnapshotUrl = "https://cam.plc-web.online/video_feed";
-      const response = await fetch(backendSnapshotUrl); // we don't forward `?t`, just use it to bypass browser cache
+      const response = await fetch(backendSnapshotUrl);
       return new Response(response.body, {
         status: response.status,
-        headers: { 'Content-Type': 'multipart/x-mixed-replace; boundary=frame' },
+        headers: { 
+          ...corsHeaders,
+          "Content-Type": "multipart/x-mixed-replace; boundary=frame"
+        }
       });
     }
 
     // ------------------ Trend Data ------------------
-    // Get trend data (PV + MV time series)
-    if (url.pathname === '/trend') {
+    if (url.pathname === "/trend") {
       const response = await fetch("https://orangepi.plc-web.online/trend");
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
 
     // ------------------ PID & Setpoint ------------------
-    if (url.pathname === '/setpoint' && request.method === 'POST') {
+    if (url.pathname === "/setpoint" && request.method === "POST") {
       const body = await request.json();
       const response = await fetch("https://orangepi.plc-web.online/setpoint", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
       });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
 
-    if (url.pathname === '/pid' && request.method === 'POST') {
+    if (url.pathname === "/pid" && request.method === "POST") {
       const body = await request.json();
       const response = await fetch("https://orangepi.plc-web.online/pid", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
       });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
 
-    if (url.pathname === '/mv_manual' && request.method === 'POST') {
+    if (url.pathname === "/mv_manual" && request.method === "POST") {
       const body = await request.json();
       const response = await fetch("https://orangepi.plc-web.online/mv_manual", {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
       });
-      return new Response(await response.text(), {
-        status: response.status,
-        headers: corsHeaders,
-      });
+      return withCors(await response.text(), response.status);
     }
-    
-    // If no route matched, return 404
-    return new Response('Not Found', { status: 404 });
+
+    // ---- Default 404 ----
+    return withCors("Not Found", 404);
   }
 };
