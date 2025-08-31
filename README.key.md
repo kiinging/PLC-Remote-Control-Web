@@ -35,7 +35,7 @@ Add a student with a username and password:
 ```sh
 wrangler kv key put user:student1 '{"password":"1234"}' --binding=USERS
 wrangler kv key put user:student1 --binding=USERS --value='{"password":"1234"}'
-
+wrangler kv key put user:student1 --binding=USERS --value='{"password":"1234"}' --remote
 ```
 
 * **Key:** `user:student1`
