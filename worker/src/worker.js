@@ -38,7 +38,7 @@ export default {
     }
 
     // ---- LOGIN ----
-    if (url.pathname === "/login" && request.method === "POST") {
+    if (url.pathname === "/api/login" && request.method === "POST") {
       const { username, password } = await request.json();
       const userData = await env.USERS.get(`user:${username}`);
       if (!userData) return withCors("Invalid user", 401);
