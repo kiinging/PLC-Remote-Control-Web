@@ -7,9 +7,10 @@ preview_urls = false
 [observability]
 enabled = true
 
-[site]
-bucket = "../public"
-
 [[kv_namespaces]]
 binding = "USERS"
 id = "a4a892b79a7f4c39ae316269ed919e6e"
+
+[[assets]]
+binding = "ASSETS"
+path = "../public"   # ⬅️ This attaches your /public folder to env.ASSETS

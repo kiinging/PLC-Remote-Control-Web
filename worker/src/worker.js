@@ -21,7 +21,12 @@ function withCors(body, status = 200, extraHeaders = {}) {
 // Serve static assets from /public
 async function serveStaticAsset(env, path) {
   const res = await env.ASSETS.fetch(new Request(`https://fake/${path}`));
-  // ✅ clone with CORS
+
+  if (!res || res.status === 404) {
+    return new Response("Not Found", { status: 404, headers: corsHeaders });
+  }
+
+  // ✅ Preserve original headers but inject CORS
   return new Response(res.body, {
     status: res.status,
     headers: { ...Object.fromEntries(res.headers), ...corsHeaders }
@@ -29,9 +34,8 @@ async function serveStaticAsset(env, path) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
-
     // ---- OPTIONS (CORS preflight) ----
     if (request.method === "OPTIONS") {
       return withCors(null, 204);
@@ -222,7 +226,7 @@ export default {
       return withCors(await response.text(), response.status);
     }
 
-    // ---- Default 404 ----
-    return withCors("Not Found", 404);
+        // ---- Default: serve static or 404 ----
+    return serveStaticAsset(env, url.pathname.slice(1) || "index.html");
   }
 };
