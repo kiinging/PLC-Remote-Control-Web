@@ -57,14 +57,22 @@ export default {
       const cookie = request.headers.get("Cookie") || "";
       const match = cookie.match(/plc_session=([^;]+)/);
 
-      if (!match) return serveStaticAsset(env, "login.html");
+      if (!match) {
+        // ⬅️ redirect to login.html if no session
+        return Response.redirect("https://plc-web.online/login.html", 302);
+      }
 
       const token = match[1];
       const sessionUser = await env.USERS.get(`session:${token}`);
-      if (!sessionUser) return serveStaticAsset(env, "login.html");
+      if (!sessionUser) {
+        // ⬅️ redirect to login.html if invalid session
+        return Response.redirect("https://plc-web.online/login.html", 302);
+      }
 
+      // valid session → serve index.html
       return serveStaticAsset(env, "index.html");
     }
+
 
     // ---- SESSION CHECK for PLC routes ----
     if (
