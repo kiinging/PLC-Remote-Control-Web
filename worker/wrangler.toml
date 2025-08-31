@@ -7,6 +7,9 @@ preview_urls = false
 [observability]
 enabled = true
 
+[site]
+bucket = "../public"
+
 [[kv_namespaces]]
 binding = "USERS"
 id = "a4a892b79a7f4c39ae316269ed919e6e"
