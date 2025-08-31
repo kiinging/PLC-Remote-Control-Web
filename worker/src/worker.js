@@ -36,6 +36,7 @@ async function serveStaticAsset(env, path) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    console.log("REQ", url.pathname, request.method);  // 👈 add here
     // ---- OPTIONS (CORS preflight) ----
     if (request.method === "OPTIONS") {
       return withCors(null, 204);
@@ -43,6 +44,8 @@ export default {
 
     // ---- LOGIN ----
     if (url.pathname === "/api/login" && request.method === "POST") {
+      console.log("HIT", url.pathname, request.method);
+
       const { username, password } = await request.json();
       const userData = await env.USERS.get(`user:${username}`);
       if (!userData) return withCors("Invalid user", 401);
