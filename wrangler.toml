@@ -1,10 +1,13 @@
 name = "cloud-worker"
 main = "worker/src/worker.js"
 compatibility_date = "2025-03-23"
-
-[assets]
-directory = "public"
+workers_dev = true
+route = "plc-web.online/*"
 
 [[kv_namespaces]]
 binding = "USERS"
 id = "a4a892b79a7f4c39ae316269ed919e6e"
+
+[[assets]]
+binding = "ASSETS"
+path = "public"
