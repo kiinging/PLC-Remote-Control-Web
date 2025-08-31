@@ -8,6 +8,5 @@ route = "plc-web.online/*"
 binding = "USERS"
 id = "a4a892b79a7f4c39ae316269ed919e6e"
 
-[[assets]]
-binding = "ASSETS"
+[assets]
 path = "public"
