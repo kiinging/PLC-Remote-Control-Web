@@ -2,8 +2,9 @@ name = "cloud-worker"
 main = "worker/src/worker.js"
 compatibility_date = "2025-03-23"
 
-[assets]
-directory = "public"
+[[assets]]
+binding = "ASSETS"
+path = "public"
 
 [[kv_namespaces]]
 binding = "USERS"

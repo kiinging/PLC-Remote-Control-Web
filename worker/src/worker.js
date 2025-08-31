@@ -20,7 +20,9 @@ function withCors(body, status = 200, extraHeaders = {}) {
 
 // Serve static assets from /public
 async function serveStaticAsset(env, path) {
-  const res = await env.ASSETS.fetch(new Request(`https://fake/${path}`));
+  const res = await env.ASSETS.fetch(request);
+  
+
 
   if (!res || res.status === 404) {
     return new Response("Not Found", { status: 404, headers: corsHeaders });
