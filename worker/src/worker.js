@@ -39,7 +39,10 @@ export default {
       console.log("HIT", url.pathname, request.method);
 
       const { username, password } = await request.json();
-      const userData = await env.USERS.get(`user:${username}`);
+      const userData = await env.USERS.get(`${username}`);
+
+      console.log("LOGIN attempt:", username, password, "stored:", storedPass); // 🔍 debug
+
       if (!userData) return withCors("Invalid user", 401);
 
       const { password: storedPass } = JSON.parse(userData);
