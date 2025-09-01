@@ -6,7 +6,7 @@ route = "plc-web.online/*"
 
 [[kv_namespaces]]
 binding = "USERS"
-id = "a4a892b79a7f4c39ae316269ed919e6e"
+id = "53b5cca7e0e34c34978581f25ed8d010"
 
 [assets]
 directory = "public"
