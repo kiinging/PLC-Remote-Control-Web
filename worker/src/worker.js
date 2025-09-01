@@ -4,6 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
   "Access-Control-Allow-Credentials": "true" // ✅ allow cookies/sessions
 };
+
 const SESSION_COOKIE = "plc_session";
 
 function setCookie(value) {
@@ -18,30 +19,19 @@ function withCors(body, status = 200, extraHeaders = {}) {
   });
 }
 
-// Serve static assets from /public
-async function serveStaticAsset(env, path) {
-  const res = await env.ASSETS.fetch(request);
-  
-
-
-  if (!res || res.status === 404) {
-    return new Response("Not Found", { status: 404, headers: corsHeaders });
-  }
-
-  // ✅ Preserve original headers but inject CORS
-  return new Response(res.body, {
-    status: res.status,
-    headers: { ...Object.fromEntries(res.headers), ...corsHeaders }
-  });
-}
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    console.log("REQ", url.pathname, request.method);  // 👈 add here
+    console.log("REQ", url.pathname, request.method);
+
     // ---- OPTIONS (CORS preflight) ----
     if (request.method === "OPTIONS") {
       return withCors(null, 204);
+    }
+
+    // ---- PING ----
+    if (url.pathname === "/ping") {
+      return new Response("pong from worker");
     }
 
     // ---- LOGIN ----
@@ -67,21 +57,18 @@ export default {
       const match = cookie.match(/plc_session=([^;]+)/);
 
       if (!match) {
-        // ⬅️ redirect to login.html if no session
         return Response.redirect("https://plc-web.online/login.html", 302);
       }
 
       const token = match[1];
       const sessionUser = await env.USERS.get(`session:${token}`);
       if (!sessionUser) {
-        // ⬅️ redirect to login.html if invalid session
         return Response.redirect("https://plc-web.online/login.html", 302);
       }
 
       // valid session → serve index.html
-      return serveStaticAsset(env, "index.html");
+      return env.ASSETS.fetch(request);
     }
-
 
     // ---- SESSION CHECK for PLC routes ----
     if (
@@ -98,17 +85,17 @@ export default {
     ) {
       const cookie = request.headers.get("Cookie") || "";
       const match = cookie.match(/plc_session=([^;]+)/);
-      if (!match) return serveStaticAsset(env, "login.html");
+      if (!match) return env.ASSETS.fetch(new Request("https://plc-web.online/login.html"));
 
       const token = match[1];
       const sessionUser = await env.USERS.get(`session:${token}`);
-      if (!sessionUser) return serveStaticAsset(env, "login.html");
+      if (!sessionUser) return env.ASSETS.fetch(new Request("https://plc-web.online/login.html"));
 
       // Refresh session TTL
       await env.USERS.put(`session:${token}`, sessionUser, { expirationTtl: 3600 });
     }
 
-    // ---- Your PLC routes below ----  
+    // ---- Proxy routes ----
     if (url.pathname === "/setpoint_status") {
       const response = await fetch("https://orangepi.plc-web.online/setpoint_status");
       return withCors(await response.text(), response.status);
@@ -231,7 +218,7 @@ export default {
       return withCors(await response.text(), response.status);
     }
 
-        // ---- Default: serve static or 404 ----
-    return serveStaticAsset(env, url.pathname.slice(1) || "index.html");
+    // ---- Default: serve static files ----
+    return env.ASSETS.fetch(request);
   }
 };

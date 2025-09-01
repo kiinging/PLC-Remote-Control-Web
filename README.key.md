@@ -12,42 +12,8 @@ Check available namespaces:
 wrangler kv namespace list
 ```
 
-Example output:
-
-```json
-[
-  {
-    "id": "a4a892b79a7f4c39ae316269ed919e6e",
-    "title": "USERS",
-    "supports_url_encoding": true
-  }
-]
-```
 
 ✅ Make sure the namespace `USERS` exists.
-
----
-
-## 👤 2. Add a Student User
-
-Add a student with a username and password:
-
-```sh
-wrangler kv key put user:student1 '{"password":"1234"}' --binding=USERS
-wrangler kv key put user:student1 --binding=USERS --value='{"password":"1234"}'
-wrangler kv key put user:student1 --binding=USERS --value='{"password":"1234"}' --remote
-wrangler kv:key put user:student1 --binding=USERS --value='{"password":"1234"}' --remote
-
-```
-
-* **Key:** `user:student1`
-* **Value:** `{"password":"1234"}`
-
----
-
-## 📋 3. List All Students
-
-Show all stored usernames:
 
 ```sh
 wrangler kv key list --binding=USERS
