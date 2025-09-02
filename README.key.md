@@ -111,28 +111,33 @@ Then deploy and hit the endpoint to read the value.
 - Navigate to your Worker → KV → `USERS` namespace
 - Use the UI to view/edit keys
 
-#### 3. **Use the KV REST API (Advanced)**
-If you want to script it externally (e.g., for provisioning), use:
 
-```bash
-curl -X GET \
-  "https://api.cloudflare.com/client/v4/accounts/<ACCOUNT_ID>/storage/kv/namespaces/<NAMESPACE_ID>/values/user:student1" \
-  -H "Authorization: Bearer <API_TOKEN>"
+
+Exactly 👍 — you’ve got it right.
+
+* In **`script-login.js`**, the line
+
+```js
+window.location.href = "/dashboard.html";
 ```
 
-You’ll need:
-- Your **account ID**
-- Your **namespace ID**
-- A **token with KV read permissions**
+is what performs the redirect after a successful login. ✅
 
----
+So:
 
-### 🧭 Recommendation for Your Workflow
+* The **Worker** (`worker.js`) only needs to check cookies/sessions when someone requests `/` or `/dashboard.html`.
+* The **frontend** (`script-login.js`) is the one that actually redirects the browser to `/dashboard.html` after login.
 
-Since you're building a student-proof remote control system, I’d suggest:
-- Wrap KV access in your Worker logic
-- Expose a secure endpoint for credential lookup or provisioning
-- Document the flow so students never touch Wrangler CLI
+That’s why your login flow works like this:
 
-If you want, I can help scaffold a `GET /user/:id` endpoint or a simple admin dashboard for managing KV entries. You're already thinking reproducibly — this is just the next layer.
+1. User goes to `https://plc-web.online/` → Worker checks for session cookie.
+
+   * If **not logged in**, Worker redirects to `/login.html`.
+   * If **logged in**, Worker serves `/dashboard.html`.
+
+2. On `/login.html`, when they submit the form, `script-login.js` → calls `/api/login`.
+
+   * If login fails → shows error text.
+   * If login succeeds → browser is redirected to `/dashboard.html`.
+
 

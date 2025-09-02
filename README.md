@@ -74,7 +74,7 @@ This project provides a **web-based PID heater control and monitoring system** f
 ```
 👤 PLC-Remote-Control-Web
  ├── 👤 public/         # Static assets (if needed)
- │   ├── 📄 index.html   # Frontend UI
+ │   ├── 📄 dashboard.html   # Frontend UI
  │   ├── 📄 styles.css   # CSS for styling
  │   └── 📄 script.js    # JavaScript logic
  │
@@ -96,7 +96,7 @@ This project provides a **web-based PID heater control and monitoring system** f
 ### 1️⃣ **Set Up Cloudflare Pages (Frontend)**
 
 1. Go to [Cloudflare Pages](https://pages.cloudflare.com/)
-2. Connect your **GitHub repository** containing `index.html`, `script.js`, and other static files
+2. Connect your **GitHub repository** containing `dashboard.html`, `script.js`, and other static files
 3. Cloudflare Pages will automatically build and deploy your frontend
 4. **Updating the frontend:**
 

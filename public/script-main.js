@@ -1,6 +1,72 @@
 const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
-
 let chart; // Global chart instance
+
+// -------------------- Session Check --------------------
+async function checkSession() {
+  try {
+    const res = await fetch("/api/session", { credentials: "include" });
+    if (!res.ok) {
+      // Not logged in → redirect to login
+      window.location.href = "/login.html";
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Session check failed:", err);
+    window.location.href = "/login.html";
+    return false;
+  }
+}
+
+// -------------------- Dashboard Init --------------------
+document.addEventListener("DOMContentLoaded", async () => {
+  const valid = await checkSession();
+  if (!valid) return; // stop here if no session
+
+  // ✅ only runs if user is logged in:
+  fetchInitialParams();
+  fetchTemperature();
+  fetchTrendData();
+
+  setInterval(fetchTemperature, 3000);
+  setInterval(fetchTrendData, 5000);
+});
+
+// -------------------- Logout Timer --------------------
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.location.pathname === "/dashboard.html") {
+    const LOGOUT_AFTER = 2 * 60 * 60 * 1000; // 2 hours
+    let logoutTimer;
+
+    function resetLogoutTimer() {
+      clearTimeout(logoutTimer);
+      logoutTimer = setTimeout(async () => {
+        await fetch("/api/logout", { method: "POST", credentials: "include" });
+        alert("Your session expired. Please log in again.");
+        window.location.href = "/login.html";
+      }, LOGOUT_AFTER);
+    }
+
+    // ✅ Reset timer on user activity
+    ["click", "keydown", "mousemove", "scroll"].forEach(evt =>
+      document.addEventListener(evt, resetLogoutTimer)
+    );
+
+    // ✅ Start the first timer
+    resetLogoutTimer();
+
+    // ✅ Poll session every 5 minutes (server-side expiry check)
+    setInterval(async () => {
+      const res = await fetch("/api/session", { credentials: "include" });
+      if (!res.ok) {
+        alert("Your session expired. Please log in again.");
+        window.location.href = "/login.html";
+      }
+    }, 5 * 60 * 1000);
+  }
+});
+
+
 
 // -------------------- Fetch Initial Setpoint & PID --------------------
 async function fetchInitialParams() {
@@ -38,7 +104,6 @@ async function fetchInitialParams() {
     console.error("Failed to fetch initial params:", err);
   }
 }
-fetchInitialParams();
 
 // -------------------- Indicator Helper --------------------
 function updateIndicator(id, isOn) {
@@ -199,9 +264,3 @@ document.getElementById("send-manual-btn").addEventListener("click", async () =>
     console.error("Error sending manual MV:", err);
   }
 });
-
-// -------------------- Auto Fetch Loops --------------------
-setInterval(fetchTemperature, 3000);
-fetchTemperature();
-setInterval(fetchTrendData, 5000);
-fetchTrendData();

@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       if (res.ok) {
-        window.location.href = "/index.html"; // ✅ redirect to control panel
+        window.location.href = "/dashboard.html"; // ✅ redirect to control panel
       } else {
         document.getElementById("error").innerText = "Invalid credentials";
       }
