@@ -57,21 +57,35 @@ export default {
       const token = crypto.randomUUID();
       await env.USERS.put(`session:${token}`, username, { expirationTtl: 7200 });
 
-      return withCors("OK", 200, { "Set-Cookie": setCookie(token) });
+      return withCors(JSON.stringify({ ok: true }), 200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": setCookie(token)
+      });
+
     }
 
     // ---- LOGOUT
     if (url.pathname === "/api/logout" && request.method === "POST") {
       const cookie = request.headers.get("Cookie") || "";
       const match = cookie.match(/plc_session=([^;]+)/);
+
       if (match) {
         const token = match[1];
-        await env.USERS.delete(`session:${token}`);
+        try {
+          await env.USERS.delete(`session:${token}`);
+        } catch (err) {
+          console.error("KV delete failed:", err);
+        }
       }
-      return withCors("Logged out", 200, {
-        "Set-Cookie": `${SESSION_COOKIE}=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Lax`
+
+      return withCors(JSON.stringify({ ok: true }), 200, {
+        "Content-Type": "application/json",
+        "Set-Cookie": "plc_session=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Lax"
       });
     }
+
+
+
 
     // ---- SESSION STATUS (optional, for frontend AJAX check)
     if (url.pathname === "/api/session" && request.method === "GET") {
@@ -86,7 +100,7 @@ export default {
       if (!session) {
         return Response.redirect("https://plc-web.online/login.html", 302);
       }
-      return env.ASSETS.fetch(new Request("https://plc-web.online/dashboard.html"));
+      return env.ASSETS.fetch(new Request("/dashboard.html", request));
     }
 
     // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
