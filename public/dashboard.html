@@ -147,6 +147,59 @@
           </form>
         </div>
 
+        <!-- Tune Setting Group -->
+        <div id="tune-setting-group" class="mb-3" style="display:none;">
+          <small class="fw-bold me-2">Autotune PID:</small>   
+          <div class="alert alert-warning p-2 small">
+            Autotuning is supported to automatically find the optimum PID constants. 
+            The system will cycle the output between limits to identify the best settings.
+          </div>
+
+          <!-- Setpoint -->
+          <div class="input-group input-group-sm mb-2">
+            <span class="input-group-text">Set Point (°C)</span>
+            <input type="number" id="tune-setpoint" class="form-control" placeholder="70" max="80">
+            <button id="send-tune-setpoint-btn" type="button" class="btn btn-primary btn-sm">Confirm</button>
+          </div>
+
+          <!-- Start/Stop buttons -->
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <button id="start-tune-btn" class="btn btn-warning btn-sm">
+              <i class="bi bi-play-fill"></i> Start Tune
+            </button>
+            <button id="stop-tune-btn" class="btn btn-secondary btn-sm">
+              <i class="bi bi-stop-fill"></i> Stop Tune
+            </button>
+            <div id="tune-indicator" class="indicator"></div>
+          </div>
+
+          <!-- Results -->
+          <div class="tune-results mt-2">
+            <h6 class="small fw-bold">Autotune Results</h6>
+            <div class="row g-2">
+              <div class="col-4">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">Kp</span>
+                  <input type="number" id="tune-kp" class="form-control" readonly>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">Ti</span>
+                  <input type="number" id="tune-ti" class="form-control" readonly>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="input-group input-group-sm">
+                  <span class="input-group-text">Td</span>
+                  <input type="number" id="tune-td" class="form-control" readonly>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
 
         <!-- Temperature & Info -->
         <div class="temp-data">

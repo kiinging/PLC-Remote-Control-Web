@@ -164,6 +164,11 @@ export default {
       return withCors(await r.text(), r.status);
     }
 
+    if (url.pathname === "/tune_mode") {
+      const r = await fetch("https://orangepi.plc-web.online/mode/tune", { method: "POST" });
+      return withCors(await r.text(), r.status);
+    }
+
     if (url.pathname === "/temp") {
       const r = await fetch("https://orangepi.plc-web.online/temp");
       return withCors(await r.text(), r.status);

@@ -91,14 +91,26 @@ async function fetchInitialParams() {
     updateIndicator("light-indicator", statusData.light === 1);
     updateIndicator("plc-indicator", statusData.plc === 1);
     updateIndicator("web-indicator", statusData.web === 1);
-    updateIndicator("mode-indicator", statusData.mode === 1);
+    updateModeIndicator(statusData.mode);  //red/yellow/green for manual/auto/tune
 
-    if (statusData.mode === 0) {
+    // Show/hide setting groups based on mode
+    // Show/hide setting groups based on mode
+    if (statusData.mode === 0) {              // Manual
       document.getElementById("pid-setting-group").style.display = "none";
       document.getElementById("manual-setting-group").style.display = "block";
-    } else {
+      document.getElementById("tune-setting-group").style.display = "none";
+    } else if (statusData.mode === 1) {       // Auto
       document.getElementById("pid-setting-group").style.display = "block";
       document.getElementById("manual-setting-group").style.display = "none";
+      document.getElementById("tune-setting-group").style.display = "none";
+    } else if (statusData.mode === 2) {       // Tune
+      document.getElementById("pid-setting-group").style.display = "none";
+      document.getElementById("manual-setting-group").style.display = "none";
+      document.getElementById("tune-setting-group").style.display = "block";
+    } else {                                  // Fallback (unknown mode)
+      document.getElementById("pid-setting-group").style.display = "block";
+      document.getElementById("manual-setting-group").style.display = "none";
+      document.getElementById("tune-setting-group").style.display = "none";
     }
   } catch (err) {
     console.error("Failed to fetch initial params:", err);
@@ -110,6 +122,20 @@ function updateIndicator(id, isOn) {
   const el = document.getElementById(id);
   el.style.backgroundColor = isOn ? "green" : "red";
 }
+
+function updateModeIndicator(mode) {
+  const el = document.getElementById("mode-indicator");
+  if (mode === 0) {        // Manual
+    el.style.backgroundColor = "red";
+  } else if (mode === 1) { // Auto
+    el.style.backgroundColor = "green";
+  } else if (mode === 2) { // Tune
+    el.style.backgroundColor = "yellow";
+  } else {
+    el.style.backgroundColor = "gray"; // fallback / unknown
+  }
+}
+
 
 // -------------------- Light Control --------------------
 document.getElementById('light-start-btn').addEventListener('click', async () => {
@@ -151,17 +177,28 @@ document.getElementById('plc-stop-btn').addEventListener('click', async () => {
 document.getElementById("manual-btn").addEventListener("click", async () => {
   const res = await fetch(`${workerBase}/manual_mode`, { method: 'POST', credentials: "include" });
   const data = await res.json();
-  updateIndicator("mode-indicator", data.mode === 1);
+  updateModeIndicator(data.mode);
   document.getElementById("pid-setting-group").style.display = "none";
   document.getElementById("manual-setting-group").style.display = "block";
+  document.getElementById("tune-setting-group").style.display = "none";
 });
 document.getElementById("auto-btn").addEventListener("click", async () => {
   const res = await fetch(`${workerBase}/auto_mode`, { method: 'POST', credentials: "include" });
   const data = await res.json();
-  updateIndicator("mode-indicator", data.mode === 1);
+  updateModeIndicator(data.mode);
   document.getElementById("pid-setting-group").style.display = "block";
   document.getElementById("manual-setting-group").style.display = "none";
+  document.getElementById("tune-setting-group").style.display = "none";
 });
+document.getElementById("tune-btn").addEventListener("click", async () => {
+  const res = await fetch(`${workerBase}/tune_mode`, { method: 'POST', credentials: "include" });
+  const data = await res.json();
+  updateModeIndicator(data.mode);
+  document.getElementById("pid-setting-group").style.display = "none";
+  document.getElementById("manual-setting-group").style.display = "none";
+  document.getElementById("tune-setting-group").style.display = "block";
+});
+
 
 // -------------------- Trend Chart --------------------
 async function fetchTrendData() {
