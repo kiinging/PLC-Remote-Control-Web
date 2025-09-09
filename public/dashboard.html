@@ -159,7 +159,7 @@
           <div class="input-group input-group-sm mb-2">
             <span class="input-group-text">Set Point (°C)</span>
             <input type="number" id="tune-setpoint" class="form-control" placeholder="70" max="80">
-            <button id="send-tune-setpoint-btn" type="button" class="btn btn-primary btn-sm">Confirm</button>
+            <button id="send-tune-setpoint-btn" type="button" class="btn btn-primary btn-sm">Send</button>
           </div>
 
           <!-- Start/Stop buttons -->
@@ -221,6 +221,12 @@
           <div class="video-container">
             <img id="video_feed" src="https://cloud-worker.wongkiinging.workers.dev/video_feed" alt="Live MJPEG Feed">
           </div>
+          <p class="small text-muted">
+            Observe the three physical LED indicators (Left is of the HMI): 
+            <span class="text-success fw-bold">Green</span> = PLC control, 
+            <span class="text-warning fw-bold">Yellow</span> = Manual control, 
+            <span class="text-danger fw-bold">Red</span> = Auto control (blinking when in Autotune).
+          </p>
         </div>
       </div>
 
