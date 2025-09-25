@@ -272,7 +272,7 @@ document.getElementById("send-setpoint-btn").addEventListener("click", async () 
 
 // ---- Send PID Parameters ----
 document.getElementById("send-pid-btn").addEventListener("click", async () => {
-  const kp = document.getElementById("kp").value;
+  const kp = document.getElementById("pb").value;
   const ti = document.getElementById("ti").value;
   const td = document.getElementById("td").value;
   try {
@@ -280,7 +280,7 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ kp, ti, td })
+      body: JSON.stringify({ pb, ti, td })
     });
   } catch (err) {
     console.error("Error sending PID params:", err);
