@@ -81,7 +81,7 @@ async function fetchInitialParams() {
 
     const pidRes = await fetch(`${workerBase}/pid_status`, { credentials: "include" });
     const pidData = await pidRes.json();
-    document.getElementById("kp").value = pidData.kp;
+    document.getElementById("pb").value = pidData.pb;
     document.getElementById("ti").value = pidData.ti;
     document.getElementById("td").value = pidData.td;
 
@@ -272,7 +272,7 @@ document.getElementById("send-setpoint-btn").addEventListener("click", async () 
 
 // ---- Send PID Parameters ----
 document.getElementById("send-pid-btn").addEventListener("click", async () => {
-  const kp = document.getElementById("pb").value;
+  const pb = document.getElementById("pb").value;
   const ti = document.getElementById("ti").value;
   const td = document.getElementById("td").value;
   try {
