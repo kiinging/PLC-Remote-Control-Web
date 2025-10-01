@@ -1,5 +1,9 @@
 const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
 let chart; // Global chart instance
+let xAxisWindow = 450; // default number of samples
+const xAxisStep = 90;  // step per click
+const xAxisMin = 10;   // minimum samples
+const xAxisMax = 450; // max samples to display
 
 // -------------------- Session Check --------------------
 async function checkSession() {
@@ -242,6 +246,19 @@ async function fetchTrendData() {
     console.error("Failed to fetch trend data:", error);
   }
 }
+
+// -------------------- X-Axis Control --------------------
+document.getElementById("increase-xaxis").addEventListener("click", () => {
+  xAxisWindow += xAxisStep;
+  if (xAxisWindow > xAxisMax) xAxisWindow = xAxisMax;
+  fetchTrendData();
+});
+
+document.getElementById("decrease-xaxis").addEventListener("click", () => {
+  xAxisWindow -= xAxisStep;
+  if (xAxisWindow < xAxisMin) xAxisWindow = xAxisMin;
+  fetchTrendData();
+});
 
 // -------------------- Temperature Fetch --------------------
 async function fetchTemperature() {
