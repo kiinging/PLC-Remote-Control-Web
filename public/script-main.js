@@ -217,8 +217,8 @@ async function fetchTrendData() {
         data: {
           labels,
           datasets: [
-            { label: 'PV (°C)', data: pvData, borderColor: 'red', yAxisID: 'y', tension: 0.3 },
-            { label: 'MV (%)', data: mvData, borderColor: 'blue', yAxisID: 'y1', tension: 0.3 }
+            { label: 'MV (%)', data: mvData, borderColor: 'blue', yAxisID: 'y', tension: 0.3 },
+            { label: 'PV (°C)', data: pvData, borderColor: 'red', yAxisID: 'y1', tension: 0.3 }            
           ]
         },
         options: {
@@ -227,8 +227,8 @@ async function fetchTrendData() {
           interaction: { mode: 'index', intersect: false },
           stacked: false,
           scales: {
-            y: { type: 'linear', position: 'left', min: 0, max: 150, ticks: { stepSize: 25 }, title: { display: true, text: 'PV (°C)' }},
-            y1: { type: 'linear', position: 'right', min: 0, max: 100, ticks: { stepSize: 20 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'MV (%)' }}
+            y: { type: 'linear', position: 'left', min: 0, max: 100, ticks: { stepSize: 20 }, title: { display: true, text: 'PV (°C)' }},
+            y1: { type: 'linear', position: 'right', min: 20, max: 150, ticks: { stepSize: 10 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'MV (%)' }}
           }
         }
       });
