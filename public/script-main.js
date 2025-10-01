@@ -227,15 +227,15 @@ async function fetchTrendData() {
           interaction: { mode: 'index', intersect: false },
           stacked: false,
           scales: {
-            y: { type: 'linear', position: 'left', min: 0, max: 100, ticks: { stepSize: 20 }, title: { display: true, text: 'PV (°C)' }},
-            y1: { type: 'linear', position: 'right', min: 20, max: 150, ticks: { stepSize: 10 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'MV (%)' }}
+            y: { type: 'linear', position: 'left', min: 0, max: 100, ticks: { stepSize: 20 }, title: { display: true, text: 'MV (%)' }},
+            y1: { type: 'linear', position: 'right', min: 20, max: 150, ticks: { stepSize: 10 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'PV (°C)' }}
           }
         }
       });
     } else {
       chart.data.labels = labels;
-      chart.data.datasets[0].data = pvData;
-      chart.data.datasets[1].data = mvData;
+      chart.data.datasets[0].data = mvData ;
+      chart.data.datasets[1].data = pvData;
       chart.update();
     }
   } catch (error) {
