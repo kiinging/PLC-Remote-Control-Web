@@ -205,10 +205,55 @@ document.getElementById("tune-btn").addEventListener("click", async () => {
 
 
 // -------------------- Trend Chart --------------------
+// async function fetchTrendData() {
+//   try {
+//     const res = await fetch(`${workerBase}/trend`, { credentials: "include" });
+//     const trend = await res.json();
+
+//     const labels = trend.map(d => d.time);
+//     const pvData = trend.map(d => d.pv);
+//     const mvData = trend.map(d => d.mv);
+
+//     if (!chart) {
+//       const ctx = document.getElementById('trendChart').getContext('2d');
+//       chart = new Chart(ctx, {
+//         type: 'line',
+//         data: {
+//           labels,
+//           datasets: [
+//             { label: 'MV (%)', data: mvData, borderColor: 'blue', yAxisID: 'y', tension: 0.3 },
+//             { label: 'PV (°C)', data: pvData, borderColor: 'red', yAxisID: 'y1', tension: 0.3 }            
+//           ]
+//         },
+//         options: {
+//           responsive: true,
+//           maintainAspectRatio: false,
+//           interaction: { mode: 'index', intersect: false },
+//           stacked: false,
+//           scales: {
+//             y: { type: 'linear', position: 'left', min: 0, max: 100, ticks: { stepSize: 20 }, title: { display: true, text: 'MV (%)' }},
+//             y1: { type: 'linear', position: 'right', min: 20, max: 150, ticks: { stepSize: 10 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'PV (°C)' }}
+//           }
+//         }
+//       });
+//     } else {
+//       chart.data.labels = labels;
+//       chart.data.datasets[0].data = mvData ;
+//       chart.data.datasets[1].data = pvData;
+//       chart.update();
+//     }
+//   } catch (error) {
+//     console.error("Failed to fetch trend data:", error);
+//   }
+// }
 async function fetchTrendData() {
   try {
     const res = await fetch(`${workerBase}/trend`, { credentials: "include" });
-    const trend = await res.json();
+    let trend = await res.json();
+
+    // Ensure we don't go out of bounds
+    const startIdx = trend.length > xAxisWindow ? trend.length - xAxisWindow : 0;
+    trend = trend.slice(startIdx);
 
     const labels = trend.map(d => d.time);
     const pvData = trend.map(d => d.pv);
@@ -246,6 +291,7 @@ async function fetchTrendData() {
     console.error("Failed to fetch trend data:", error);
   }
 }
+
 
 // -------------------- X-Axis Control --------------------
 document.getElementById("increase-xaxis").addEventListener("click", () => {
