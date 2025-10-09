@@ -212,7 +212,7 @@ export default {
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
-
+ 
     if (url.pathname === "/mv_manual" && request.method === "POST") {
       const body = await request.json();
       const r = await fetch("https://orangepi.plc-web.online/mv_manual", {
