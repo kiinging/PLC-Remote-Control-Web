@@ -121,7 +121,7 @@ async function fetchInitialParams() {
   }
 }
 
-// -------------------- Indicator Helper --------------------
+//--------------------- Indicator Helper --------------------
 function updateIndicator(id, isOn) {
   const el = document.getElementById(id);
   el.style.backgroundColor = isOn ? "green" : "red";
@@ -205,47 +205,6 @@ document.getElementById("tune-btn").addEventListener("click", async () => {
 
 
 // -------------------- Trend Chart --------------------
-// async function fetchTrendData() {
-//   try {
-//     const res = await fetch(`${workerBase}/trend`, { credentials: "include" });
-//     const trend = await res.json();
-
-//     const labels = trend.map(d => d.time);
-//     const pvData = trend.map(d => d.pv);
-//     const mvData = trend.map(d => d.mv);
-
-//     if (!chart) {
-//       const ctx = document.getElementById('trendChart').getContext('2d');
-//       chart = new Chart(ctx, {
-//         type: 'line',
-//         data: {
-//           labels,
-//           datasets: [
-//             { label: 'MV (%)', data: mvData, borderColor: 'blue', yAxisID: 'y', tension: 0.3 },
-//             { label: 'PV (°C)', data: pvData, borderColor: 'red', yAxisID: 'y1', tension: 0.3 }            
-//           ]
-//         },
-//         options: {
-//           responsive: true,
-//           maintainAspectRatio: false,
-//           interaction: { mode: 'index', intersect: false },
-//           stacked: false,
-//           scales: {
-//             y: { type: 'linear', position: 'left', min: 0, max: 100, ticks: { stepSize: 20 }, title: { display: true, text: 'MV (%)' }},
-//             y1: { type: 'linear', position: 'right', min: 20, max: 150, ticks: { stepSize: 10 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'PV (°C)' }}
-//           }
-//         }
-//       });
-//     } else {
-//       chart.data.labels = labels;
-//       chart.data.datasets[0].data = mvData ;
-//       chart.data.datasets[1].data = pvData;
-//       chart.update();
-//     }
-//   } catch (error) {
-//     console.error("Failed to fetch trend data:", error);
-//   }
-// }
 async function fetchTrendData() {
   try {
     const res = await fetch(`${workerBase}/trend`, { credentials: "include" });
@@ -338,6 +297,11 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
   const pb = document.getElementById("pb").value;
   const ti = document.getElementById("ti").value;
   const td = document.getElementById("td").value;
+
+  // Turn button red to indicate sending
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-danger");
+
   try {
     await fetch(`${workerBase}/pid`, {
       method: "POST",
@@ -345,8 +309,31 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
       credentials: "include",
       body: JSON.stringify({ pb, ti, td })
     });
+
+    // Start polling every 500ms to check acknowledgement
+    const interval = setInterval(async () => {
+      try {
+        const resp = await fetch(`${workerBase}/pid-status`);
+        const data = await resp.json();
+
+        if (data.acknowledged) {
+          // PID reached PLC, stop polling
+          clearInterval(interval);
+
+          // Turn button blue again
+          button.classList.remove("btn-danger");
+          button.classList.add("btn-primary");
+        }
+      } catch (err) {
+        console.error("Error checking PID status:", err);
+      }
+    }, 500);
+
   } catch (err) {
     console.error("Error sending PID params:", err);
+    // Optional: reset button to blue on failure
+    button.classList.remove("btn-danger");
+    button.classList.add("btn-primary");
   }
 });
 
