@@ -294,6 +294,7 @@ document.getElementById("send-setpoint-btn").addEventListener("click", async () 
 
 // ---- Send PID Parameters ----
 document.getElementById("send-pid-btn").addEventListener("click", async () => {
+  const button = event.currentTarget; // ✅ get the clicked button
   const pb = document.getElementById("pb").value;
   const ti = document.getElementById("ti").value;
   const td = document.getElementById("td").value;
