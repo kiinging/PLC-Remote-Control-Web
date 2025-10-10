@@ -114,8 +114,8 @@ export default {
       return withCors(await r.text(), r.status);
     }
 
-    if (url.pathname === "/pid_status") {
-      const r = await fetch("https://orangepi.plc-web.online/pid_status");
+    if (url.pathname === "/pid_params") {
+      const r = await fetch("https://orangepi.plc-web.online/pid_params");
       return withCors(await r.text(), r.status);
     }
 
@@ -207,8 +207,8 @@ export default {
       return withCors(await r.text(), r.status);
     }
 
-    if (url.pathname === "/pid-status" && request.method === "GET") {
-      const r = await fetch("https://orangepi.plc-web.online/pid-status");
+    if (url.pathname === "/pid_ack" && request.method === "GET") {
+      const r = await fetch("https://orangepi.plc-web.online/pid_ack");
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 

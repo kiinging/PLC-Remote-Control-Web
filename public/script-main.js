@@ -83,7 +83,7 @@ async function fetchInitialParams() {
     const mvData = await mvRes.json();
     document.getElementById("mv_manual").value = mvData.mv_manual;
 
-    const pidRes = await fetch(`${workerBase}/pid_status`, { credentials: "include" });
+    const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
     const pidData = await pidRes.json();
     document.getElementById("pb").value = pidData.pb;
     document.getElementById("ti").value = pidData.ti;
@@ -314,7 +314,7 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
     // Start polling every 500ms to check acknowledgement
     const interval = setInterval(async () => {
       try {
-        const resp = await fetch(`${workerBase}/pid-status`);
+        const resp = await fetch(`${workerBase}/pid_ack`);
         const data = await resp.json();
 
         if (data.acknowledged) {
