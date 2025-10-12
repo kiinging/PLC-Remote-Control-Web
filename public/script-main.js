@@ -278,22 +278,53 @@ async function fetchTemperature() {
 }
 
 // ---- Send Setpoint ----
-document.getElementById("send-setpoint-btn").addEventListener("click", async () => {
+// ---- Send Setpoint with Acknowledgement ----
+document.getElementById("send-setpoint-btn").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
   const setpoint = document.getElementById("setpoint").value;
+
+  // Turn button red to indicate sending
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-danger");
+
   try {
+    // Send new setpoint to worker
     await fetch(`${workerBase}/setpoint`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ setpoint })
     });
+
+    // Poll for acknowledgement every 500 ms
+    const interval = setInterval(async () => {
+      try {
+        const resp = await fetch(`${workerBase}/setpoint_ack`, { credentials: "include" });
+        const data = await resp.json();
+
+        if (data.acknowledged) {
+          // Setpoint successfully updated at PLC
+          clearInterval(interval);
+
+          // Turn button blue again
+          button.classList.remove("btn-danger");
+          button.classList.add("btn-primary");
+        }
+      } catch (err) {
+        console.error("Error checking setpoint status:", err);
+      }
+    }, 500);
+
   } catch (err) {
     console.error("Error sending setpoint:", err);
+    // Reset to blue if failed
+    button.classList.remove("btn-danger");
+    button.classList.add("btn-primary");
   }
 });
 
 // ---- Send PID Parameters ----
-document.getElementById("send-pid-btn").addEventListener("click", async () => {
+document.getElementById("send-pid-btn").addEventListener("click", async (event) => {
   const button = event.currentTarget; // ✅ get the clicked button
   const pb = document.getElementById("pb").value;
   const ti = document.getElementById("ti").value;
@@ -320,7 +351,6 @@ document.getElementById("send-pid-btn").addEventListener("click", async () => {
         if (data.acknowledged) {
           // PID reached PLC, stop polling
           clearInterval(interval);
-
           // Turn button blue again
           button.classList.remove("btn-danger");
           button.classList.add("btn-primary");

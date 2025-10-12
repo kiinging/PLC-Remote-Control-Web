@@ -197,6 +197,12 @@ export default {
       return withCors(await r.text(), r.status);
     }
 
+    // ✅ NEW: Setpoint Acknowledgement
+    if (url.pathname === "/setpoint_ack" && request.method === "GET") {
+      const r = await fetch("https://orangepi.plc-web.online/setpoint_ack");
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
+    }
+
     if (url.pathname === "/pid" && request.method === "POST") {
       const body = await request.json();
       const r = await fetch("https://orangepi.plc-web.online/pid", {
