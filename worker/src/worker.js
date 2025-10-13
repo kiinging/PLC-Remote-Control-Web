@@ -229,6 +229,12 @@ export default {
       return withCors(await r.text(), r.status);
     }
 
+    // ---- Manual MV Acknowledgement ----
+    if (url.pathname === "/mv_manual_ack") {
+      const r = await fetch("https://orangepi.plc-web.online/mv_manual_ack");
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
+    }
+
     // ---- Default: serve static files
     return env.ASSETS.fetch(request);
   }

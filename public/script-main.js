@@ -368,17 +368,48 @@ document.getElementById("send-pid-btn").addEventListener("click", async (event) 
   }
 });
 
-// ---- Send mv_manual ----
-document.getElementById("send-manual-btn").addEventListener("click", async () => {
+// ---- Send Manual MV with Handshake ----
+document.getElementById("send-manual-btn").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
   const mv_manual = document.getElementById("mv_manual").value;
+
+  // Turn button red to indicate sending
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-danger");
+
   try {
+    // Send manual MV to worker
     await fetch(`${workerBase}/mv_manual`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ mv_manual })
     });
+
+    // Poll the worker every 500 ms to check for acknowledgement
+    const interval = setInterval(async () => {
+      try {
+        const resp = await fetch(`${workerBase}/mv_manual_ack`, { credentials: "include" });
+        const data = await resp.json();
+
+        if (data.acknowledged) {
+          // Acknowledged by PLC → stop polling
+          clearInterval(interval);
+
+          // Turn button back to blue
+          button.classList.remove("btn-danger");
+          button.classList.add("btn-primary");
+        }
+      } catch (err) {
+        console.error("Error checking mv_manual status:", err);
+      }
+    }, 500);
+
   } catch (err) {
     console.error("Error sending manual MV:", err);
+    // Reset to blue if failed
+    button.classList.remove("btn-danger");
+    button.classList.add("btn-primary");
   }
 });
+
