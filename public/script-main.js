@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   setInterval(fetchTemperature, 3000);
   setInterval(fetchTrendData, 5000);
+  setInterval(updateTuneIndicator, 4000);
 });
 
 // -------------------- Logout Timer --------------------
@@ -116,6 +117,16 @@ async function fetchInitialParams() {
       document.getElementById("manual-setting-group").style.display = "none";
       document.getElementById("tune-setting-group").style.display = "none";
     }
+
+        // ✅ Tune indicator initial check (add here)
+    try {
+      const tuneRes = await fetch(`${workerBase}/tune_status`, { credentials: "include" });
+      const tuneData = await tuneRes.json();
+      updateIndicator("tune-indicator", tuneData.tuning_active);
+    } catch (err) {
+      console.warn("Tune indicator fetch failed:", err);
+    }
+
   } catch (err) {
     console.error("Failed to fetch initial params:", err);
   }
@@ -137,6 +148,16 @@ function updateModeIndicator(mode) {
     el.style.backgroundColor = "yellow";
   } else {
     el.style.backgroundColor = "gray"; // fallback / unknown
+  }
+}
+
+async function updateTuneIndicator() {
+  try {
+    const res = await fetch(`${workerBase}/tune_status`, { credentials: "include" });
+    const data = await res.json();
+    updateIndicator("tune-indicator", data.tuning_active);
+  } catch (err) {
+    console.error("Failed to fetch tune indicator:", err);
   }
 }
 
