@@ -235,6 +235,43 @@ export default {
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
+    // -------------------- Auto-Tune Related Routes --------------------
+    // ---- Send Tune Setpoint ----
+    if (url.pathname === "/tune_setpoint" && request.method === "POST") {
+      const body = await request.json();
+      const r = await fetch("https://orangepi.plc-web.online/tune_setpoint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      return withCors(await r.text(), r.status);
+    }
+
+    // ---- Tune Setpoint Acknowledgement ----
+    if (url.pathname === "/tune_setpoint_ack" && request.method === "GET") {
+      const r = await fetch("https://orangepi.plc-web.online/tune_setpoint_ack");
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
+    }
+
+    // ---- Start Auto-Tune ----
+    if (url.pathname === "/tune_start" && request.method === "POST") {
+      const r = await fetch("https://orangepi.plc-web.online/tune_start", { method: "POST" });
+      return withCors(await r.text(), r.status);
+    }
+
+    // ---- Stop Auto-Tune ----
+    if (url.pathname === "/tune_stop" && request.method === "POST") {
+      const r = await fetch("https://orangepi.plc-web.online/tune_stop", { method: "POST" });
+      return withCors(await r.text(), r.status);
+    }
+
+    // ---- Poll Auto-Tune Status ----
+    if (url.pathname === "/tune_status" && request.method === "GET") {
+      const r = await fetch("https://orangepi.plc-web.online/tune_status");
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
+    }
+
+
     // ---- Default: serve static files
     return env.ASSETS.fetch(request);
   }

@@ -277,7 +277,6 @@ async function fetchTemperature() {
   }
 }
 
-// ---- Send Setpoint ----
 // ---- Send Setpoint with Acknowledgement ----
 document.getElementById("send-setpoint-btn").addEventListener("click", async (event) => {
   const button = event.currentTarget;
@@ -413,3 +412,102 @@ document.getElementById("send-manual-btn").addEventListener("click", async (even
   }
 });
 
+// ---- Send Tune Setpoint ----
+document.getElementById("send-tune-setpoint-btn").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const tune_setpoint = document.getElementById("tune_setpoint").value;
+
+  // Turn button red to indicate sending
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-danger");
+
+  try {
+    await fetch(`${workerBase}/tune_setpoint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ tune_setpoint })
+    });
+
+    // Poll for ack
+    const interval = setInterval(async () => {
+      try {
+        const resp = await fetch(`${workerBase}/tune_setpoint_ack`, { credentials: "include" });
+        const data = await resp.json();
+
+        if (data.acknowledged) {
+          clearInterval(interval);
+          button.classList.remove("btn-danger");
+          button.classList.add("btn-primary");
+        }
+      } catch (err) {
+        console.error("Error checking tune_setpoint ack:", err);
+      }
+    }, 500);
+
+  } catch (err) {
+    console.error("Error sending tune setpoint:", err);
+    button.classList.remove("btn-danger");
+    button.classList.add("btn-primary");
+  }
+});
+
+let tuneStatusInterval = null;
+
+// ---- Start Auto-Tune ----
+document.getElementById("start-tune-btn").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+
+  // Immediately send start command
+  try {
+    await fetch(`${workerBase}/tune_start`, {
+      method: "POST",
+      credentials: "include"
+    });
+
+    // Turn indicator to green
+    updateIndicator("tune-indicator", true);
+
+    // Stop any previous polling
+    if (tuneStatusInterval) clearInterval(tuneStatusInterval);
+
+    // Start periodic polling to check tuning status
+    tuneStatusInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${workerBase}/tune_status`, { credentials: "include" });
+        const data = await res.json();
+
+        if (data.tuning_active) {
+          updateIndicator("tune-indicator", true);   // green during tuning
+        } else {
+          updateIndicator("tune-indicator", false);  // red after done
+          clearInterval(tuneStatusInterval);
+
+          // ✅ Optional: refresh PID values automatically after tune
+          const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
+          const pidData = await pidRes.json();
+          document.getElementById("pb").value = pidData.pb;
+          document.getElementById("ti").value = pidData.ti;
+          document.getElementById("td").value = pidData.td;
+        }
+
+      } catch (err) {
+        console.error("Error fetching tune status:", err);
+      }
+    }, 5000); // poll every 5s
+
+  } catch (err) {
+    console.error("Error starting tuning:", err);
+  }
+});
+
+// ---- Stop Auto-Tune ----
+document.getElementById("stop-tune-btn").addEventListener("click", async () => {
+  try {
+    await fetch(`${workerBase}/tune_stop`, { method: "POST", credentials: "include" });
+    clearInterval(tuneStatusInterval);
+    updateIndicator("tune-indicator", false); // red = stopped
+  } catch (err) {
+    console.error("Error stopping tuning:", err);
+  }
+});
