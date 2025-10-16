@@ -75,22 +75,6 @@
             <div id="mode-indicator" class="indicator"></div>
           </div>
         </div>
-
-        <!-- PLC Heater Control -->
-        <div class="mb-2 d-flex align-items-center justify-content-between">
-          <small class="fw-bold me-2">PLC Control:</small>     
-          <!-- Buttons + Indicator in one row -->
-          <div class="d-flex align-items-center gap-2">
-            <button id="plc-start-btn" class="btn btn-success btn-sm">
-              <i class="bi bi-play-fill"></i> Start
-            </button>
-            <button id="plc-stop-btn" class="btn btn-danger btn-sm">
-              <i class="bi bi-stop-fill"></i> Stop
-            </button>
-            <!-- Round Indicator -->
-            <div id="plc-indicator" class="indicator"></div>
-          </div>
-        </div>
                
         <!-- PID Setting Group -->
         <div id="pid-setting-group" class="mb-3">
@@ -124,13 +108,12 @@
                   <input type="number" id="td" class="form-control" placeholder="0.0">
                 </div>
               </div>
-            </div>
-            
-            <!-- One button for all PID params -->
-            <div class="mt-2 text-end">
-              <button id="send-pid-btn" type="button" class="btn btn-primary btn-sm">
-                <i class="bi bi-save"></i> Send PID
-              </button>
+              <!-- Send PID button -->
+              <div class="col-3 text-end">
+                <button id="send-pid-btn" type="button" class="btn btn-primary btn-sm w-100">
+                  <i class="bi bi-save"></i> Send PID
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -199,7 +182,21 @@
           </div>
         </div>
 
-
+        <!-- PLC Heater Control -->
+        <div class="mb-2 d-flex align-items-center justify-content-between">
+          <small class="fw-bold me-2">PLC Control:</small>     
+          <!-- Buttons + Indicator in one row -->
+          <div class="d-flex align-items-center gap-2">
+            <button id="plc-start-btn" class="btn btn-success btn-sm">
+              <i class="bi bi-play-fill"></i> Start
+            </button>
+            <button id="plc-stop-btn" class="btn btn-danger btn-sm">
+              <i class="bi bi-stop-fill"></i> Stop
+            </button>
+            <!-- Round Indicator -->
+            <div id="plc-indicator" class="indicator"></div>
+          </div>
+        </div>
 
         <!-- Temperature & Info -->
         <div class="temp-data">
@@ -242,11 +239,10 @@
             <button id="increase-xaxis" class="btn btn-secondary btn-sm">+ X-axis</button>
           </div>
         </div>
-      </div>
-</div>
-      
-    </div>
-  </div>
-<script src="script-main.js?v36"></script>
+      </div> <!-- .panel -->
+      </div> <!-- .container-fluid -->
+    </div> <!-- .row -->
+  </div> <!-- .container -->
+<script src="script-main.js?v37"></script>
 </body>
 </html>
