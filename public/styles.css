@@ -121,3 +121,14 @@ body.dark-mode .chart-container {
   background-color: #2d2d2d;
   border-radius: 0.5rem;
 }
+
+/* Remove number input arrows in all major browsers */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
