@@ -1,7 +1,7 @@
 const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
 let chart; // Global chart instance
-let xAxisWindow = 450; // default number of samples
-const xAxisStep = 90;  // step per click
+let xAxisWindow = 360; // default number of samples
+const xAxisStep = 60;  // step per click
 const xAxisMin = 10;   // minimum samples
 const xAxisMax = 450; // max samples to display
 
