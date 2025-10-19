@@ -86,32 +86,18 @@
               <input type="number" id="setpoint" class="form-control" placeholder="e.g. 70" max="80">
               <button id="send-setpoint-btn" type="button" class="btn btn-primary btn-sm">Send</button>
             </div>
-            <div class="row g-2">
-              <!-- PB(%) -->
-              <div class="col-4">
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text">PB (%)</span>
-                  <input type="number" id="pb" class="form-control" placeholder="0.0"  max="99">
-                </div>
-              </div>
-              <!-- Ti -->
-              <div class="col-4">
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text">Ti</span>
-                  <input type="number" id="ti" class="form-control" placeholder="0.0"  max="999">
-                </div>
-              </div>
-              <!-- Td -->
-              <div class="col-4">
-                <div class="input-group input-group-sm">
-                  <span class="input-group-text">Td</span>
-                  <input type="number" id="td" class="form-control" placeholder="0.0"  max="99">
-                </div>
-              </div>
-              <!-- Send PID button -->
-              <div class="col-3 text-end">
-                <button id="send-pid-btn" type="button" class="btn btn-primary btn-sm">Send</button>
-              </div>
+               <!-- PID Parameters -->
+            <div class="input-group input-group-sm">
+              <span class="input-group-text">PB (%)</span>
+              <input type="number" id="pb" class="form-control" placeholder="0" max="99" style="width:70px;">
+              
+              <span class="input-group-text">Ti</span>
+              <input type="number" id="ti" class="form-control" placeholder="0" max="999" style="width:90px;">
+              
+              <span class="input-group-text">Td</span>
+              <input type="number" id="td" class="form-control" placeholder="0" max="99" style="width:70px;">
+              
+              <button id="send-pid-btn" type="button" class="btn btn-primary btn-sm">Send</button>
             </div>
           </form>
         </div>
