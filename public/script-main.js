@@ -432,11 +432,13 @@ document.getElementById("send-manual-btn").addEventListener("click", async (even
     button.classList.add("btn-primary");
   }
 });
-
+//////////////////////////////////////////
+//------ AUTO TUNING CONTROLS ------
+/////////////////////////////////////////
 // ---- Send Tune Setpoint ----
 document.getElementById("send-tune-setpoint-btn").addEventListener("click", async (event) => {
   const button = event.currentTarget;
-  const tune_setpoint = document.getElementById("tune_setpoint").value;
+  const tune_setpoint = document.getElementById("tune-setpoint").value;
 
   // Turn button red to indicate sending
   button.classList.remove("btn-primary");
@@ -451,7 +453,16 @@ document.getElementById("send-tune-setpoint-btn").addEventListener("click", asyn
     });
 
     // Poll for ack
+    const maxPollTime = 10000; // 10 seconds
+    const startTime = Date.now();
     const interval = setInterval(async () => {
+      if (Date.now() - startTime > maxPollTime) {
+        clearInterval(interval);
+        button.classList.remove("btn-danger");
+        button.classList.add("btn-primary");
+        console.warn("Timeout waiting for tune_setpoint ack");
+        return;
+      }
       try {
         const resp = await fetch(`${workerBase}/tune_setpoint_ack`, { credentials: "include" });
         const data = await resp.json();
@@ -479,6 +490,22 @@ let tuneStatusInterval = null;
 document.getElementById("start-tune-btn").addEventListener("click", async (event) => {
   const button = event.currentTarget;
 
+  // ✅ Ignore if a tune is already running
+  if (button.dataset.tuning === "true") {
+    console.warn("Tuning already active — ignoring second click.");
+    return;
+  }
+
+  // Mark as active immediately (prevents re-click)
+  button.dataset.tuning = "true";
+  button.disabled = true;
+
+  // Defensive cleanup: clear any leftover interval just in case
+  if (tuneStatusInterval) {
+    clearInterval(tuneStatusInterval);
+    tuneStatusInterval = null;
+  }
+
   // Immediately send start command
   try {
     await fetch(`${workerBase}/tune_start`, {
@@ -489,9 +516,6 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
     // Turn indicator to green
     updateIndicator("tune-indicator", true);
 
-    // Stop any previous polling
-    if (tuneStatusInterval) clearInterval(tuneStatusInterval);
-
     // Start periodic polling to check tuning status
     tuneStatusInterval = setInterval(async () => {
       try {
@@ -501,8 +525,14 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
         if (data.tuning_active) {
           updateIndicator("tune-indicator", true);   // green during tuning
         } else {
-          updateIndicator("tune-indicator", false);  // red after done
+          // ✅ tuning completed
+          updateIndicator("tune-indicator", false);
           clearInterval(tuneStatusInterval);
+          tuneStatusInterval = null;
+
+          // Allow new tune to start
+          button.dataset.tuning = "false";
+          button.disabled = false;
 
           // ✅ Optional: refresh PID values automatically after tune
           const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
@@ -519,6 +549,9 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
 
   } catch (err) {
     console.error("Error starting tuning:", err);
+    // Reset so user can retry
+    button.dataset.tuning = "false";
+    button.disabled = false;
   }
 });
 
@@ -526,8 +559,19 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
 document.getElementById("stop-tune-btn").addEventListener("click", async () => {
   try {
     await fetch(`${workerBase}/tune_stop`, { method: "POST", credentials: "include" });
-    clearInterval(tuneStatusInterval);
-    updateIndicator("tune-indicator", false); // red = stopped
+
+    // Stop polling and reset state
+    if (tuneStatusInterval) {
+      clearInterval(tuneStatusInterval);
+      tuneStatusInterval = null;
+    }
+
+    updateIndicator("tune-indicator", false);
+    const startBtn = document.getElementById("start-tune-btn");
+    startBtn.dataset.tuning = "false";
+    startBtn.disabled = false;
+
+    console.log("Tuning stopped by operator.");
   } catch (err) {
     console.error("Error stopping tuning:", err);
   }

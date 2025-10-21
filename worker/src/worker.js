@@ -194,7 +194,7 @@ export default {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-      return withCors(await r.text(), r.status);
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
     // ✅ NEW: Setpoint Acknowledgement
@@ -210,7 +210,7 @@ export default {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-      return withCors(await r.text(), r.status);
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
     if (url.pathname === "/pid_ack" && request.method === "GET") {
@@ -226,7 +226,7 @@ export default {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-      return withCors(await r.text(), r.status);
+       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
     // ---- Manual MV Acknowledgement ----
@@ -244,7 +244,7 @@ export default {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body)
       });
-      return withCors(await r.text(), r.status);
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
     // ---- Tune Setpoint Acknowledgement ----
@@ -256,13 +256,13 @@ export default {
     // ---- Start Auto-Tune ----
     if (url.pathname === "/tune_start" && request.method === "POST") {
       const r = await fetch("https://orangepi.plc-web.online/tune_start", { method: "POST" });
-      return withCors(await r.text(), r.status);
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
     // ---- Stop Auto-Tune ----
     if (url.pathname === "/tune_stop" && request.method === "POST") {
       const r = await fetch("https://orangepi.plc-web.online/tune_stop", { method: "POST" });
-      return withCors(await r.text(), r.status);
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
     // ---- Poll Auto-Tune Status ----
@@ -270,13 +270,6 @@ export default {
       const r = await fetch("https://orangepi.plc-web.online/tune_status");
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
-
-    // ---- Tune Indicator State ----
-    if (url.pathname === "/tune_indicator" && request.method === "GET") {
-      const r = await fetch("https://orangepi.plc-web.online/tune_status");
-      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
-    }
-
 
     // ---- Default: serve static files
     return env.ASSETS.fetch(request);
