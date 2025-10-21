@@ -271,6 +271,11 @@ export default {
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
+    if (url.pathname === "/tune_setpoint_status") {
+      const r = await fetch("https://orangepi.plc-web.online/tune_setpoint_status");
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
+    }
+
     // ---- Default: serve static files
     return env.ASSETS.fetch(request);
   }
