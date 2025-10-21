@@ -118,17 +118,14 @@
         <div id="tune-setting-group" class="mb-3" style="display:none;">
           <small class="fw-bold me-2">Autotune PID:</small>   
           <div class="alert alert-warning p-2 small">
-            Autotuning is supported to automatically find the optimum PID constants. 
-            The system will cycle the output between limits to identify the best settings.
+            Automatically finds optimal PID values by cycling the output between limits.
           </div>
 
           <!-- Setpoint -->
-          <div class="mb-2">
-            <label for="tune-setpoint" class="form-label small">Set Point (°C)</label>
-            <div class="input-group input-group-sm">
-              <input type="number" id="tune-setpoint" class="form-control" placeholder="70" max="80">
-              <button id="send-tune-setpoint-btn" type="button" class="btn btn-primary btn-sm">Send</button>
-            </div>
+          <div class="input-group input-group-sm mb-2">
+            <span class="input-group-text">Set Point (°C)</span>
+            <input type="number" id="tune-setpoint" class="form-control" placeholder="70" max="80">
+            <button id="send-tune-setpoint-btn" type="button" class="btn btn-primary btn-sm">Send</button>
           </div>
 
           <!-- Start/Stop buttons -->
