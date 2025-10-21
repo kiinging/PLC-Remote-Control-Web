@@ -84,6 +84,10 @@ async function fetchInitialParams() {
     const mvData = await mvRes.json();
     document.getElementById("mv_manual").value = mvData.mv_manual;
 
+    const tuneSetRes = await fetch(`${workerBase}/tune_setpoint_status`, { credentials: "include" });
+    const tuneSetData = await tuneSetRes.json();
+    document.getElementById("tune-setpoint").value = tuneSetData.setpoint;
+
     const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
     const pidData = await pidRes.json();
     document.getElementById("pb").value = pidData.pb;
@@ -438,7 +442,7 @@ document.getElementById("send-manual-btn").addEventListener("click", async (even
 // ---- Send Tune Setpoint ----
 document.getElementById("send-tune-setpoint-btn").addEventListener("click", async (event) => {
   const button = event.currentTarget;
-  const tune_setpoint = document.getElementById("tune-setpoint").value;
+  const setpoint = document.getElementById("tune-setpoint").value;
 
   // Turn button red to indicate sending
   button.classList.remove("btn-primary");
@@ -449,7 +453,7 @@ document.getElementById("send-tune-setpoint-btn").addEventListener("click", asyn
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ tune_setpoint })
+      body: JSON.stringify({ setpoint })
     });
 
     // Poll for ack
