@@ -503,6 +503,9 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
     return;
   }
 
+  // Turn red to indicate sending/////////////////////
+  button.style.backgroundColor = "red";
+
   // Mark as active immediately (prevents re-click)
   button.dataset.tuning = "true";
   button.disabled = true;
@@ -522,6 +525,9 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
 
     // Turn indicator to green
     updateIndicator("tune-indicator", true);
+
+    // Return button to its normal yellow color/////////////////
+    button.style.backgroundColor = "yellow";
 
     // Start periodic polling to check tuning status
     tuneStatusInterval = setInterval(async () => {
