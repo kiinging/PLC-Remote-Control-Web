@@ -93,6 +93,9 @@ async function fetchInitialParams() {
     document.getElementById("pb").value = pidData.pb;
     document.getElementById("ti").value = pidData.ti;
     document.getElementById("td").value = pidData.td;
+    document.getElementById("tune-pb").value = pidData.pb;
+    document.getElementById("tune-ti").value = pidData.ti;
+    document.getElementById("tune-td").value = pidData.td;
 
     const statusRes = await fetch(`${workerBase}/control_status`, { credentials: "include" });
     const statusData = await statusRes.json();
@@ -544,6 +547,9 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
           document.getElementById("pb").value = pidData.pb;
           document.getElementById("ti").value = pidData.ti;
           document.getElementById("td").value = pidData.td;
+          document.getElementById("tune-pb").value = pidData.pb;
+          document.getElementById("tune-ti").value = pidData.ti;
+          document.getElementById("tune-td").value = pidData.td;
         }
 
       } catch (err) {
@@ -562,6 +568,7 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
 // ---- Stop Auto-Tune ----
 document.getElementById("stop-tune-btn").addEventListener("click", async () => {
   try {
+    // Send stop request to backend
     await fetch(`${workerBase}/tune_stop`, { method: "POST", credentials: "include" });
 
     // Stop polling and reset state
@@ -576,6 +583,18 @@ document.getElementById("stop-tune-btn").addEventListener("click", async () => {
     startBtn.disabled = false;
 
     console.log("Tuning stopped by operator.");
+
+    // ✅ Fetch and restore latest PID values after tuning stops
+    const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
+    const pidData = await pidRes.json();
+
+    // Update Tune result fields with the restored PID values
+    document.getElementById("tune-pb").value = pidData.pb;
+    document.getElementById("tune-ti").value = pidData.ti;
+    document.getElementById("tune-td").value = pidData.td;
+
+    console.log("PID parameters restored after stopping tune:", pidData);
+
   } catch (err) {
     console.error("Error stopping tuning:", err);
   }
