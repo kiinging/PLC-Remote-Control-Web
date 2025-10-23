@@ -90,10 +90,10 @@ async function fetchInitialParams() {
 
     const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
     const pidData = await pidRes.json();
-    document.getElementById("pb").value = pidData.pb;
+    document.getElementById("pb").value = Number(pidData.pb).toFixed(2);
     document.getElementById("ti").value = pidData.ti;
     document.getElementById("td").value = pidData.td;
-    document.getElementById("tune-pb").value = pidData.pb;
+    document.getElementById("tune-pb").value = Number(pidData.pb).toFixed(2);
     document.getElementById("tune-ti").value = pidData.ti;
     document.getElementById("tune-td").value = pidData.td;
 
@@ -544,10 +544,10 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
           // ✅ Optional: refresh PID values automatically after tune
           const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
           const pidData = await pidRes.json();
-          document.getElementById("pb").value = pidData.pb;
+          document.getElementById("pb").value = Number(pidData.pb).toFixed(2);
           document.getElementById("ti").value = pidData.ti;
           document.getElementById("td").value = pidData.td;
-          document.getElementById("tune-pb").value = pidData.pb;
+          document.getElementById("tune-pb").value = Number(pidData.pb).toFixed(2);
           document.getElementById("tune-ti").value = pidData.ti;
           document.getElementById("tune-td").value = pidData.td;
         }
