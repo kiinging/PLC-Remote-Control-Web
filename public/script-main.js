@@ -629,7 +629,7 @@ document.getElementById("stop-tune-btn").addEventListener("click", async () => {
     const pidData = await pidRes.json();
 
     // Update Tune result fields with the restored PID values
-    document.getElementById("tune-pb").value = pidData.pb;
+    document.getElementById("tune-pb").value = Number(pidData.pb).toFixed(2);
     document.getElementById("tune-ti").value = pidData.ti;
     document.getElementById("tune-td").value = pidData.td;
 
