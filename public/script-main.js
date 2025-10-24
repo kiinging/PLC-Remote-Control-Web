@@ -503,8 +503,9 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
     return;
   }
 
-  // Turn red to indicate sending/////////////////////
-  button.style.backgroundColor = "red";
+  // Turn button red (sending)
+  button.classList.remove("btn-primary");
+  button.classList.add("btn-danger");
 
   // Mark as active immediately (prevents re-click)
   button.dataset.tuning = "true";
@@ -515,59 +516,88 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
     clearInterval(tuneStatusInterval);
     tuneStatusInterval = null;
   }
-
-  // Immediately send start command
+  
   try {
+    // 1️⃣ Send start command to backend
     await fetch(`${workerBase}/tune_start`, {
       method: "POST",
       credentials: "include"
     });
 
-    // Turn indicator to green
-    updateIndicator("tune-indicator", true);
+    // 2️⃣ Poll for acknowledgment from PLC (max 10 s)
+    const maxPollTime = 10000; // 10 seconds
+    const startTime = Date.now();
 
-    // Return button to its normal yellow color/////////////////
-    button.style.backgroundColor = "yellow";
-
-    // Start periodic polling to check tuning status
-    tuneStatusInterval = setInterval(async () => {
-      try {
-        const res = await fetch(`${workerBase}/tune_status`, { credentials: "include" });
-        const data = await res.json();
-
-        if (data.tuning_active) {
-          updateIndicator("tune-indicator", true);   // green during tuning
-        } else {
-          // ✅ tuning completed
-          updateIndicator("tune-indicator", false);
-          clearInterval(tuneStatusInterval);
-          tuneStatusInterval = null;
-
-          // Allow new tune to start
-          button.dataset.tuning = "false";
-          button.disabled = false;
-
-          // ✅ Optional: refresh PID values automatically after tune
-          const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
-          const pidData = await pidRes.json();
-          document.getElementById("pb").value = Number(pidData.pb).toFixed(2);
-          document.getElementById("ti").value = pidData.ti;
-          document.getElementById("td").value = pidData.td;
-          document.getElementById("tune-pb").value = Number(pidData.pb).toFixed(2);
-          document.getElementById("tune-ti").value = pidData.ti;
-          document.getElementById("tune-td").value = pidData.td;
-        }
-
-      } catch (err) {
-        console.error("Error fetching tune status:", err);
+    const ackInterval = setInterval(async () => {
+      if (Date.now() - startTime > maxPollTime) {
+        clearInterval(ackInterval);
+        button.classList.remove("btn-danger");
+        button.classList.add("btn-warning"); // yellow again
+        console.warn("Timeout waiting for tune_start ack");
+        return;
       }
-    }, 5000); // poll every 5s
+
+      try {
+        const resp = await fetch(`${workerBase}/tune_start_ack`, { credentials: "include" });
+        const data = await resp.json();
+
+        if (data.acknowledged) {
+          clearInterval(ackInterval);
+          console.log("Tune start acknowledged by PLC ✅");
+
+          // Return button to original yellow color
+          button.classList.remove("btn-danger");
+          button.classList.add("btn-warning");
+
+          // 3️⃣ Once ack received, turn indicator green
+          updateIndicator("tune-indicator", true);
+
+          // 4️⃣ Start periodic polling for tune status
+          tuneStatusInterval = setInterval(async () => {
+            try {
+              const res = await fetch(`${workerBase}/tune_status`, { credentials: "include" });
+              const data = await res.json();
+
+              if (data.tuning_active) {
+                updateIndicator("tune-indicator", true); // green during tuning
+              } else {
+                // ✅ tuning completed
+                updateIndicator("tune-indicator", false);
+                clearInterval(tuneStatusInterval);
+                tuneStatusInterval = null;
+
+                // Allow new tune to start
+                button.dataset.tuning = "false";
+                button.disabled = false;
+
+                // ✅ Optional: refresh PID values automatically
+                const pidRes = await fetch(`${workerBase}/pid_params`, { credentials: "include" });
+                const pidData = await pidRes.json();
+
+                document.getElementById("pb").value = Number(pidData.pb).toFixed(2);
+                document.getElementById("ti").value = pidData.ti;
+                document.getElementById("td").value = pidData.td;
+                document.getElementById("tune-pb").value = Number(pidData.pb).toFixed(2);
+                document.getElementById("tune-ti").value = pidData.ti;
+                document.getElementById("tune-td").value = pidData.td;
+              }
+            } catch (err) {
+              console.error("Error fetching tune status:", err);
+            }
+          }, 5000); // poll every 5 s
+        }
+      } catch (err) {
+        console.error("Error checking tune_start ack:", err);
+      }
+    }, 500); // poll every 0.5 s
 
   } catch (err) {
     console.error("Error starting tuning:", err);
     // Reset so user can retry
     button.dataset.tuning = "false";
     button.disabled = false;
+    button.classList.remove("btn-danger");
+    button.classList.add("btn-primary");
   }
 });
 

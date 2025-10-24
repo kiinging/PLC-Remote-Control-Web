@@ -259,6 +259,12 @@ export default {
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
 
+    // ---- Tune Start Acknowledgement ----
+    if (url.pathname === "/tune_start_ack" && request.method === "GET") {
+      const r = await fetch("https://orangepi.plc-web.online/tune_start_ack");
+      return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
+    }
+
     // ---- Stop Auto-Tune ----
     if (url.pathname === "/tune_stop" && request.method === "POST") {
       const r = await fetch("https://orangepi.plc-web.online/tune_stop", { method: "POST" });
