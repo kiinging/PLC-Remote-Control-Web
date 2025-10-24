@@ -560,7 +560,8 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
 
               if (data.tuning_active) {
                 updateIndicator("tune-indicator", true); // green during tuning
-              } else {
+              }
+              else if (data.tune_completed) {
                 // ✅ tuning completed
                 updateIndicator("tune-indicator", false);
                 clearInterval(tuneStatusInterval);
@@ -581,6 +582,9 @@ document.getElementById("start-tune-btn").addEventListener("click", async (event
                 document.getElementById("tune-ti").value = pidData.ti;
                 document.getElementById("tune-td").value = pidData.td;
               }
+            else {
+                updateIndicator("tune-indicator", false); // red if not tuning
+            }
             } catch (err) {
               console.error("Error fetching tune status:", err);
             }
