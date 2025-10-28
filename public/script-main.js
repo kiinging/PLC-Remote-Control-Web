@@ -639,3 +639,29 @@ document.getElementById("stop-tune-btn").addEventListener("click", async () => {
     console.error("Error stopping tuning:", err);
   }
 });
+
+// Relay ON/OFF control
+document.getElementById("relay-on-btn").addEventListener("click", async () => {
+  await fetch("https://your-worker-name.yourdomain.workers.dev/relay", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ relay: true })
+  });
+  updateIndicator("relay-indicator", true);
+});
+
+document.getElementById("relay-off-btn").addEventListener("click", async () => {
+  await fetch("https://your-worker-name.yourdomain.workers.dev/relay", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ relay: false })
+  });
+  updateIndicator("relay-indicator", false);
+});
+
+// Reusable indicator function
+function updateIndicator(id, state) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.backgroundColor = state ? "green" : "gray";
+}

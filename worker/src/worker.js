@@ -6,6 +6,7 @@ const corsHeaders = {
 };
 
 const SESSION_COOKIE = "plc_session";
+let relayState = false; // <-- store relay state in memory
 
 function setCookie(value) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`;
@@ -94,13 +95,34 @@ export default {
       return Response.json({ user: session.user }, { headers: corsHeaders });
     }
 
-    // ---- ROOT & DASHBOARD
+    // ---- DASHBOARD ACCESS
     if (url.pathname === "/" || url.pathname === "/dashboard.html") {
       const session = await validateSession(request, env);
       if (!session) {
         return Response.redirect("https://plc-web.online/login.html", 302);
       }
       return env.ASSETS.fetch(new Request("/dashboard.html", request));
+    }
+
+        // ---- RELAY CONTROL (ESP32-S3)
+    if (url.pathname === "/relay") {
+      if (request.method === "POST") {
+        try {
+          const data = await request.json();
+          relayState = !!data.relay;
+          return withCors(JSON.stringify({ ok: true, relay: relayState }), 200, {
+            "Content-Type": "application/json"
+          });
+        } catch (err) {
+          return withCors(JSON.stringify({ ok: false, error: err.message }), 400);
+        }
+      }
+
+      if (request.method === "GET") {
+        return withCors(JSON.stringify({ relay: relayState }), 200, {
+          "Content-Type": "application/json"
+        });
+      }
     }
 
     // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
@@ -281,7 +303,7 @@ export default {
       const r = await fetch("https://orangepi.plc-web.online/tune_setpoint_status");
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
-
+ 
     // ---- Default: serve static files
     return env.ASSETS.fetch(request);
   }
