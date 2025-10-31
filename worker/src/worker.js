@@ -304,6 +304,23 @@ export default {
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
  
+
+// ---- RELAY CONTROL (ESP32-S3) ----
+    if (url.pathname === "/relay") {
+      if (request.method === "POST") {
+        const data = await request.json();
+        relayState = !!data.relay;
+        return withCors(JSON.stringify({ ok: true, relay: relayState }), 200, {
+          "Content-Type": "application/json"
+        });
+      }
+      if (request.method === "GET") {
+        return withCors(JSON.stringify({ relay: relayState }), 200, {
+          "Content-Type": "application/json"
+        });
+      }
+    }
+
     // ---- Default: serve static files
     return env.ASSETS.fetch(request);
   }
