@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ✅ only runs if user is logged in:
   fetchInitialParams();
+  fetchInitialRelayStatus();
   fetchTemperature();
   fetchTrendData();
 
@@ -125,7 +126,7 @@ async function fetchInitialParams() {
       document.getElementById("tune-setting-group").style.display = "none";
     }
 
-        // ✅ Tune indicator initial check (add here)
+    // ✅ Tune indicator initial check (add here)
     try {
       const tuneRes = await fetch(`${workerBase}/tune_status`, { credentials: "include" });
       const tuneData = await tuneRes.json();
@@ -136,6 +137,28 @@ async function fetchInitialParams() {
 
   } catch (err) {
     console.error("Failed to fetch initial params:", err);
+  }
+}
+
+async function fetchInitialRelayStatus() {
+  try {
+    const res = await fetch(`${workerBase}/relay`, { cache: "no-store" });
+    const data = await res.json();
+
+    if (data.alive) {
+      updateIndicator("relay-indicator", true);
+      videoEl.src = RADXA_STREAM_URL;  // show video
+      videoEl.style.opacity = "1";
+    } else {
+      updateIndicator("relay-indicator", false);
+      videoEl.src = "";                // hide video
+      videoEl.style.opacity = "0.2";
+    }
+  } catch (err) {
+    console.error("Failed to fetch relay status:", err);
+    updateIndicator("relay-indicator", false);
+    videoEl.src = "";
+    videoEl.style.opacity = "0.2";
   }
 }
 
