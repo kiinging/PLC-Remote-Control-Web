@@ -685,7 +685,42 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
     body: JSON.stringify({ relay: false })
   });
   updateIndicator("relay-indicator", false);
-  
 });
+ 
+//-------------------------------------------
+// 🧠 Radxa Video Auto Control
+//-------------------------------------------
 
+const videoEl = document.getElementById("video_feed"); // existing <img>
+const RADXA_STREAM_URL = "https://cloud-worker.wongkiinging.workers.dev/video_feed"; // your existing MJPEG stream
 
+async function checkRadxaVideoStatus() {
+  try {
+    const res = await fetch(`${workerBase}/relay`, { cache: "no-store" });
+    const data = await res.json();
+
+    if (data.alive) {
+      // ✅ Radxa is ON and alive — ensure stream is visible
+      if (!videoEl.src || videoEl.src === "") {
+        console.log("🔵 Radxa online — starting stream...");
+        videoEl.src = RADXA_STREAM_URL;
+      }
+      videoEl.style.opacity = "1"; // show video
+
+    } else {
+      // ❌ Radxa is offline — hide or clear the stream
+      console.log("🔴 Radxa offline — clearing stream...");
+      videoEl.src = ""; // stops frozen frame
+      videoEl.style.opacity = "0.2"; // fade out visually
+    }
+
+  } catch (err) {
+    console.error("⚠️ Error checking Radxa status:", err);
+    videoEl.src = "";
+    videoEl.style.opacity = "0.2";
+  }
+}
+
+// Check every 3 seconds
+setInterval(checkRadxaVideoStatus, 3000);
+checkRadxaVideoStatus(); // run once on page load

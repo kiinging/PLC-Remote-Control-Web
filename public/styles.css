@@ -132,3 +132,7 @@ input[type=number]::-webkit-outer-spin-button {
 input[type=number] {
     -moz-appearance: textfield;
 }
+
+#video_feed {
+  transition: opacity 0.5s ease;
+}
