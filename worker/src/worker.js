@@ -1,3 +1,7 @@
+let relayState = false;
+let radxaAlive = false;
+let lastRadxaPing = 0;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://plc-web.online", // restrict to your domain
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -6,7 +10,7 @@ const corsHeaders = {
 };
 
 const SESSION_COOKIE = "plc_session";
-let relayState = false; // <-- store relay state in memory
+
 
 function setCookie(value) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`;
@@ -102,27 +106,6 @@ export default {
         return Response.redirect("https://plc-web.online/login.html", 302);
       }
       return env.ASSETS.fetch(new Request("/dashboard.html", request));
-    }
-
-        // ---- RELAY CONTROL (ESP32-S3)
-    if (url.pathname === "/relay") {
-      if (request.method === "POST") {
-        try {
-          const data = await request.json();
-          relayState = !!data.relay;
-          return withCors(JSON.stringify({ ok: true, relay: relayState }), 200, {
-            "Content-Type": "application/json"
-          });
-        } catch (err) {
-          return withCors(JSON.stringify({ ok: false, error: err.message }), 400);
-        }
-      }
-
-      if (request.method === "GET") {
-        return withCors(JSON.stringify({ relay: relayState }), 200, {
-          "Content-Type": "application/json"
-        });
-      }
     }
 
     // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
@@ -304,8 +287,7 @@ export default {
       return withCors(await r.text(), r.status, { "Content-Type": "application/json" });
     }
  
-
-// ---- RELAY CONTROL (ESP32-S3) ----
+    // ---- RELAY CONTROL (ESP32-S3) ----
     if (url.pathname === "/relay") {
       if (request.method === "POST") {
         const data = await request.json();
@@ -315,10 +297,20 @@ export default {
         });
       }
       if (request.method === "GET") {
-        return withCors(JSON.stringify({ relay: relayState }), 200, {
+        const alive = (Date.now() - lastRadxaPing < 15000);
+        return withCors(JSON.stringify({ relay: relayState, alive }), 200, {
           "Content-Type": "application/json"
         });
       }
+    }
+
+    // ---- RADXA HEARTBEAT ----
+    if (url.pathname === "/radxa_heartbeat" && request.method === "POST") {
+      lastRadxaPing = Date.now();
+      radxaAlive = true;
+      return withCors(JSON.stringify({ ok: true, time: lastRadxaPing }), 200, {
+        "Content-Type": "application/json"
+      });
     }
 
     // ---- Default: serve static files

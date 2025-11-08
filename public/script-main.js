@@ -140,10 +140,15 @@ async function fetchInitialParams() {
 }
 
 //--------------------- Indicator Helper --------------------
-function updateIndicator(id, isOn) {
+function updateIndicator(id, state) {
   const el = document.getElementById(id);
-  el.style.backgroundColor = isOn ? "green" : "red";
+  if (!el) return;
+
+  if (state === true) el.style.backgroundColor = "green";
+  else if (state === "booting") el.style.backgroundColor = "orange";
+  else el.style.backgroundColor = "red";
 }
+
 
 function updateModeIndicator(mode) {
   const el = document.getElementById("mode-indicator");
@@ -642,12 +647,35 @@ document.getElementById("stop-tune-btn").addEventListener("click", async () => {
 
 // Relay ON/OFF control
 document.getElementById("relay-on-btn").addEventListener("click", async () => {
+  // 1️⃣ Send command to turn on relay
   await fetch(`${workerBase}/relay`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ relay: true })
   });
-  updateIndicator("relay-indicator", true);
+
+  // 2️⃣ Show temporary "booting" indicator
+  updateIndicator("relay-indicator", "booting");
+
+  // 3️⃣ Poll worker until Radxa becomes alive
+  const maxWait = 60_000; // 60 seconds max
+  const interval = 2000;  // check every 2 seconds
+  const start = Date.now();
+
+  while (Date.now() - start < maxWait) {
+    const res = await fetch(`${workerBase}/relay`);
+    const data = await res.json();
+
+    if (data.alive) {
+      updateIndicator("relay-indicator", true);
+      return;
+    }
+
+    await new Promise(r => setTimeout(r, interval));
+  }
+
+  // Timeout (Radxa didn't come online)
+  updateIndicator("relay-indicator", false);
 });
 
 document.getElementById("relay-off-btn").addEventListener("click", async () => {
@@ -657,12 +685,7 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
     body: JSON.stringify({ relay: false })
   });
   updateIndicator("relay-indicator", false);
+  
 });
 
 
-// Reusable indicator function
-function updateIndicator(id, state) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.style.backgroundColor = state ? "green" : "gray";
-}
