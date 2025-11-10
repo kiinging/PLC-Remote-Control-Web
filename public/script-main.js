@@ -722,50 +722,7 @@ const videoEl = document.getElementById("video_feed");
 const RADXA_STREAM_URL = "https://cloud-worker.wongkiinging.workers.dev/video_feed";
 let lastVideoAlive = false; // remember previous state
 
-async function checkRadxaVideoStatus() {
-  try {
-    const res = await fetch(`${workerBase}/relay`, { cache: "no-store" });
-    const data = await res.json();
-
-    if (data.alive) {
-      // ✅ Radxa ON
-      updateIndicator("relay-indicator", true);
-
-      // 🔄 only reload video if state changed or video missing
-      if (!lastVideoAlive) {
-        console.log("🔵 Radxa online — (re)starting stream...");
-
-        // Add timestamp to force fresh fetch (bypass cache)
-        videoEl.src = `${RADXA_STREAM_URL}?t=${Date.now()}`;
-      }
-
-      videoEl.style.opacity = "1";
-      lastVideoAlive = true;
-    } else {
-      // ❌ Radxa OFF
-      updateIndicator("relay-indicator", false);
-
-      if (lastVideoAlive) {
-        console.log("🔴 Radxa offline — clearing stream...");
-        videoEl.src = ""; // stop frozen frame
-      }
-
-      videoEl.style.opacity = "0.2";
-      lastVideoAlive = false;
-    }
-  } catch (err) {
-    console.error("⚠️ Error checking Radxa status:", err);
-    videoEl.src = "";
-    videoEl.style.opacity = "0.2";
-    lastVideoAlive = false;
-  }
-}
-
-// Run every 3 seconds
-setInterval(checkRadxaVideoStatus, 3000);
-checkRadxaVideoStatus();
-
-// ===== Countdown & Video Control =====
+// ===== Relay ON/OFF & Video Control =====
 let countdownTimer = null;
 let countdown = 30;
 
