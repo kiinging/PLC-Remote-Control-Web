@@ -679,6 +679,7 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
     });
 
     updateIndicator("relay-indicator", "booting"); // orange
+    startCountdown(); // ✅ start countdown now
 
     const start = Date.now();
     const maxWait = 60_000;
@@ -691,7 +692,7 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
       if (data.alive) {
         updateIndicator("relay-indicator", true); // green
         clearInterval(poll);
-        startCountdown(); // ✅ start countdown now
+        startVideo();
       } else if (Date.now() - start > maxWait) {
         updateIndicator("relay-indicator", false); // red only after fail
         clearInterval(poll);
@@ -787,7 +788,7 @@ function startCountdown() {
 
     if (countdown <= 0) {
       clearInterval(countdownTimer);
-      startVideo();
+    
     }
   }, 1000);
 }
