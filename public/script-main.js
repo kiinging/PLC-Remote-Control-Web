@@ -727,7 +727,7 @@ const countdownElement = document.getElementById("countdown");
 
 let countdownTimer = null;
 
-function startCountdown(duration = 30) {
+function startCountdown(duration = 60) {
   clearInterval(countdownTimer);
   let countdown = duration;
   countdownElement.textContent = countdown;
