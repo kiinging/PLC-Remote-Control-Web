@@ -1,3 +1,4 @@
+// public/script-main.js
 const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
 let chart; // Global chart instance
 let xAxisWindow = 360; // default number of samples
@@ -147,7 +148,7 @@ async function fetchInitialRelayStatus() {
 
     if (data.alive) {
       updateIndicator("relay-indicator", true);
-      videoEl.src = RADXA_STREAM_URL;  // show video
+      videoEl.src =  RADXA_STREAM_URL;  // show video
       videoEl.style.opacity = "1";
     } else {
       updateIndicator("relay-indicator", false);
@@ -711,11 +712,12 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
 });
  
 //-------------------------------------------
-// 🧠 Radxa Video Auto Control
+// 🧠 Radxa Video Auto Control (Improved)
 //-------------------------------------------
 
-const videoEl = document.getElementById("video_feed"); // existing <img>
-const RADXA_STREAM_URL = "https://cloud-worker.wongkiinging.workers.dev/video_feed"; // your existing MJPEG stream
+const videoEl = document.getElementById("video_feed");
+const RADXA_STREAM_URL = "https://cloud-worker.wongkiinging.workers.dev/video_feed";
+let lastVideoAlive = false; // remember previous state
 
 async function checkRadxaVideoStatus() {
   try {
@@ -723,27 +725,74 @@ async function checkRadxaVideoStatus() {
     const data = await res.json();
 
     if (data.alive) {
-      // ✅ Radxa is ON and alive — ensure stream is visible
-      if (!videoEl.src || videoEl.src === "") {
-        console.log("🔵 Radxa online — starting stream...");
-        videoEl.src = RADXA_STREAM_URL;
+      // ✅ Radxa ON
+      updateIndicator("relay-indicator", true);
+
+      // 🔄 only reload video if state changed or video missing
+      if (!lastVideoAlive) {
+        console.log("🔵 Radxa online — (re)starting stream...");
+
+        // Add timestamp to force fresh fetch (bypass cache)
+        videoEl.src = `${RADXA_STREAM_URL}?t=${Date.now()}`;
       }
-      videoEl.style.opacity = "1"; // show video
 
+      videoEl.style.opacity = "1";
+      lastVideoAlive = true;
     } else {
-      // ❌ Radxa is offline — hide or clear the stream
-      console.log("🔴 Radxa offline — clearing stream...");
-      videoEl.src = ""; // stops frozen frame
-      videoEl.style.opacity = "0.2"; // fade out visually
-    }
+      // ❌ Radxa OFF
+      updateIndicator("relay-indicator", false);
 
+      if (lastVideoAlive) {
+        console.log("🔴 Radxa offline — clearing stream...");
+        videoEl.src = ""; // stop frozen frame
+      }
+
+      videoEl.style.opacity = "0.2";
+      lastVideoAlive = false;
+    }
   } catch (err) {
     console.error("⚠️ Error checking Radxa status:", err);
     videoEl.src = "";
     videoEl.style.opacity = "0.2";
+    lastVideoAlive = false;
   }
 }
 
-// Check every 3 seconds
+// Run every 3 seconds
 setInterval(checkRadxaVideoStatus, 3000);
-checkRadxaVideoStatus(); // run once on page load
+checkRadxaVideoStatus();
+
+
+let countdown = 30;
+  const countdownElement = document.getElementById("countdown");
+  const overlay = document.getElementById("countdownOverlay");
+  const videoFeed = document.getElementById("video_feed");
+
+  // Start countdown
+  const timer = setInterval(() => {
+    countdown--;
+    countdownElement.textContent = countdown;
+
+    // When countdown reaches zero, show video
+    if (countdown <= 0) {
+      clearInterval(timer);
+      startVideo();
+    }
+  }, 1000);
+
+  // Load video early (simulate that it's ready before 30s)
+  function startVideo() {
+    videoFeed.src = "https://cloud-worker.wongkiinging.workers.dev/video_feed";
+    videoFeed.style.display = "block";
+    overlay.style.transition = "opacity 0.5s ease";
+    overlay.style.opacity = "0";
+    setTimeout(() => overlay.style.display = "none", 600);
+  }
+
+  // If the video loads early, remove overlay immediately
+  videoFeed.addEventListener("load", () => {
+    if (overlay.style.display !== "none") {
+      clearInterval(timer);
+      startVideo();
+    }
+  });
