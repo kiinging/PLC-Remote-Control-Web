@@ -669,7 +669,7 @@ document.getElementById("stop-tune-btn").addEventListener("click", async () => {
   }
 });
 
-// ===== Relay-ON button handler =====
+// ---- Relay ON ----
 document.getElementById("relay-on-btn").addEventListener("click", async () => {
   try {
     await fetch(`${workerBase}/relay`, {
@@ -678,11 +678,11 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
       body: JSON.stringify({ relay: true })
     });
 
-    updateIndicator("relay-indicator", "booting"); // orange
-    startCountdown(); // ✅ start countdown now
+    updateIndicator("relay-indicator", "booting");
+    startCountdown();
 
     const start = Date.now();
-    const maxWait = 60_000;
+    const maxWait = 60000;
     const interval = 2000;
 
     const poll = setInterval(async () => {
@@ -690,21 +690,22 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
       const data = await res.json();
 
       if (data.alive) {
-        updateIndicator("relay-indicator", true); // green
         clearInterval(poll);
-        startVideo();
+        updateIndicator("relay-indicator", true);
+        startVideo(); // ✅ Only start video when relay is alive
       } else if (Date.now() - start > maxWait) {
-        updateIndicator("relay-indicator", false); // red only after fail
         clearInterval(poll);
+        updateIndicator("relay-indicator", false);
       }
     }, interval);
+
   } catch (err) {
     console.error("Relay ON error:", err);
     updateIndicator("relay-indicator", false);
   }
 });
-// ===== Relay-OFF button handler =====
 
+// ---- Relay OFF ----
 document.getElementById("relay-off-btn").addEventListener("click", async () => {
   await fetch(`${workerBase}/relay`, {
     method: "POST",
@@ -712,53 +713,43 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
     body: JSON.stringify({ relay: false })
   });
   updateIndicator("relay-indicator", false);
+  videoFeed.src = ""; // stop video
+  videoFeed.style.opacity = "0.2";
 });
  
 //-------------------------------------------
 // 🧠 Radxa Video Auto Control (Improved)
 //-------------------------------------------
-
-const videoEl = document.getElementById("video_feed");
-const RADXA_STREAM_URL = "https://cloud-worker.wongkiinging.workers.dev/video_feed";
-let lastVideoAlive = false; // remember previous state
-
-// ===== Relay ON/OFF & Video Control =====
-let countdownTimer = null;
-let countdown = 30;
-
-const countdownElement = document.getElementById("countdown");
-const overlay = document.getElementById("countdownOverlay");
 const videoFeed = document.getElementById("video_feed");
+const RADXA_STREAM_URL = "https://cloud-worker.wongkiinging.workers.dev/video_feed";
+const overlay = document.getElementById("countdownOverlay");
+const countdownElement = document.getElementById("countdown");
 
-// Start countdown
-function startCountdown() {
-  // Reset timer if already running
+let countdownTimer = null;
+
+function startCountdown(duration = 30) {
   clearInterval(countdownTimer);
-  countdown = 30;
+  let countdown = duration;
   countdownElement.textContent = countdown;
-  overlay.style.opacity = "1";
   overlay.style.display = "flex";
-  
+  overlay.style.opacity = "1";
+
   countdownTimer = setInterval(() => {
     countdown--;
     countdownElement.textContent = countdown;
-
-    if (countdown <= 0) {
-      clearInterval(countdownTimer);
-    
-    }
+    if (countdown <= 0) clearInterval(countdownTimer);
   }, 1000);
 }
- 
-// Load video early (simulate that it's ready before 30s)
+
 function startVideo() {
-  // ✅ your real URL + cache-buster to force reload
-  videoFeed.src = "https://cloud-worker.wongkiinging.workers.dev/video_feed?t=" + Date.now();
+  // Add timestamp to prevent caching
+  videoFeed.src = RADXA_STREAM_URL + "?t=" + Date.now();
   videoFeed.style.display = "block";
   overlay.style.transition = "opacity 0.5s ease";
   overlay.style.opacity = "0";
   setTimeout(() => overlay.style.display = "none", 600);
 }
+
 
 // If the video loads early, remove overlay immediately
 videoFeed.addEventListener("load", () => {
