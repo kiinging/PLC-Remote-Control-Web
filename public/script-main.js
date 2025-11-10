@@ -669,38 +669,40 @@ document.getElementById("stop-tune-btn").addEventListener("click", async () => {
   }
 });
 
-// Relay ON/OFF control
+// ===== Relay-ON button handler =====
 document.getElementById("relay-on-btn").addEventListener("click", async () => {
-  // 1️⃣ Send command to turn on relay
-  await fetch(`${workerBase}/relay`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ relay: true })
-  });
+  try {
+    await fetch(`${workerBase}/relay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ relay: true })
+    });
 
-  // 2️⃣ Show temporary "booting" indicator
-  updateIndicator("relay-indicator", "booting");
+    updateIndicator("relay-indicator", "booting"); // orange
 
-  // 3️⃣ Poll worker until Radxa becomes alive
-  const maxWait = 60_000; // 60 seconds max
-  const interval = 2000;  // check every 2 seconds
-  const start = Date.now();
+    const start = Date.now();
+    const maxWait = 60_000;
+    const interval = 2000;
 
-  while (Date.now() - start < maxWait) {
-    const res = await fetch(`${workerBase}/relay`);
-    const data = await res.json();
+    const poll = setInterval(async () => {
+      const res = await fetch(`${workerBase}/relay`, { cache: "no-store" });
+      const data = await res.json();
 
-    if (data.alive) {
-      updateIndicator("relay-indicator", true);
-      return;
-    }
-
-    await new Promise(r => setTimeout(r, interval));
+      if (data.alive) {
+        updateIndicator("relay-indicator", true); // green
+        clearInterval(poll);
+        startCountdown(); // ✅ start countdown now
+      } else if (Date.now() - start > maxWait) {
+        updateIndicator("relay-indicator", false); // red only after fail
+        clearInterval(poll);
+      }
+    }, interval);
+  } catch (err) {
+    console.error("Relay ON error:", err);
+    updateIndicator("relay-indicator", false);
   }
-
-  // Timeout (Radxa didn't come online)
-  updateIndicator("relay-indicator", false);
 });
+// ===== Relay-OFF button handler =====
 
 document.getElementById("relay-off-btn").addEventListener("click", async () => {
   await fetch(`${workerBase}/relay`, {
@@ -762,37 +764,48 @@ async function checkRadxaVideoStatus() {
 setInterval(checkRadxaVideoStatus, 3000);
 checkRadxaVideoStatus();
 
-
+// ===== Countdown & Video Control =====
+let countdownTimer = null;
 let countdown = 30;
-  const countdownElement = document.getElementById("countdown");
-  const overlay = document.getElementById("countdownOverlay");
-  const videoFeed = document.getElementById("video_feed");
 
-  // Start countdown
-  const timer = setInterval(() => {
+const countdownElement = document.getElementById("countdown");
+const overlay = document.getElementById("countdownOverlay");
+const videoFeed = document.getElementById("video_feed");
+
+// Start countdown
+function startCountdown() {
+  // Reset timer if already running
+  clearInterval(countdownTimer);
+  countdown = 30;
+  countdownElement.textContent = countdown;
+  overlay.style.opacity = "1";
+  overlay.style.display = "flex";
+  
+  countdownTimer = setInterval(() => {
     countdown--;
     countdownElement.textContent = countdown;
 
-    // When countdown reaches zero, show video
     if (countdown <= 0) {
-      clearInterval(timer);
+      clearInterval(countdownTimer);
       startVideo();
     }
   }, 1000);
+}
+ 
+// Load video early (simulate that it's ready before 30s)
+function startVideo() {
+  // ✅ your real URL + cache-buster to force reload
+  videoFeed.src = "https://cloud-worker.wongkiinging.workers.dev/video_feed?t=" + Date.now();
+  videoFeed.style.display = "block";
+  overlay.style.transition = "opacity 0.5s ease";
+  overlay.style.opacity = "0";
+  setTimeout(() => overlay.style.display = "none", 600);
+}
 
-  // Load video early (simulate that it's ready before 30s)
-  function startVideo() {
-    videoFeed.src = "https://cloud-worker.wongkiinging.workers.dev/video_feed";
-    videoFeed.style.display = "block";
-    overlay.style.transition = "opacity 0.5s ease";
-    overlay.style.opacity = "0";
-    setTimeout(() => overlay.style.display = "none", 600);
+// If the video loads early, remove overlay immediately
+videoFeed.addEventListener("load", () => {
+  if (overlay.style.display !== "none") {
+    clearInterval(timer);
+    startVideo();
   }
-
-  // If the video loads early, remove overlay immediately
-  videoFeed.addEventListener("load", () => {
-    if (overlay.style.display !== "none") {
-      clearInterval(timer);
-      startVideo();
-    }
-  });
+});
