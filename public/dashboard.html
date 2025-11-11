@@ -18,9 +18,10 @@
 <body>
 <!-- Device Power Control (ESP32-S3 Relay) -->
 <div class="container mt-2">
-  <div class="d-flex flex-wrap justify-content-between align-items-center">
-    <h5 class="fw-bold mb-2 mb-sm-0">Device Power Control</h5>
+  <div class="d-flex justify-content-between align-items-center flex-wrap">
+    <!-- Left: Title + ON/OFF buttons -->
     <div class="d-flex align-items-center gap-2">
+      <h5 class="fw-bold mb-0">Device Power Control</h5>
       <button id="relay-on-btn" class="btn btn-success btn-sm">
         <i class="bi bi-plug"></i> ON
       </button>
@@ -29,9 +30,15 @@
       </button>
       <div id="relay-indicator" class="indicator"></div>
     </div>
+
+    <!-- Right: Logout button -->
+    <button id="logout-btn" class="btn btn-secondary btn-sm">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </button>
   </div>
   <hr class="my-2">
 </div>
+
 
 <div class="container py-4">
   <div class="row g-4">
