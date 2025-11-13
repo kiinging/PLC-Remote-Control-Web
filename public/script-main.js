@@ -41,6 +41,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   setInterval(fetchTemperature, 3000);
   setInterval(updateTuneIndicator, 4000);
 
+  // ✅ Restore countdown if still active
+  const savedEnd = localStorage.getItem("countdownEndTime");
+  if (savedEnd) {
+    const remaining = Math.ceil((+savedEnd - Date.now()) / 1000);
+    if (remaining > 0) {
+      console.log(`Resuming countdown: ${remaining}s left`);
+      startCountdown(remaining);
+    } else {
+      localStorage.removeItem("countdownEndTime");
+    }
+  }
+
+
   // ✅ Restore video if relay was previously alive
   const relayAlive = localStorage.getItem("relayAlive") === "true";
   if (relayAlive) {
@@ -156,21 +169,32 @@ async function fetchInitialRelayStatus() {
     const res = await fetch(`${workerBase}/relay`, { cache: "no-store" });
     const data = await res.json();
 
-    if (data.booting) {
-      updateIndicator("relay-indicator", "booting");
+    // --- Priority 1: Alive ---
+    if (data.alive) {
+      updateIndicator("relay-indicator", true);
+      setTimeout(connectWS, 5000); // optional
+      videoFeed.src = RADXA_STREAM_URL;
+      videoFeed.style.opacity = "1";
+      localStorage.setItem("relayAlive", "true");
+      return; // ✅ stop here
     }
 
-    if (data.alive) {
-      // 🧠 Start WebSocket here:
-      setTimeout(connectWS, 5000); // wait 5s, then connect
-      updateIndicator("relay-indicator", true);
-      videoFeed.src =  RADXA_STREAM_URL;  // show video
-      videoFeed.style.opacity = "1";  
-    } else {
-      updateIndicator("relay-indicator", false);
-      videoFeed.src = "";                // hide video
-      videoFeed.style.opacity = "0.2";
+    
+    // --- Priority 2: Booting ---
+    if (data.booting) {
+      updateIndicator("relay-indicator", "booting");
+      videoFeed.src = "";
+      videoFeed.style.opacity = "0.4"; // dimmed
+      return; // ✅ stop here
     }
+
+    // --- Priority 3: Relay OFF ---
+    updateIndicator("relay-indicator", false);
+    videoFeed.src = "";
+    videoFeed.style.opacity = "0.2";
+    localStorage.removeItem("relayAlive");
+
+
   } catch (err) {
     console.error("Failed to fetch relay status:", err);
     updateIndicator("relay-indicator", false);
@@ -708,6 +732,7 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
         clearInterval(poll);
         updateIndicator("relay-indicator", true);        
         localStorage.setItem("relayAlive", "true"); // ✅ Save relay alive state
+        localStorage.removeItem("countdownEndTime");
         setTimeout(startVideo, 3000);   // Wait for camera to stabilize
 //        
       } else if (Date.now() - start > maxWait) {
@@ -747,17 +772,29 @@ const countdownElement = document.getElementById("countdown");
 let countdownTimer = null;
 
 function startCountdown(duration = 60) {
-  clearInterval(countdownTimer);
-  let countdown = duration;
-  countdownElement.textContent = countdown;
-  overlay.style.display = "flex";
-  overlay.style.opacity = "1";
+  const counterEl = document.getElementById("countdown");
+  const endTime = Date.now() + duration * 1000;
 
-  countdownTimer = setInterval(() => {
-    countdown--;
-    countdownElement.textContent = countdown;
-    if (countdown <= 0) clearInterval(countdownTimer);
-  }, 1000);
+  localStorage.setItem("countdownEndTime", endTime.toString());
+  overlay.style.display = "flex"; // show overlay
+
+  // Set style for active countdown (yellow text)
+  counterEl.style.color = "#ffcc00"; // yellow
+  overlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+
+  const updateCountdown = () => {
+    const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    counterEl.textContent = `${remaining}s`;
+
+    if (remaining <= 0) {
+      clearInterval(timer);
+      localStorage.removeItem("countdownEndTime");
+      overlay.style.display = "none";
+    }
+  };
+
+  updateCountdown();
+  const timer = setInterval(updateCountdown, 1000);
 }
 
 function startVideo() {
