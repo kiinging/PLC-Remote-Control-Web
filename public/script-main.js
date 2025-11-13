@@ -732,7 +732,7 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
         updateIndicator("relay-indicator", true);        
         localStorage.setItem("relayAlive", "true"); // ✅ Save relay alive state
         localStorage.removeItem("countdownEndTime");
-        setTimeout(startVideo, 3000);   // Wait for camera to stabilize
+        setTimeout(startVideo, 5000);   // Wait for camera to stabilize
 //        
       } else if (Date.now() - start > maxWait) {
         clearInterval(poll);
