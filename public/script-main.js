@@ -164,18 +164,18 @@ async function fetchInitialRelayStatus() {
       // 🧠 Start WebSocket here:
       setTimeout(connectWS, 5000); // wait 5s, then connect
       updateIndicator("relay-indicator", true);
-      videoEl.src =  RADXA_STREAM_URL;  // show video
-      videoEl.style.opacity = "1";  
+      videoFeed.src =  RADXA_STREAM_URL;  // show video
+      videoFeed.style.opacity = "1";  
     } else {
       updateIndicator("relay-indicator", false);
-      videoEl.src = "";                // hide video
-      videoEl.style.opacity = "0.2";
+      videoFeed.src = "";                // hide video
+      videoFeed.style.opacity = "0.2";
     }
   } catch (err) {
     console.error("Failed to fetch relay status:", err);
     updateIndicator("relay-indicator", false);
-    videoEl.src = "";
-    videoEl.style.opacity = "0.2";
+    videoFeed.src = "";
+    videoFeed.style.opacity = "0.2";
   }
 }
 
