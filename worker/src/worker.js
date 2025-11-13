@@ -187,11 +187,6 @@ export default {
       });
     }
 
-    if (url.pathname === "/trend") {
-      const r = await fetch("https://orangepi.plc-web.online/trend");
-      return withCors(await r.text(), r.status);
-    }
-
     if (url.pathname === "/setpoint" && request.method === "POST") {
       const body = await request.json();
       const r = await fetch("https://orangepi.plc-web.online/setpoint", {
@@ -312,6 +307,33 @@ export default {
         "Content-Type": "application/json"
       });
     }
+    // ---- WebSocket relay to Orange Pi ----
+    if (url.pathname === "/ws") {
+      // 👇 Backend WS target (your Orange Pi’s internal websocket)
+      const target = "ws://orangepi.plc-web.online:8765"; 
+
+      // Create WS pair for the browser connection
+      const pair = new WebSocketPair();
+      const [client, server] = Object.values(pair);
+
+      // Connect to backend
+      const backend = new WebSocket(target);
+
+      // Forward messages from backend → browser
+      backend.addEventListener("message", (event) => server.send(event.data));
+
+      // Forward messages from browser → backend
+      server.addEventListener("message", (event) => backend.send(event.data));
+
+      // Close both ends cleanly
+      backend.addEventListener("close", () => server.close());
+      backend.addEventListener("error", () => server.close());
+      server.addEventListener("close", () => backend.close());
+
+      server.accept();
+      return new Response(null, { status: 101, webSocket: client });
+    }
+
 
     // ---- Default: serve static files
     return env.ASSETS.fetch(request);

@@ -23,12 +23,3 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-document.getElementById("logout-btn")?.addEventListener("click", async () => {
-  const res = await fetch("/api/logout", { method: "POST", credentials: "include" });
-  if (res.ok) {
-    // ✅ Logout successful — redirect to login page
-    window.location.href = "/login.html";
-  } else {
-    alert("Logout failed. Please try again.");
-  }
-});

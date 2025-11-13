@@ -1,10 +1,15 @@
 // public/script-main.js
 const workerBase = 'https://cloud-worker.wongkiinging.workers.dev';
+const wsUrl      = "wss://cloud-worker.wongkiinging.workers.dev/ws";
 let chart; // Global chart instance
+let socket;
 let xAxisWindow = 360; // default number of samples
 const xAxisStep = 60;  // step per click
 const xAxisMin = 10;   // minimum samples
 const xAxisMax = 450; // max samples to display
+let mvData = [];
+let pvData = [];
+let spData = [];
 
 // -------------------- Session Check --------------------
 async function checkSession() {
@@ -32,10 +37,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   fetchInitialParams();
   fetchInitialRelayStatus();
   fetchTemperature();
-  fetchTrendData();
 
   setInterval(fetchTemperature, 3000);
-  setInterval(fetchTrendData, 5000);
   setInterval(updateTuneIndicator, 4000);
 });
 
@@ -72,7 +75,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 5 * 60 * 1000);
   }
 });
-
 
 
 // -------------------- Fetch Initial Setpoint & PID --------------------
@@ -147,9 +149,11 @@ async function fetchInitialRelayStatus() {
     const data = await res.json();
 
     if (data.alive) {
+      // 🧠 Start WebSocket here:
+      setTimeout(connectWS, 5000); // wait 5s, then connect
       updateIndicator("relay-indicator", true);
       videoEl.src =  RADXA_STREAM_URL;  // show video
-      videoEl.style.opacity = "1";
+      videoEl.style.opacity = "1";  
     } else {
       updateIndicator("relay-indicator", false);
       videoEl.src = "";                // hide video
@@ -260,66 +264,61 @@ document.getElementById("tune-btn").addEventListener("click", async () => {
   document.getElementById("tune-setting-group").style.display = "block";
 });
 
+// -------------------- Trend Chart Setup --------------------
+const datasets = [
+  { label: 'MV (%)', data: mvData, borderColor: 'blue', yAxisID: 'y', tension: 0.3 },
+  { label: 'PV (°C)', data: pvData, borderColor: 'red', yAxisID: 'y1', tension: 0.3 },
+  { label: 'SP (°C)', data: spData, borderColor: 'green', yAxisID: 'y1', tension: 0.3, borderDash: [5,5] } // dashed line
+];
+let maxDisplayMinutes = 30;
 
-// -------------------- Trend Chart --------------------
-async function fetchTrendData() {
-  try {
-    const res = await fetch(`${workerBase}/trend`, { credentials: "include" });
-    let trend = await res.json();
-
-    // Ensure we don't go out of bounds
-    const startIdx = trend.length > xAxisWindow ? trend.length - xAxisWindow : 0;
-    trend = trend.slice(startIdx);
-
-    const labels = trend.map(d => d.time);
-    const pvData = trend.map(d => d.pv);
-    const mvData = trend.map(d => d.mv);
-
-    if (!chart) {
-      const ctx = document.getElementById('trendChart').getContext('2d');
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: 'MV (%)', data: mvData, borderColor: 'blue', yAxisID: 'y', tension: 0.3 },
-            { label: 'PV (°C)', data: pvData, borderColor: 'red', yAxisID: 'y1', tension: 0.3 }            
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          stacked: false,
-          scales: {
-            y: { type: 'linear', position: 'left', min: 0, max: 100, ticks: { stepSize: 20 }, title: { display: true, text: 'MV (%)' }},
-            y1: { type: 'linear', position: 'right', min: 20, max: 150, ticks: { stepSize: 10 }, grid: { drawOnChartArea: false }, title: { display: true, text: 'PV (°C)' }}
-          }
-        }
-      });
-    } else {
-      chart.data.labels = labels;
-      chart.data.datasets[0].data = mvData ;
-      chart.data.datasets[1].data = pvData;
-      chart.update();
+const ctx = document.getElementById('trendChart').getContext('2d');
+chart = new Chart(ctx, {
+  type: 'line',
+  data: { labels: [], datasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      y:  { type: 'linear', position: 'left', min: 0, max: 100, title: { display: true, text: 'MV (%)' }},
+      y1: { type: 'linear', position: 'right', min: 20, max: 150, grid: { drawOnChartArea: false }, title: { display: true, text: 'PV/SP (°C)' }}
     }
-  } catch (error) {
-    console.error("Failed to fetch trend data:", error);
   }
+});
+
+
+function addTrendPoint({ time, sp, pv, mv }) {
+  if (!chart) return;
+  
+  // Push new data
+  chart.data.labels.push(time);
+  chart.data.datasets[0].data.push(mv);  // MV (%)
+  chart.data.datasets[1].data.push(pv);  // PV (°C)
+  chart.data.datasets[2].data.push(sp);  // SP (°C)
+
+
+  // Remove old points beyond 30 minutes
+  const cutoff = new Date(time).getTime() - maxDisplayMinutes*60*1000;
+  while(chart.data.labels.length > 0 && new Date(chart.data.labels[0]).getTime() < cutoff){
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(ds => ds.data.shift());
+  }
+
+  chart.update('none'); // smooth streaming
 }
+
 
 
 // -------------------- X-Axis Control --------------------
 document.getElementById("increase-xaxis").addEventListener("click", () => {
-  xAxisWindow += xAxisStep;
-  if (xAxisWindow > xAxisMax) xAxisWindow = xAxisMax;
-  fetchTrendData();
+  maxDisplayMinutes += 5;
+  if(maxDisplayMinutes > 60) maxDisplayMinutes = 60; // cap at 60 min
 });
 
 document.getElementById("decrease-xaxis").addEventListener("click", () => {
-  xAxisWindow -= xAxisStep;
-  if (xAxisWindow < xAxisMin) xAxisWindow = xAxisMin;
-  fetchTrendData();
+  maxDisplayMinutes -= 5;
+  if(maxDisplayMinutes < 5) maxDisplayMinutes = 5; // minimum 5 min
 });
 
 // -------------------- Temperature Fetch --------------------
@@ -714,7 +713,8 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
   });
   updateIndicator("relay-indicator", false);
   videoFeed.src = ""; // stop video
-  videoFeed.style.opacity = "0.2";
+  videoFeed.style.opacity = "0.2";  
+  disconnectWS();  // ✅ Disconnect WebSocket
 });
  
 //-------------------------------------------
@@ -758,3 +758,55 @@ videoFeed.addEventListener("load", () => {
     startVideo();
   }
 });
+
+document.getElementById("logout-btn")?.addEventListener("click", async () => {
+  const res = await fetch("/api/logout", { method: "POST", credentials: "include" });
+  if (res.ok) {
+    // ✅ Logout successful — redirect to login page
+    window.location.href = "/login.html";
+  } else {
+    alert("Logout failed. Please try again.");
+  }
+});
+
+
+// Cloudflare Worker endpoint (secure)
+function connectWS() {
+  if (socket && socket.readyState === WebSocket.OPEN) return; // already connected
+
+  socket = new WebSocket(wsUrl);
+  socket.onopen = () => console.log("WS connected");
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    // Update trend chart if pv/mv/time exist
+    if (data.pv !== undefined && data.mv !== undefined && data.time !== undefined) {
+      addTrendPoint({
+        time: data.time, // ISO string or HH:mm:ss
+        sp: data.sp,
+        pv: data.pv,
+        mv: data.mv
+      });
+    }   
+  };
+
+  socket.onclose = () => {
+    console.warn("⚠️ WebSocket closed. Reconnecting in 3s...");
+    setTimeout(connectWS, 3000);
+  };
+
+  socket.onerror = (err) => {
+    console.error("❌ WebSocket error:", err);
+  };
+}
+
+connectWS();
+
+function disconnectWS() {
+  if (socket) {
+    console.log("🔌 Closing WebSocket...");
+    socket.onclose = null;  // prevent auto-reconnect
+    socket.onerror = null;
+    socket.close();
+    socket = null;
+  }
+}
