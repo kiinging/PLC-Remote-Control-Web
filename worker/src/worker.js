@@ -1,6 +1,7 @@
 let relayState = false;
 let radxaAlive = false;
 let lastRadxaPing = 0;
+let lastRelayOn = 0;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://plc-web.online", // restrict to your domain
@@ -287,13 +288,20 @@ export default {
       if (request.method === "POST") {
         const data = await request.json();
         relayState = !!data.relay;
+
+        if (relayState) {
+          lastRelayOn = Date.now(); // record when relay turned on
+        }
+
         return withCors(JSON.stringify({ ok: true, relay: relayState }), 200, {
           "Content-Type": "application/json"
         });
       }
       if (request.method === "GET") {
         const alive = (Date.now() - lastRadxaPing < 15000);
-        return withCors(JSON.stringify({ relay: relayState, alive }), 200, {
+        const booting = relayState && !alive && (Date.now() - lastRelayOn < 60000);
+
+        return withCors(JSON.stringify({ relay: relayState, alive, booting }), 200, {
           "Content-Type": "application/json"
         });
       }

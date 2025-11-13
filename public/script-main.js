@@ -40,6 +40,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   setInterval(fetchTemperature, 3000);
   setInterval(updateTuneIndicator, 4000);
+
+  // ✅ Restore video if relay was previously alive
+  const relayAlive = localStorage.getItem("relayAlive") === "true";
+  if (relayAlive) {
+    console.log("Restoring video stream after refresh...");
+    startVideo();
+  }
+
 });
 
 // -------------------- Logout Timer --------------------
@@ -147,6 +155,10 @@ async function fetchInitialRelayStatus() {
   try {
     const res = await fetch(`${workerBase}/relay`, { cache: "no-store" });
     const data = await res.json();
+
+    if (data.booting) {
+      updateIndicator("relay-indicator", "booting");
+    }
 
     if (data.alive) {
       // 🧠 Start WebSocket here:
@@ -688,10 +700,16 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
       const res = await fetch(`${workerBase}/relay`, { cache: "no-store" });
       const data = await res.json();
 
+      if (data.booting) {
+        updateIndicator("relay-indicator", "booting");
+      }
+
       if (data.alive) {
         clearInterval(poll);
-        updateIndicator("relay-indicator", true);
-        startVideo(); // ✅ Only start video when relay is alive
+        updateIndicator("relay-indicator", true);        
+        localStorage.setItem("relayAlive", "true"); // ✅ Save relay alive state
+        setTimeout(startVideo, 3000);   // Wait for camera to stabilize
+//        
       } else if (Date.now() - start > maxWait) {
         clearInterval(poll);
         updateIndicator("relay-indicator", false);
@@ -712,6 +730,7 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
     body: JSON.stringify({ relay: false })
   });
   updateIndicator("relay-indicator", false);
+  localStorage.removeItem("relayAlive"); // ✅ clear alive state
   videoFeed.src = ""; // stop video
   videoFeed.style.opacity = "0.2";  
   disconnectWS();  // ✅ Disconnect WebSocket
