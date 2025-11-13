@@ -713,7 +713,6 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
       body: JSON.stringify({ relay: true })
     });
 
-    updateIndicator("relay-indicator", "booting");
     startCountdown();
 
     const start = Date.now();
