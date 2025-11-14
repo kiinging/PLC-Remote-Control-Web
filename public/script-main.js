@@ -755,9 +755,13 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
   });
   updateIndicator("relay-indicator", false);
   localStorage.removeItem("relayAlive"); // ✅ clear alive state
-  videoFeed.src = ""; // stop video
-  videoFeed.style.opacity = "0.2";  
-  disconnectWS();  // ✅ Disconnect WebSocket
+
+  // ⏳ WAIT 5 seconds before stopping stream + WS
+  setTimeout(() => {
+    videoFeed.src = "";           // stop video
+    videoFeed.style.opacity = "0.2";
+    disconnectWS();               // disconnect websocket
+  }, 5000);
 });
  
 //-------------------------------------------
@@ -772,14 +776,14 @@ let countdownTimer = null;
 
 function startCountdown(duration = 60) {
   const counterEl = document.getElementById("countdown");
+  const textEl = document.getElementById("countdownText");
   const endTime = Date.now() + duration * 1000;
 
   localStorage.setItem("countdownEndTime", endTime.toString());
   overlay.style.display = "flex"; // show overlay
 
-  // Set style for active countdown (yellow text)
+  textEl.style.color = "#ffcc00";  // Make entire text yellow
   counterEl.style.color = "#ffcc00"; // yellow
-  overlay.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
 
   const updateCountdown = () => {
     const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
