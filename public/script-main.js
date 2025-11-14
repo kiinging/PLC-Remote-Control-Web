@@ -802,11 +802,9 @@ function startCountdown(duration = 60) {
 
 function startVideo() {
   // Add timestamp to prevent caching
-  videoFeed.src = RADXA_STREAM_URL + "?t=" + Date.now();
+  videoFeed.src = RADXA_STREAM_URL;
   videoFeed.style.display = "block";
-  overlay.style.transition = "opacity 0.5s ease";
-  overlay.style.opacity = "0";
-  setTimeout(() => overlay.style.display = "none", 600);
+  overlay.style.opacity = "1";
 }
 
 function stopCountdown() {
