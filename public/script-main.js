@@ -761,7 +761,7 @@ document.getElementById("relay-off-btn").addEventListener("click", async () => {
     videoFeed.src = "";           // stop video
     videoFeed.style.opacity = "0.2";
     disconnectWS();               // disconnect websocket
-  }, 5000);
+  }, 10000);
 });
  
 //-------------------------------------------
