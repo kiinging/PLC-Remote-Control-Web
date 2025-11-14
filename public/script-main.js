@@ -729,9 +729,9 @@ document.getElementById("relay-on-btn").addEventListener("click", async () => {
 
       if (data.alive) {
         clearInterval(poll);
+        stopCountdown();
         updateIndicator("relay-indicator", true);        
         localStorage.setItem("relayAlive", "true"); // ✅ Save relay alive state
-        localStorage.removeItem("countdownEndTime");
         setTimeout(startVideo, 5000);   // Wait for camera to stabilize
 //        
       } else if (Date.now() - start > maxWait) {
@@ -805,6 +805,11 @@ function startVideo() {
   setTimeout(() => overlay.style.display = "none", 600);
 }
 
+function stopCountdown() {
+  const overlay = document.getElementById("countdownOverlay");
+  localStorage.removeItem("countdownEndTime");
+  overlay.style.display = "none";
+}
 
 // If the video loads early, remove overlay immediately
 videoFeed.addEventListener("load", () => {
