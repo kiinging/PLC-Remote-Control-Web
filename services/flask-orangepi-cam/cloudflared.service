@@ -1,0 +1,12 @@
+[Unit]
+Description=Cloudflare Tunnel
+After=network.target camera_app.service
+
+[Service]
+User=pizza
+ExecStart=/usr/local/bin/cloudflared tunnel run pi-camera
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

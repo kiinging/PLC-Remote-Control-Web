@@ -1,0 +1,16 @@
+[Unit]
+Description=Gunicorn Flask Camera Application
+After=network.target dev-video0.device
+
+[Service]
+ExecStartPre=/bin/sleep 5
+User=pizza
+WorkingDirectory=/home/pizza/flask-pi-cam-cloudflare
+Environment="PATH=/home/pizza/flask-pi-cam-cloudflare/venv/bin"
+ExecStart=/home/pizza/flask-pi-cam-cloudflare/venv/bin/gunicorn -b 127.0.0.1:5000 app:app --threads 2
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
