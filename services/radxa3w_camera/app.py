@@ -138,6 +138,21 @@ def capture_frames():
 # Start capture thread
 threading.Thread(target=capture_frames, daemon=True).start()
 
+def heartbeat_loop():
+    """Send heartbeat to the main worker to indicate camera is online."""
+    import requests
+    target_url = "https://plc-web.online/radxa_heartbeat"
+    
+    while True:
+        try:
+            requests.post(target_url, timeout=5)
+            # logging.info("Heartbeat sent")
+        except Exception as e:
+            logging.error(f"Heartbeat failed: {e}")
+        time.sleep(10)
+
+threading.Thread(target=heartbeat_loop, daemon=True).start()
+
 @app.route('/')
 @basic_auth.required
 def index():
