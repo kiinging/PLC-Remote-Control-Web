@@ -4,6 +4,17 @@ This document explains how the **OV5647 camera sensor** connects through the **M
 
 ---
 
+## Clone the REAL repository
+
+# 1. Clone the REAL repository
+git clone https://github.com/kiinging/PLC-Remote-Control-Web.git repo
+# 2. Create a link so your service still finds the code at "~/radxa3w_camera"
+ln -s ~/repo/services/radxa3w_camera ~/radxa3w_camera
+# 3. Now go in and setup (this uses the NEW setup.sh I just fixed)
+cd ~/radxa3w_camera
+chmod +x setup.sh
+./setup.sh
+
 ## ✅ OV5647 Driver Build Status (Kernel Config Note)
 
 When checking the kernel configuration with:
