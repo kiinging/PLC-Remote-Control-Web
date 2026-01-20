@@ -1,4 +1,4 @@
-cat /sys/class/thermal/thermal_zone*/temp
+cat /sys/class/thermal/thermal_zone1/temp
 chmod +x setup.sh
 
 # commands for wifi
