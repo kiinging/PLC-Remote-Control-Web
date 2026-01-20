@@ -1,5 +1,5 @@
 name = "cloud-worker"
-main = "worker/src/worker.js"
+main = "services/worker/src/worker.js"
 compatibility_date = "2025-03-23"
 workers_dev = true
 route = "plc-web.online/*"
@@ -9,5 +9,5 @@ binding = "USERS"
 id = "53b5cca7e0e34c34978581f25ed8d010"
 
 [assets]
-directory = "public"
+directory = "apps/web/dist"
 

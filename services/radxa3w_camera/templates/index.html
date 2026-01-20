@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PLC Remote Camera</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 40px; }
+    #video { display: none; }
+  </style>
+</head>
+<body>
+  <h2>Login</h2>
+  <input id="username" placeholder="Username"><br><br>
+  <input id="password" type="password" placeholder="Password"><br><br>
+  <button onclick="login()">Login</button>
+
+  <div id="video">
+    <h3>Camera Stream</h3>
+    <img src="/video_feed" width="640">
+    <br><br>
+    <button onclick="toggleDevice('on')">Turn ON Device</button>
+    <button onclick="toggleDevice('off')">Turn OFF Device</button>
+  </div>
+
+  <script>
+    async function login() {
+      let username = document.getElementById("username").value;
+      let password = document.getElementById("password").value;
+      let res = await fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, password})
+      });
+      if (res.ok) {
+        alert("Login successful!");
+        document.getElementById("video").style.display = "block";
+      } else {
+        alert("Invalid credentials");
+      }
+    }
+
+    async function toggleDevice(action) {
+      await fetch('/device', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action})
+      });
+    }
+  </script>
+</body>
+</html>

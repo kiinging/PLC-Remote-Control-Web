@@ -1,0 +1,21 @@
+# File: /etc/systemd/system/cloudflared.service
+# Cloudflare Tunnel for radxa3w-camera
+[Unit]
+Description=Cloudflare Tunnel
+After=network-online.target camera_app.service
+Wants=network-online.target
+
+[Service]
+User=radxa
+TimeoutStartSec=0
+Type=notify
+ExecStart=/usr/bin/cloudflared \
+  --config /home/radxa/.cloudflared/config.yml \
+  --no-autoupdate \
+  tunnel run radxa3w-camera
+
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

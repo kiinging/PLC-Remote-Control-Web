@@ -1,0 +1,18 @@
+# File: /etc/systemd/system/camera_app.service
+# Flask camera app service for radxa3w
+[Unit]
+Description=Gunicorn Flask Camera Application
+After=network.target dev-video0.device
+
+[Service]
+ExecStartPre=/bin/sleep 5
+User=radxa
+WorkingDirectory=/home/radxa/camera-stream
+Environment="PATH=/home/radxa/camera-stream/venv/bin"
+ExecStart=/home/radxa/camera-stream/venv/bin/gunicorn -b 127.0.0.1:5000 app:app --threads 2
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
