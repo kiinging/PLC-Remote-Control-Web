@@ -18,8 +18,8 @@ sudo apt full-upgrade -y --allow-change-held-packages || echo "⚠️  Skipped d
 
 # Install essential dependencies including those for OpenCV
 echo "📦 Installing core dependencies..."
-# python3-full is recommended for venv on newer Debian/Raspbian
-sudo apt install -y python3 python3-full python3-pip v4l-utils ffmpeg libgl1
+# python3-full is recommended for venv, python3-opencv includes GStreamer support (pip version often misses it)
+sudo apt install -y python3 python3-full python3-pip v4l-utils ffmpeg libgl1 python3-opencv
 
 # Install Cloudflared
 if ! command -v cloudflared &> /dev/null; then
@@ -38,9 +38,10 @@ fi
 echo "🐍 Creating Python virtual environment..."
 # Remove existing venv to prevent symlink errors
 rm -rf venv
-python3 -m venv venv
+# --system-site-packages is CRITICAL to access the apt-installed python3-opencv (with GStreamer)
+python3 -m venv venv --system-site-packages
 
-# Install Python dependencies using explicit path to avoid "source" issues
+# Install Python dependencies using explicit path
 if [ -f "requirements.txt" ]; then
   echo "📜 Installing Python packages..."
   ./venv/bin/pip install --upgrade pip

@@ -245,10 +245,17 @@ export default {
     }
 
     if (url.pathname === "/video_feed") {
-      const r = await fetch("https://cam.plc-web.online/video_feed");
+      const session = await validateSession(request, env);
+      if (!session) return withCors(request, "Unauthorized", 401);
+
+      // Pass Basic Auth credentials (radxa:radxa) to the camera stream
+      const authHeader = "Basic " + btoa("radxa:radxa");
+      const r = await fetch("https://cam.plc-web.online/video_feed", {
+        headers: { "Authorization": authHeader }
+      });
       return new Response(r.body, {
         status: r.status,
-        headers: { ...corsHeaders, "Content-Type": "multipart/x-mixed-replace; boundary=frame" }
+        headers: { ...getCorsHeaders(request), "Content-Type": "multipart/x-mixed-replace; boundary=frame" }
       });
     }
 

@@ -3,6 +3,5 @@ flask-cors
 flask-basicauth
 gunicorn
 requests
-opencv-python
 numpy
 pillow
