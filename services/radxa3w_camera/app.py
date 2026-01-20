@@ -17,6 +17,7 @@ app.config['BASIC_AUTH_PASSWORD'] = 'radxa'
 app.config['BASIC_AUTH_FORCE'] = True # Protect entire app
 
 basic_auth = BasicAuth(app)
+print(f"🔐 Protection Enabled. User: {app.config['BASIC_AUTH_USERNAME']}")
 
 # Global variables
 camera = None
@@ -36,39 +37,46 @@ def check_gstreamer_support():
 def setup_camera():
     global camera
     
-    # 1. Try Rockchip Specific Pipeline (NV21 -> BGR)
-    # The diagnosic showed support for NV21 (Index 5)
-    gstreamer_pipeline = (
+    # 1. Try Generic GStreamer Pipeline (Auto-negotiate format)
+    # This pipeline lets v4l2src pick the best format (NV12, UYVY, etc.) and videoconvert handles the BGR conversion.
+    # We remove strict resolution/fps caps to avoid "Internal data stream error".
+    gstreamer_pipeline_auto = (
         "v4l2src device=/dev/video0 ! "
-        "video/x-raw,format=NV21,width=640,height=480,framerate=30/1 ! "
         "videoconvert ! "
         "video/x-raw,format=BGR ! "
         "appsink drop=1"
     )
 
-    logging.info(f"Attempting GStreamer Pipeline: {gstreamer_pipeline}")
-    cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
+    logging.info(f"Attempting Generic GStreamer Pipeline: {gstreamer_pipeline_auto}")
+    cap = cv2.VideoCapture(gstreamer_pipeline_auto, cv2.CAP_GSTREAMER)
 
     if cap.isOpened():
-        logging.info("Camera opened successfully via GStreamer (NV21)!")
-        camera = cap
-        return
+        # Read one frame to prove it works
+        ret, _ = cap.read()
+        if ret:
+            logging.info("Camera opened successfully via Generic GStreamer!")
+            camera = cap
+            return
+        else:
+            logging.warning("Generic Pipeline opened but failed to read frame.")
+            cap.release()
 
-    logging.warning("GStreamer NV21 failed. Trying UYVY...")
-
-    # 2. Try UYVY (Index 0 from diagnosis)
-    gstreamer_pipeline_uyvy = (
+    # 2. Try explicitly simpler resolution (320x240) which is almost always supported
+    logging.warning("Generic failed. Trying 320x240...")
+    gstreamer_pipeline_small = (
         "v4l2src device=/dev/video0 ! "
-        "video/x-raw,format=UYVY,width=640,height=480,framerate=30/1 ! "
+        "video/x-raw,width=320,height=240 ! "
         "videoconvert ! "
         "video/x-raw,format=BGR ! "
         "appsink drop=1"
     )
-    cap = cv2.VideoCapture(gstreamer_pipeline_uyvy, cv2.CAP_GSTREAMER)
+    cap = cv2.VideoCapture(gstreamer_pipeline_small, cv2.CAP_GSTREAMER)
     if cap.isOpened():
-        logging.info("Camera opened successfully via GStreamer (UYVY)!")
-        camera = cap
-        return
+        ret, _ = cap.read()
+        if ret:
+            logging.info("Camera opened via Small GStreamer Pipeline!")
+            camera = cap
+            return
     
     # 3. Fallback to standard index
     logging.warning("GStreamer failed. Trying standard index 0...")
@@ -77,7 +85,7 @@ def setup_camera():
         camera = cap
         return
             
-    logging.error("No camera found! (GStreamer & Index 0 failed)")
+    logging.error("No camera found! (All pipelines failed)")
 
 def capture_frames():
     global latest_frame, camera
