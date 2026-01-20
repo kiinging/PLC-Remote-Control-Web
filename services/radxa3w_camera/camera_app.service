@@ -7,9 +7,9 @@ After=network.target dev-video0.device
 [Service]
 ExecStartPre=/bin/sleep 5
 User=radxa
-WorkingDirectory=/home/radxa/camera-stream
-Environment="PATH=/home/radxa/camera-stream/venv/bin"
-ExecStart=/home/radxa/camera-stream/venv/bin/gunicorn -b 127.0.0.1:5000 app:app --threads 2
+WorkingDirectory=/home/radxa/radxa3w_camera
+Environment="PATH=/home/radxa/radxa3w_camera/venv/bin"
+ExecStart=/home/radxa/radxa3w_camera/venv/bin/gunicorn -b 0.0.0.0:5000 app:app --threads 2
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1

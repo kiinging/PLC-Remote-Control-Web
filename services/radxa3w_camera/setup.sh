@@ -18,8 +18,8 @@ sudo apt full-upgrade -y --allow-change-held-packages || echo "⚠️  Skipped d
 
 # Install essential dependencies including those for OpenCV
 echo "📦 Installing core dependencies..."
-# libgl1 is often needed for opencv-python-headless even if headless
-sudo apt install -y python3 python3-venv python3-pip v4l-utils ffmpeg libgl1
+# python3-full is recommended for venv on newer Debian/Raspbian
+sudo apt install -y python3 python3-full python3-pip v4l-utils ffmpeg libgl1
 
 # Install Cloudflared
 if ! command -v cloudflared &> /dev/null; then
@@ -36,18 +36,21 @@ fi
 
 # Create virtual environment
 echo "🐍 Creating Python virtual environment..."
+# Remove existing venv to prevent symlink errors
+rm -rf venv
 python3 -m venv venv
-source venv/bin/activate
 
-# Install Python dependencies
+# Install Python dependencies using explicit path to avoid "source" issues
 if [ -f "requirements.txt" ]; then
   echo "📜 Installing Python packages..."
-  pip install --upgrade pip
-  pip install -r requirements.txt
+  ./venv/bin/pip install --upgrade pip
+  ./venv/bin/pip install -r requirements.txt
 else
   echo "⚠️  No requirements.txt found!"
 fi
 
 echo "✅ Setup complete!"
-echo "To start manually: source venv/bin/activate && python3 app.py"
-echo "To check service: sudo systemctl status camera_app"
+echo "To copy the service file:"
+echo "sudo cp camera_app.service /etc/systemd/system/"
+echo "sudo systemctl daemon-reload"
+echo "sudo systemctl enable --now camera_app"
