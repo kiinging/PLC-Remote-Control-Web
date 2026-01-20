@@ -5,7 +5,7 @@ import axios from 'axios';
 const API_URL = '';
 
 // Create an axios instance with credentials (cookies) support for session management
-const api = axios.create({
+export const api = axios.create({
     baseURL: API_URL,
     withCredentials: true, // Important: Sends cookies with requests
     headers: {

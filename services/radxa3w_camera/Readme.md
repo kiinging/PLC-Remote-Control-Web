@@ -54,6 +54,11 @@ CONFIG_VIDEO_OV5647=y
 If the Device Tree Overlay (DTBO) for your camera is missing or misconfigured, the kernel will still contain the OV5647 driver — but the sensor will not appear in `/dev` or `media-ctl`.
 
 ---
+Step 1: Verify Camera (Build Confidence)
+Run this on your Radxa to confirm the camera app is listening and accepting the password:
+
+curl -I -u radxa:radxa http://localhost:5000/video_feed
+If it says HTTP/1.1 200 OK, the camera is perfect. 🎉
 
 ## 🔧 Overview of the Camera Data Path
 

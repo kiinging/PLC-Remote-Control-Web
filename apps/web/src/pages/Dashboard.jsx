@@ -110,7 +110,7 @@ export default function Dashboard() {
         if (r.alive) {
             setRelayStatus('alive');
             setRelay(true);
-            if (!videoSrc) setVideoSrc('https://cloud-worker.wongkiinging.workers.dev/video_feed');
+            if (!videoSrc) setVideoSrc('/video_feed');
         } else if (r.booting) {
             setRelayStatus('booting');
             setRelay(true);
