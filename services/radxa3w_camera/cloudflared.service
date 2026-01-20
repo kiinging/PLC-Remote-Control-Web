@@ -12,7 +12,7 @@ Type=notify
 ExecStart=/usr/bin/cloudflared \
   --config /home/radxa/.cloudflared/config.yml \
   --no-autoupdate \
-  tunnel run radxa3w-camera
+  tunnel run radxa3w_camera
 
 Restart=on-failure
 RestartSec=5s

@@ -60,6 +60,16 @@ Run this on your Radxa to confirm the camera app is listening and accepting the 
 curl -I -u radxa:radxa http://localhost:5000/video_feed
 If it says HTTP/1.1 200 OK, the camera is perfect. 🎉
 
+
+Step A — Test in a browser locally (no Cloudflare yet)
+
+From your PC (same network), open:
+
+http://RADXA_IP:5000/video_feed
+
+
+
+
 ## 🔧 Overview of the Camera Data Path
 
 On the Radxa Zero 3 (RK3566), the MIPI-CSI camera pipeline flows through these stages:
