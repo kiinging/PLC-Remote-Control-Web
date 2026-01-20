@@ -117,8 +117,11 @@ export default function Dashboard() {
         } else {
             setRelayStatus('offline');
             setRelay(false);
-            setVideoSrc('');
+            // setVideoSrc(''); // Keep video trying to connect
         }
+
+        // Always try to load video
+        if (!videoSrc) setVideoSrc('/video_feed');
     };
 
     const handleRelayToggle = async (state) => {
@@ -341,9 +344,9 @@ export default function Dashboard() {
                         <Card className="mb-3 text-center">
                             <Card.Header>Live Video</Card.Header>
                             <Card.Body className="p-0 bg-black" style={{ minHeight: '240px', position: 'relative' }}>
-                                {relayStatus !== 'alive' && (
+                                {relayStatus === 'booting' && (
                                     <div className="d-flex align-items-center justify-content-center text-white h-100" style={{ position: 'absolute', width: '100%', top: 0 }}>
-                                        {relayStatus === 'booting' ? 'Booting Camera...' : 'Camera Offline'}
+                                        Booting Camera...
                                     </div>
                                 )}
                                 {videoSrc && (
