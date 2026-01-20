@@ -146,7 +146,7 @@ def heartbeat_loop():
     while True:
         try:
             requests.post(target_url, timeout=5)
-            # logging.info("Heartbeat sent")
+            logging.info("Heartbeat sent to Worker")
         except Exception as e:
             logging.error(f"Heartbeat failed: {e}")
         time.sleep(10)
