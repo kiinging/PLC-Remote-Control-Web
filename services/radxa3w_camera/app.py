@@ -15,27 +15,52 @@ camera = None
 latest_frame = None
 frame_lock = threading.Lock()
 
+def check_gstreamer_support():
+    """Verify if OpenCV is built with GStreamer support."""
+    build_info = cv2.getBuildInformation()
+    if "GStreamer: YES" in build_info:
+        logging.info("OpenCV GStreamer support: YES")
+        return True
+    else:
+        logging.warning("OpenCV GStreamer support: NO (This may cause failure)")
+        return False
+
 def setup_camera():
     global camera
-    # Try index 0, then 1, then -1 to find a camera
-    for idx in [0, 1, -1]:
-        try:
-            cap = cv2.VideoCapture(idx)
-            if cap.isOpened():
-                logging.info(f"Camera opened on index {idx}")
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
-                cap.set(cv2.CAP_PROP_FPS, 15)
-                camera = cap
-                return
-        except Exception as e:
-            logging.warn(f"Failed to open camera index {idx}: {e}")
+    
+    # 1. Try Rockchip Specific Pipeline (NV12 -> BGR)
+    # The diagnosic showed 'Video Capture Multiplanar' and NV12/NV21 support.
+    # We must use GStreamer to handle the multiplanar format.
+    gstreamer_pipeline = (
+        "v4l2src device=/dev/video0 ! "
+        "video/x-raw,format=NV12,width=640,height=480,framerate=30/1 ! "
+        "videoconvert ! "
+        "video/x-raw,format=BGR ! "
+        "appsink drop=1"
+    )
+
+    logging.info(f"Attempting GStreamer Pipeline: {gstreamer_pipeline}")
+    cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
+
+    if cap.isOpened():
+        logging.info("Camera opened successfully via GStreamer!")
+        camera = cap
+        return
+
+    logging.warning("GStreamer failed. Trying standard index 0...")
+    
+    # 2. Fallback to standard index (unlikely to work based on logs, but good backup)
+    cap = cv2.VideoCapture(0)
+    if cap.isOpened():
+        camera = cap
+        return
             
-    logging.error("No camera found!")
+    logging.error("No camera found! (GStreamer & Index 0 failed)")
 
 def capture_frames():
     global latest_frame, camera
     
+    check_gstreamer_support()
     setup_camera()
     
     font = None
@@ -54,7 +79,7 @@ def capture_frames():
         success, frame = camera.read()
         if not success:
             logging.warning("Failed to read frame")
-            time.sleep(0.5)
+            time.sleep(1) # Wait a bit before retry
             continue
             
         try:
@@ -78,7 +103,7 @@ def capture_frames():
         except Exception as e:
             logging.error(f"Processing error: {e}")
             
-        time.sleep(0.05) # Cap FPS slightly (approx 20fps)
+        time.sleep(0.05) 
 
 # Start capture thread
 threading.Thread(target=capture_frames, daemon=True).start()
