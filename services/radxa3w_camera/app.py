@@ -1,4 +1,5 @@
 from flask import Flask, Response, render_template
+from flask_basicauth import BasicAuth
 import cv2
 import time
 import threading
@@ -9,6 +10,13 @@ from datetime import datetime
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# Authorization Config
+app.config['BASIC_AUTH_USERNAME'] = 'radxa'
+app.config['BASIC_AUTH_PASSWORD'] = 'radxa'
+app.config['BASIC_AUTH_FORCE'] = True # Protect entire app
+
+basic_auth = BasicAuth(app)
 
 # Global variables
 camera = None
@@ -28,12 +36,11 @@ def check_gstreamer_support():
 def setup_camera():
     global camera
     
-    # 1. Try Rockchip Specific Pipeline (NV12 -> BGR)
-    # The diagnosic showed 'Video Capture Multiplanar' and NV12/NV21 support.
-    # We must use GStreamer to handle the multiplanar format.
+    # 1. Try Rockchip Specific Pipeline (NV21 -> BGR)
+    # The diagnosic showed support for NV21 (Index 5)
     gstreamer_pipeline = (
         "v4l2src device=/dev/video0 ! "
-        "video/x-raw,format=NV12,width=640,height=480,framerate=30/1 ! "
+        "video/x-raw,format=NV21,width=640,height=480,framerate=30/1 ! "
         "videoconvert ! "
         "video/x-raw,format=BGR ! "
         "appsink drop=1"
@@ -43,13 +50,28 @@ def setup_camera():
     cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
 
     if cap.isOpened():
-        logging.info("Camera opened successfully via GStreamer!")
+        logging.info("Camera opened successfully via GStreamer (NV21)!")
         camera = cap
         return
 
-    logging.warning("GStreamer failed. Trying standard index 0...")
+    logging.warning("GStreamer NV21 failed. Trying UYVY...")
+
+    # 2. Try UYVY (Index 0 from diagnosis)
+    gstreamer_pipeline_uyvy = (
+        "v4l2src device=/dev/video0 ! "
+        "video/x-raw,format=UYVY,width=640,height=480,framerate=30/1 ! "
+        "videoconvert ! "
+        "video/x-raw,format=BGR ! "
+        "appsink drop=1"
+    )
+    cap = cv2.VideoCapture(gstreamer_pipeline_uyvy, cv2.CAP_GSTREAMER)
+    if cap.isOpened():
+        logging.info("Camera opened successfully via GStreamer (UYVY)!")
+        camera = cap
+        return
     
-    # 2. Fallback to standard index (unlikely to work based on logs, but good backup)
+    # 3. Fallback to standard index
+    logging.warning("GStreamer failed. Trying standard index 0...")
     cap = cv2.VideoCapture(0)
     if cap.isOpened():
         camera = cap
@@ -109,10 +131,12 @@ def capture_frames():
 threading.Thread(target=capture_frames, daemon=True).start()
 
 @app.route('/')
+@basic_auth.required
 def index():
     return render_template('index.html')
 
 @app.route('/video_feed')
+@basic_auth.required
 def video_feed():
     def generate():
         while True:
