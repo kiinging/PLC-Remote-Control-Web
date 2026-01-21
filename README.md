@@ -1,212 +1,288 @@
 
 # PLC Remote Control Web
 
-This project provides a **web-based PID heater control and monitoring system** for a PLC, built with:
+A **cloud-based remote laboratory system** for PID temperature control education, built with modern web technologies and edge computing.
 
-* **Cloudflare Pages** → Frontend (HTML, JavaScript, Bootstrap, Chart.js)
-* **Cloudflare Workers** → Backend API & proxy layer
-* **Orange Pi Zero 3 (1GB)** → Runs the Flask API and handles all PLC control & monitoring
-* **Optional Cloudflare D1** → For logging and storing historical data
-* **Raspberry Pi Zero 2 W Security Camera** → Separate [camera repo](https://github.com/kiinging/flask_cam) (Flask + Picamera2) used for **live video streaming**
+## 🏗️ Architecture
+
+### Frontend
+* **React + Vite** → Modern SPA with hot module replacement
+* **React Bootstrap** → Responsive UI components
+* **Chart.js** → Real-time temperature and control trend visualization
+* **Cloudflare Pages** → Global CDN deployment
+
+### Backend
+* **Cloudflare Workers** → Edge API proxy, session management, and authentication
+* **Cloudflare KV** → User credentials and session storage
+* **Cloudflare Tunnel** → Secure connection to on-premise hardware
+
+### Hardware
+* **Orange Pi 4 Pro (12GB RAM)** → Main gateway server
+  * PLC communication (Modbus TCP)
+  * MAX31865 RTD temperature acquisition
+  * Student file management (lab sheets, booking system)
+  * User authentication backend
+* **Radxa Zero 3W (4GB RAM)** → Dedicated video streaming server
+  * OV5647 camera (5MP)
+  * OpenCV + GStreamer pipeline
+  * MJPEG streaming over Cloudflare Tunnel
 
 ### ✨ Features
 
-* Start/stop PLC and lights
-* Send setpoints and PID parameters
-* Real-time temperature monitoring
-* Historical trend visualization
-* Optional secure live camera feed (via Pi Zero 2 W + Cloudflare Tunnel)
+#### For Students
+* 🎓 **Remote PID Control Lab** - Access real hardware from anywhere
+* 📹 **Live Video Feed** - Monitor the physical setup in real-time
+* 📊 **Real-time Trends** - Visualize PV, SP, and MV on interactive charts
+* 📝 **Lab Sheet Download** - Access experiment instructions and templates
+* 📅 **Lab Booking System** - Reserve time slots for experiments
+* 🔐 **Secure Login** - Individual student accounts with session management
+
+#### For Instructors
+* 👥 **User Management** - Create and manage student accounts
+* 📈 **System Monitoring** - View all active sessions and system status
+* 🛠️ **Remote Diagnostics** - Check hardware status and logs
+
+#### Control Features
+* **Manual Mode** - Direct MV (%) control
+* **Auto Mode** - PID control with adjustable parameters (PB, Ti, Td)
+* **Auto-Tune Mode** - Automatic PID parameter identification
+* **Process Control** - Start/stop light, web interface, and PLC independently
+* **Power Management** - Remote relay control for equipment power
 
 ---
 
----
-## 🔄 How Requests Flow
+## 📁 Project Structure
 
-1. **Frontend (Browser → Worker)**
-   The browser always talks to:
-
-   ```
-   https://cloud-worker.wongkiinging.workers.dev
-   ```
-   with a specific **pathname**.
-
-   Example:
-
-   * `/start_light` → Turn on light
-   * `/stop_light` → Turn off light
-   * `/start_plc` → Start PLC heater
-   * `/stop_plc` → Stop PLC heater
-   * `/setpoint` → Send new temperature setpoint
-   * `/pid` → Send new PID parameters
-   * `/temp` → Get current RTD temperature
-   * `/trend` → Get PV/MV trend data
-   * `/video_feed` → Live MJPEG camera feed
-
-2. **Worker (Proxy → Backends)**
-   - Based on the pathname, the Worker forwards the request to the right backend:
-     - `orangepi.plc-web.online` → PLC commands + temperature
-     - `cam.plc-web.online` → Live camera feed
----
-
-## 📌 Features
-
-* **Web Interface**
-
-  * Start/stop PLC and light
-  * Manual/Auto mode selection
-  * Send **setpoint** and **PID parameters (Kp, Ti, Td)**
-  * View **real-time temperature** and **update timestamps**
-  * Display **PV (°C)** and **MV (%)** trends in Chart.js
-  * Live video stream of the system
-
-* **Cloudflare Worker API**
-
-  * Secure proxy between web frontend and backend servers
-  * Adds CORS headers for browser requests
-
-* **Optional Database**
-
-  * Use Cloudflare D1 to log operator actions or temperature history
-
----
-
-## 😁 Project Structure
 ```
-👤 PLC-Remote-Control-Web
- ├── 👤 public/         # Static assets (if needed)
- │   ├── 📄 dashboard.html   # Frontend UI
- │   ├── 📄 styles.css   # CSS for styling
- │   └── 📄 script.js    # JavaScript logic
- │
- ├── 👤 worker/        # Cloudflare Worker backend
- │   ├── 📄 worker.js    # Backend API logic
- │   └── 📄 wrangler.toml # Cloudflare Worker config
- │
- ├── 👤 database/      # Optional database setup
- │   ├── 📄 schema.sql   # SQL for Cloudflare D1
- │   └── 📄 seed.sql     # Initial test data
- │
- └── 📄 README.md      # Documentation
+PLC-Remote-Control-Web/
+├── apps/
+│   └── web/                    # React + Vite frontend
+│       ├── src/
+│       │   ├── pages/          # Dashboard, Login, Signup, Admin
+│       │   ├── components/     # TrendChart, etc.
+│       │   ├── contexts/       # AuthContext
+│       │   └── services/       # API client
+│       ├── vite.config.js
+│       └── package.json
+│
+├── services/
+│   ├── worker/                 # Cloudflare Worker
+│   │   ├── src/
+│   │   │   └── worker.js       # API proxy, auth, video streaming
+│   │   └── wrangler.toml
+│   │
+│   ├── Opi4Pro_gateway/        # Orange Pi Flask API
+│   │   ├── app.py              # PLC control, temp reading
+│   │   ├── modbus_client.py    # Modbus TCP communication
+│   │   └── max31865.py         # RTD sensor driver
+│   │
+│   └── radxa3w_camera/         # Radxa camera service
+│       ├── app.py              # Flask video streaming
+│       ├── setup.sh            # Environment setup
+│       └── camera_app.service  # Systemd service
+│
+├── wrangler.toml               # Worker + Pages deployment config
+└── README.md
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Deployment
 
-### 1️⃣ **Set Up Cloudflare Pages (Frontend)**
+### 1️⃣ Frontend (React + Vite)
 
-1. Go to [Cloudflare Pages](https://pages.cloudflare.com/)
-2. Connect your **GitHub repository** containing `dashboard.html`, `script.js`, and other static files
-3. Cloudflare Pages will automatically build and deploy your frontend
-4. **Updating the frontend:**
+```bash
+cd apps/web
+npm install
+npm run build
+```
 
-   * Make changes locally (e.g., edit `index.html` in VS Code)
-   * Run `git commit` and `git push`
-   * Cloudflare Pages will automatically detect the push and redeploy the site — no manual action required
+The build output (`dist/`) is automatically deployed via Cloudflare Worker's asset serving.
 
+### 2️⃣ Cloudflare Worker
 
-### 2️⃣ **Deploy Cloudflare Worker (Backend API)**
-1. Install [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/):
-   ```sh
-   npm install -g wrangler
-   ```
-2. Log in to Cloudflare:
-   ```sh
-   npx wrangler login
-   ```
-3. Initialize a worker project:
-   ```sh
-   wrangler init plc-worker
-   ```
-4. Navigate to the worker directory:
-   ```sh
-   cd worker
-   ```
-5. Update `worker.js` with API logic
-6. Deploy the worker:
-   ```sh
-   npx wrangler deploy
-   ```
+```bash
+cd services/worker
+npx wrangler deploy
+```
 
-### 3️⃣ **Set Up Cloudflare D1 (Database) [underconstruction]**
-1. Create a new D1 database:
-   ```sh
-   npx wrangler d1 create plc-db
-   ```
-2. Deploy schema:
-   ```sh
-   npx wrangler d1 execute plc-db --file=database/schema.sql
-   ```
+This deploys:
+- API proxy routes (`/temp`, `/control_status`, `/setpoint`, etc.)
+- Authentication endpoints (`/api/login`, `/api/signup`, `/api/session`)
+- Video feed proxy (`/video_feed` → `https://cam.plc-web.online`)
+- Static asset serving (React app)
 
-### 4️⃣ **Backend (OrangePi / Raspberry Pi)**
+### 3️⃣ Orange Pi 4 Pro Gateway
 
-Run a Flask (or similar) HTTP API to actually control PLC hardware.
+```bash
+# On the Orange Pi
+cd ~/gateway
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Start services
+sudo systemctl enable gateway.service
+sudo systemctl start gateway.service
+```
+
+### 4️⃣ Radxa Zero 3W Camera
+
+```bash
+# On the Radxa
+cd ~/radxa3w_camera
+chmod +x setup.sh
+./setup.sh
+
+# Start services
+sudo systemctl enable camera_app.service cloudflared.service
+sudo systemctl start camera_app.service cloudflared.service
+```
+
+---
+
+## 🔄 Request Flow
+
+```
+Browser
+  ↓
+https://plc-web.online (Cloudflare Worker)
+  ↓
+  ├─→ /api/* → Worker KV (Auth, Session)
+  ├─→ /video_feed → cam.plc-web.online (Radxa)
+  └─→ /temp, /control_status, etc. → orangepi.plc-web.online (OPi4Pro)
+```
 
 ---
 
 ## ⚡ API Endpoints
 
-| Endpoint       | Method | Description                    |
-| -------------- | ------ | ------------------------------ |
-| `/start_light` | POST   | Turn on the light              |
-| `/stop_light`  | POST   | Turn off the light             |
-| `/start_plc`   | POST   | Start PLC heater               |
-| `/stop_plc`    | POST   | Stop PLC heater                |
-| `/temp`        | GET    | Get RTD temperature            |
-| `/trend`       | GET    | Get PV/MV historical data      |
-| `/setpoint`    | POST   | Update setpoint (°C)           |
-| `/pid`         | POST   | Update PID params (Kp, Ti, Td) |
-| `/video_feed`  | GET    | Live MJPEG camera feed         |
+### Authentication
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/login` | POST | User login (returns session cookie) |
+| `/api/signup` | POST | Create new student account |
+| `/api/logout` | POST | End session |
+| `/api/session` | GET | Check current session |
+| `/api/users` | GET | List all users (admin) |
+| `/api/user/delete` | POST | Delete user (admin) |
 
----
-## 🖥️ Web Interface
+### PLC Control
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/start_light` | POST | Turn on indicator light |
+| `/stop_light` | POST | Turn off indicator light |
+| `/start_web` | POST | Enable web control |
+| `/stop_web` | POST | Disable web control |
+| `/start_plc` | POST | Enable PLC control |
+| `/stop_plc` | POST | Disable PLC control |
+| `/manual_mode` | POST | Switch to manual mode |
+| `/auto_mode` | POST | Switch to auto mode |
+| `/tune_mode` | POST | Switch to auto-tune mode |
 
-The frontend uses **Bootstrap 5 + Chart.js** for a responsive UI.
+### Data & Parameters
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/temp` | GET | Get current RTD temperature |
+| `/control_status` | GET | Get light/web/plc/mode status |
+| `/setpoint` | POST | Set temperature setpoint (°C) |
+| `/pid` | POST | Set PID parameters (PB, Ti, Td) |
+| `/mv_manual` | POST | Set manual MV (%) |
+| `/tune_start` | POST | Start auto-tuning |
+| `/tune_stop` | POST | Stop auto-tuning |
+| `/tune_status` | GET | Get tuning progress |
 
-* Control panel with Start/Stop buttons and mode selection
-* Input fields for Setpoint, Kp, Ti, Td
-* Trend chart showing **PV vs MV**
-* Live video feed
-
----
-
-
-## 💀 Useful Wrangler CLI Commands
-| Command | Description |
-|---------|-------------|
-| `npx wrangler login` | Authenticate Wrangler with Cloudflare |
-| `npx wrangler init` | Initialize a new Worker project |
-| `npx wrangler dev` | Run Worker locally at `http://localhost:8787/` |
-| `npx wrangler deploy` | Deploy the Worker to Cloudflare |
-| `npx wrangler tail` | View real-time logs of Worker requests |
-| `npx wrangler d1 create <db-name>` | Create a Cloudflare D1 database |
-| `npx wrangler d1 execute <db-name> --file=<schema.sql>` | Apply SQL schema to D1 |
-
----
-
-## 💪 Next Steps
-- ✅ Secure API endpoints with authentication
-- ✅ Store logs in Cloudflare D1
-
----
-
-## 💽 License
-This project is open-source under the MIT License.
+### Video & Power
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/video_feed` | GET | MJPEG stream (640x480) |
+| `/relay` | GET/POST | Query or control equipment power |
 
 ---
 
-## 📲 Contact
-If you have questions or suggestions, feel free to open an issue on GitHub!
+## 🎓 Educational Use Case
+
+This system is designed for **remote temperature control laboratories** where students can:
+
+1. **Book a Time Slot** - Reserve equipment access via the booking system
+2. **Download Lab Sheet** - Get experiment instructions and data templates
+3. **Login** - Access the dashboard with individual credentials
+4. **Monitor Setup** - View live video of the physical equipment
+5. **Run Experiments** - Control temperature, adjust PID parameters, collect data
+6. **Analyze Results** - Export trend data for lab reports
+
+**Instructor Benefits:**
+- No physical lab access required (24/7 availability)
+- Reduced equipment wear (controlled access)
+- Scalable to multiple student groups
+- Real-time monitoring of student activity
 
 ---
 
-## 🏠 Live Deployment Links
-- **Web Interface:** [https://cloud-ui-4ws.pages.dev/](https://cloud-ui-4ws.pages.dev/)
-- **Worker API:** [https://cloud-worker.wongkiinging.workers.dev/](https://cloud-worker.wongkiinging.workers.dev/)
+## 🛠️ Development
 
+### Local Frontend Development
+```bash
+cd apps/web
+npm run dev
+# Opens http://localhost:5173
+# Proxies API requests to production worker
+```
 
-# Remote PLC Control Using Raspberry Pi, Flask, and Cloudflare Workers
-
-This guide provides a novice-friendly approach to remotely control a Programmable Logic Controller (PLC) using a Raspberry Pi as an intermediary. By implementing an HTTP server on the Raspberry Pi with Flask and integrating it with Cloudflare Workers, you can securely send start and stop commands to your PLC from a web interface.
+### Local Worker Development
+```bash
+cd services/worker
+npx wrangler dev
+# Opens http://localhost:8787
+# Uses production KV bindings
+```
 
 ---
+
+## 🔐 Security
+
+- **Session-based authentication** with HTTP-only cookies
+- **Basic Auth** on camera stream (username: `radxa`, password: `radxa`)
+- **Cloudflare Tunnel** for secure hardware access (no port forwarding)
+- **CORS** restricted to `plc-web.online` and `localhost:5173`
+
+---
+
+## 📊 System Requirements
+
+### Orange Pi 4 Pro
+- **OS**: Ubuntu 22.04 LTS (ARM64)
+- **Python**: 3.10+
+- **Dependencies**: Flask, pymodbus, adafruit-circuitpython-max31865
+
+### Radxa Zero 3W
+- **OS**: Debian 12 (ARM64)
+- **Python**: 3.11+
+- **Dependencies**: Flask, OpenCV (with GStreamer), Flask-BasicAuth
+- **Camera**: OV5647 (MIPI-CSI)
+
+---
+
+## 🌐 Live Deployment
+
+- **Dashboard**: [https://plc-web.online/dashboard](https://plc-web.online/dashboard)
+- **Login**: [https://plc-web.online/login](https://plc-web.online/login)
+- **Camera (Direct)**: [https://cam.plc-web.online/video_feed](https://cam.plc-web.online/video_feed)
+
+---
+
+## 📝 License
+
+MIT License - Open source for educational use
+
+---
+
+## 🤝 Contributing
+
+Issues and pull requests are welcome! This project is actively used in industrial automation education.
+
+---
+
+## 📧 Contact
+
+For questions about deployment or educational use, please open a GitHub issue.
