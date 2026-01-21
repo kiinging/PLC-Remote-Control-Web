@@ -39,69 +39,92 @@ export default function Dashboard() {
     }, []);
 
     const fetchInitialData = async () => {
+        // Try each API call independently so one failure doesn't block others
         try {
             const cStatus = await api.getControlStatus();
             setControlStatus(cStatus);
+        } catch (e) {
+            console.warn("Control status unavailable", e);
+        }
+
+        try {
             const pid = await api.getPidParams();
             setPidParams(pid);
-            setTuneResults(pid); // Init tune results with current
+            setTuneResults(pid);
+        } catch (e) {
+            console.warn("PID params unavailable", e);
+        }
 
+        try {
             const sp = await api.api.get('/setpoint_status').then(r => r.data);
             setSetpoint(sp.setpoint);
+        } catch (e) {
+            console.warn("Setpoint unavailable", e);
+        }
 
+        try {
             const mv = await api.api.get('/mv_manual_status').then(r => r.data);
             setManualMV(mv.mv_manual);
+        } catch (e) {
+            console.warn("Manual MV unavailable", e);
+        }
 
+        try {
             refreshRelay();
         } catch (e) {
-            console.error("Init failed", e);
+            console.warn("Relay status unavailable", e);
         }
     };
 
     const optionsPoll = async () => {
+        let tData = null;
+        let cStatus = null;
+
+        // Try each API call independently
         try {
-            // Temp
-            const tData = await api.getTemp();
+            tData = await api.getTemp();
             setTemp(tData.rtd_temp);
             setLastUpdate(tData.last_update);
+        } catch (e) {
+            // Orange Pi offline - keep showing last known temp
+        }
 
-            // Control Status (Light, PLC, etc)
-            const cStatus = await api.getControlStatus();
+        try {
+            cStatus = await api.getControlStatus();
             setControlStatus(cStatus);
+        } catch (e) {
+            // Keep last known control status
+        }
 
-            // Relay
+        try {
             refreshRelay();
+        } catch (e) {
+            // Keep last known relay status
+        }
 
-            // Tuning
-            if (cStatus.mode === 2) {
+        try {
+            if (cStatus && cStatus.mode === 2) {
                 const tStatus = await api.getTuneStatus();
                 setTuneStatus(tStatus);
             }
+        } catch (e) {
+            // Tuning status unavailable
+        }
 
-            // Chart Data Point (Mocking MV/PV/SP/Time from polling response or inference)
-            // The legacy app pushed data into array. We need to construct it.
-            // We have current temp (PV), current Setpoint (from local state or fetch?), current MV?
-            // Legacy `script-main.js` seemed to push data? IDK where it got MV from each second?
-            // Ah, likely `temp` endpoint returns more? 
-            // `getTemp` -> `rtd_temp`.
-            // We might need to fetch `mv` status too.
-            // Let's assume we can plot what we have.
-
+        // Update chart only if we have temp data
+        if (tData) {
             const now = new Date().toLocaleTimeString();
             setChartData(prev => {
                 const newItem = {
                     time: now,
                     pv: tData.rtd_temp,
-                    sp: (cStatus.mode === 2 ? tuneSetpoint : setpoint),
-                    mv: manualMV // approximate, or fetch actual MV
+                    sp: (cStatus?.mode === 2 ? tuneSetpoint : setpoint),
+                    mv: manualMV
                 };
                 const newData = [...prev, newItem];
-                if (newData.length > 60) newData.shift(); // Keep last 60 points
+                if (newData.length > 60) newData.shift();
                 return newData;
             });
-
-        } catch (e) {
-            console.error("Poll error", e);
         }
     };
 
