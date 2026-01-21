@@ -1,0 +1,17 @@
+[Unit]
+Description=Flask + Modbus TCP Server for Orange Pi
+After=network.target
+
+[Service]
+#User=orangepi
+#Group=orangepi
+WorkingDirectory=/home/orangepi/projects/flask
+ExecStart=/bin/bash /home/orangepi/projects/flask/run_all.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+Environment=FLASK_ENV=production
+
+[Install]
+WantedBy=multi-user.targe
