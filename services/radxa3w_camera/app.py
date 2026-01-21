@@ -43,6 +43,8 @@ def setup_camera():
     gstreamer_pipeline_auto = (
         "v4l2src device=/dev/video0 ! "
         "videoconvert ! "
+        "videoscale ! "
+        "video/x-raw,width=640,height=480 ! "
         "video/x-raw,format=BGR ! "
         "appsink drop=1"
     )
