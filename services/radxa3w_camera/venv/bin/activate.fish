@@ -33,7 +33,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /home/radxa/camera-stream/venv
+set -gx VIRTUAL_ENV /home/radxa/PLC-Remote-Control-Web/services/radxa3w_camera/venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
