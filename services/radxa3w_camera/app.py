@@ -61,22 +61,25 @@ def setup_camera():
         logger.info(f"Trying camera pipeline: {name}")
         cap = cv2.VideoCapture(pipe, cv2.CAP_GSTREAMER)
         if cap.isOpened():
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)   # ✅ ADD THIS LINE
             ret, _ = cap.read()
             if ret:
-                logger.info(f"Camera opened OK: {name}")
-                camera = cap
-                return True
-            cap.release()
+            logger.info(f"Camera opened OK: {name}")
+            camera = cap
+            return True
+        cap.release()
 
     logger.warning("GStreamer failed. Trying VideoCapture(0)...")
     cap = cv2.VideoCapture(0)
     if cap.isOpened():
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)       # ✅ ADD THIS LINE
         camera = cap
         logger.info("Camera opened OK: index 0")
         return True
 
     logger.error("No camera found (all pipelines failed).")
     return False
+
 
 def capture_frames():
     global latest_frame, latest_frame_ts, camera
@@ -145,11 +148,6 @@ def health():
 @basic_auth.required
 def index():
     return render_template('index.html')
-
-@app.route('/health')
-def health():
-    """Public health check endpoint."""
-    return {"status": "alive", "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 @app.route('/video_feed')
 @basic_auth.required
