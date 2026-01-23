@@ -11,6 +11,8 @@ data["thermo_temp"] = None
 data["internal_temp"] = None
 data["fault"] = False
 data["last_update"] = None
+data["last_update_ts"] = None  # Timestamp of last sensor reading (for heartbeat health check)
+data["modbus_last_tick_ts"] = None  # Timestamp of last modbus loop tick (for heartbeat health check)
 
 # ---------------- Control & Process Vars ----------------
 data["mv"] = None              # Manipulated Variable calculated by the PID (0–100% PWM)

@@ -33,6 +33,9 @@ def update_modbus_registers():
     last_print_time = 0  # <-- ADD THIS
     while True:
         try:
+            # Update modbus loop tick timestamp for heartbeat monitoring
+            shared_data.data["modbus_last_tick_ts"] = time.time()
+            
             # Safely get values from shared memory
             tc = shared_data.data.get("thermo_temp", 0.0) or 0.0
             rtd = shared_data.data.get("rtd_temp", 0.0) or 0.0

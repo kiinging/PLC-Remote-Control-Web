@@ -37,17 +37,42 @@ def serve_gateway_monitor():
 # ---------------- Health Check / Heartbeat ---------------
 # =========================================================
 @app.route('/heartbeat', methods=['GET'])
-def http://192.168.8.134:5000/test/gateway_monitor.htmlheartbeat():
+def heartbeat():
     """
-    Simple heartbeat endpoint for monitoring SBC health.
-    Browser can poll every 1-2 seconds and mark SBC as dead if no response for 10s.
+    Enhanced heartbeat endpoint for monitoring SBC + sensor + modbus health.
+    Browser can poll every 1-2 seconds to detect if API is alive but sensors/modbus are dead.
     """
+    current_time = time.time()
+    
+    # Sensor health check
+    last_update_ts = data.get("last_update_ts")
+    sensor_age_sec = None
+    sensor_ok = False
+    
+    if last_update_ts is not None:
+        sensor_age_sec = current_time - last_update_ts
+        sensor_ok = sensor_age_sec <= 5  # 2s sampling, 5s is reasonable threshold
+    
+    # Modbus health check
+    modbus_last_tick_ts = data.get("modbus_last_tick_ts")
+    modbus_age_sec = None
+    modbus_ok = False
+    
+    if modbus_last_tick_ts is not None:
+        modbus_age_sec = current_time - modbus_last_tick_ts
+        modbus_ok = modbus_age_sec <= 5  # 1s loop, 5s is reasonable threshold
+    
     return jsonify({
         "status": "alive",
-        "timestamp": time.time(),
+        "timestamp": current_time,
         "light": data.get("light", 0),
         "plc": data.get("plc", 0),
-        "mode": data.get("mode", 0)
+        "mode": data.get("mode", 0),
+        "last_update": data.get("last_update"),
+        "sensor_age_sec": sensor_age_sec,
+        "sensor_ok": sensor_ok,
+        "modbus_age_sec": modbus_age_sec,
+        "modbus_ok": modbus_ok
     }), 200
 
 

@@ -44,6 +44,7 @@ def main():
             data["internal_temp"] = i_temp
             data["fault"] = fault
             data["last_update"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            data["last_update_ts"] = time.time()
 
             # Log PV + MV to trend buffer
             log_trend_point()
