@@ -1,12 +1,17 @@
 [Unit]
-Description=cloudflared
+Description=Cloudflare Tunnel
 After=network-online.target
 Wants=network-online.target
 
 [Service]
+User=orangepi
 TimeoutStartSec=0
 Type=notify
-ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run --token <YOUR_TOKEN_HERE>
+ExecStart=/usr/bin/cloudflared \
+  --config /home/orangepi/.cloudflared/config.yml \
+  --no-autoupdate \
+  tunnel run opi4pro_tunnel
+
 Restart=on-failure
 RestartSec=5s
 

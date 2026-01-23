@@ -5,8 +5,8 @@ After=network.target
 [Service]
 #User=orangepi
 #Group=orangepi
-WorkingDirectory=/home/orangepi/projects/flask
-ExecStart=/bin/bash /home/orangepi/projects/flask/run_all.sh
+WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
+ExecStart=/bin/bash /home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/run_all.sh
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -14,4 +14,4 @@ StandardError=journal
 Environment=FLASK_ENV=production
 
 [Install]
-WantedBy=multi-user.targe
+WantedBy=multi-user.target

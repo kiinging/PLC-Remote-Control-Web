@@ -1,5 +1,4 @@
 Flask
-OPi.GPIO
 spidev
 requests
 gunicorn

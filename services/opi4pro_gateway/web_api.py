@@ -3,34 +3,66 @@
 # Read temperatures from shared memory
 
 # web_api.py
-from flask import Flask, jsonify, request
-import OPi.GPIO as GPIO
+from flask import Flask, jsonify, request, send_from_directory
+import wiringpi
 from shared_data import data
+import time
+import os
 
 app = Flask(__name__)
 
 # ---------------- GPIO Setup ----------------
-LIGHT_PIN = "PC14"
-GPIO.setmode(GPIO.SUNXI)
-GPIO.setup(LIGHT_PIN, GPIO.OUT)
+# Using wiringpi for Orange Pi 4 Pro GPIO control
+# wPi pin mapping: Physical pin 18 (PL2) maps to wPi pin 10
+# Initialize wiringpi with BCM pin mode
+wiringpi.wiringPiSetup()
+LIGHT_PIN = 10  # wPi pin 10 for physical pin 18 (PL2) on Orange Pi 4 Pro
+wiringpi.pinMode(LIGHT_PIN, wiringpi.OUTPUT)
 
 # --- Initial state: ensure OFF --------------
-GPIO.output(LIGHT_PIN, GPIO.LOW)
+wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
 data["light"] = 0  #
 data["plc"] = 0  # plc always OFF at boot
+
+# =========================================================
+# ------------ Static Files / HTML Pages -----------------
+# =========================================================
+@app.route('/test/gateway_monitor.html')
+def serve_gateway_monitor():
+    """Serve gateway_monitor.html from test folder"""
+    test_dir = os.path.join(os.path.dirname(__file__), 'test')
+    return send_from_directory(test_dir, 'gateway_monitor.html')
+
+# =========================================================
+# ---------------- Health Check / Heartbeat ---------------
+# =========================================================
+@app.route('/heartbeat', methods=['GET'])
+def http://192.168.8.134:5000/test/gateway_monitor.htmlheartbeat():
+    """
+    Simple heartbeat endpoint for monitoring SBC health.
+    Browser can poll every 1-2 seconds and mark SBC as dead if no response for 10s.
+    """
+    return jsonify({
+        "status": "alive",
+        "timestamp": time.time(),
+        "light": data.get("light", 0),
+        "plc": data.get("plc", 0),
+        "mode": data.get("mode", 0)
+    }), 200
+
 
 # =========================================================
 # ---------------- Light / Web / PLC Control --------------
 # =========================================================
 @app.route('/light/on', methods=['POST'])
 def turn_light_on():
-    GPIO.output(LIGHT_PIN, GPIO.HIGH)
+    wiringpi.digitalWrite(LIGHT_PIN, wiringpi.HIGH)
     data["light"] = 1
     return jsonify({"light": data["light"]}), 200
 
 @app.route('/light/off', methods=['POST'])
 def turn_light_off():
-    GPIO.output(LIGHT_PIN, GPIO.LOW)
+    wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
     data["light"] = 0
     return jsonify({"light": data["light"]}), 200
 

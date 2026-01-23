@@ -1,317 +1,253 @@
-# 📷 Orange Pi Zero 3 (1GB) — Flask + MAX31865 + Modbus
+# Orange Pi 4 Pro — Flask + MAX31865 + Modbus + wiringpi
 
-This project turns an **Orange Pi Zero 3 (1GB)** running **Ubuntu Noble Server (24.04)** into a **control and monitoring hub** for a Siemens S7-1200 PLC.  
-
-It combines three main components that work together through a shared memory store (`shared_data.py`):
-
-### 🔑 Core Files
-
-* **`web_api.py` (Flask REST API)**  
-  Exposes a simple HTTP API that the **Cloudflare Worker** calls.  
-  - Controls outputs (`/light/on`, `/plc/on`, `/mode/auto`, etc.)  
-  - Reads current states (`/control_status`, `/temp`, `/trend`)  
-  - Updates control parameters (setpoint, PID values, manual MV).  
-  → This is the **bridge between the web frontend and the Orange Pi**.
-
-* **`temp_reading.py` (Sensor Loop)**  
-  Continuously samples temperatures from:  
-  - **MAX31865** (RTD)  
-  - **MAX31855** (thermocouple)  
-  Stores readings in shared memory along with a **trend buffer** of PV/MV data for plotting.  
-  → This keeps live sensor data available for both the API and Modbus.
-
-* **`modbus_server.py` (Modbus TCP Bridge)**  
-  Runs a Modbus TCP server (port `1502`) so the **PLC can read/write data**.  
-  - Publishes temperature readings, setpoint, and control states via **Input Registers (IR)**  
-  - Accepts setpoints, MV values, and sensor selection via **Holding Registers (HR)**  
-  → This is the **bridge between the PLC and the Orange Pi**.
+Control and monitoring hub for Omron NJ301 PLC running on **Orange Pi 4 Pro** with **Ubuntu 22.04 LTS**.
 
 ---
 
-✅ With these three services:  
-- The **web app** (via Cloudflare Worker) can turn things ON/OFF, tune parameters, and visualize trends.  
-- The **PLC** can read live process values and write control commands over Modbus.  
-- The **Orange Pi** ties everything together, acting as both a **data concentrator** and a **control interface**.
+## 🔑 Core Components
+
+| File | Purpose |
+|------|---------|
+| `web_api.py` | Flask REST API for web/Cloudflare Worker |
+| `temp_reading.py` | Reads MAX31865 (RTD) & MAX31855 (thermocouple) sensors |
+| `modbus_server.py` | Modbus TCP bridge (port 1502) to PLC |
+| `shared_data.py` | Shared memory for inter-process communication |
 
 ---
 
+## 🚀 Quick Start (Fresh Device Setup)
 
-### 📂 Project Structure
-
-```
-flask-orangepi-temp/
-├── web_api.py         ← Flask API for LED control (via Cloudflare Worker)
-├── temp_reading.py    ← Reads temps from MAX31865 & MAX31855
-├── modbus_server.py   ← Exposes shared data via Modbus TCP (for PLC/NJ301)
-├── shared_data.py     ← Global variable store (temperatures, states, etc.)
-├── run_all.sh         ← Startup script (launches all services)
-├── main.py            ← Orchestrator; runs API, reader, and Modbus server
-└── requirements.txt   ← Python dependencies
-```
-
----
-
-# 🚀 PART 1: Quick start
-### 1️⃣ Clone the repos & install deps
+### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/kiinging/flask-orangepi-temp.git
-cd flask-orangepi-temp
+git clone https://github.com/kiinging/PLC-Remote-Control-Web.git
+cd PLC-Remote-Control-Web/services/opi4pro_gateway
 ```
 
+### 2️⃣ Create Symbolic Link (Optional)
 
-### 2️⃣ Run the setup script
+If you want quick access from home directory:
+
 ```bash
-chmod +x setup.sh
-./setup.sh
+cd ~
+ln -s /home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway opi4pro_gateway
+cd opi4pro_gateway
 ```
-This will:
 
-* Install system packages
-* Create a Python virtual environment (PEP 668 compliant)
-* Install all dependencies inside the venv
+### 3️⃣ Run Setup Script
 
+```bash
+bash setup.sh
+```
 
+**What it does:**
+- Updates system packages
+- Installs: `python3-venv`, `git`, `swig`, `python3-setuptools`, `build-essential`, etc.
+- Creates virtual environment (`venv/`)
+- Clones and builds **wiringOP-Python from source** (required—not on PyPI)
+- Installs Flask, pymodbus, requests, gunicorn
 
-## 🧪 Testing
-<img src="./src/zero3_pinout.png" alt="Orange Pi Zero3 Pinout" width="80%">
+⚠️ **Note on wiringOP-Python:** The setup includes a critical step: `python3 generate-bindings.py > bindings.i` which generates SWIG bindings needed for compilation.
 
-* **Test blink only**:
+### 4️⃣ Configure GPIO Group (Optional but Recommended)
+
+To run GPIO scripts without `sudo` every time, add `orangepi` user to `gpio` group:
+
+```bash
+sudo usermod -aG gpio orangepi
+sudo usermod -aG spi orangepi
+```
+
+Then log out and log back in for group changes to take effect:
+
+```bash
+logout
+# Re-login
+```
+
+### 5️⃣ Test LED Blink
+
+Activate venv and test GPIO control:
+
 ```bash
 source venv/bin/activate
-sudo /home/orangepi/venv/bin/python /home/orangepi/flask-orangeapi-temp/test/blink.py
+sudo python test/test_blink.py
 ```
 
-
-⚠️ **Note:** On Ubuntu, GPIO scripts (e.g. `blink.py`) need root *and* your venv’s Python, so `sudo` must be told which Python to run 😵‍💫.
-
-
-## 🔹 Flask API (Orangepi Web API)
-
-The Flask server exposes endpoints that the **Cloudflare Worker** calls.
-
-### Example: `web_api.py`
-
-```python
-@app.route('/light/on', methods=['POST'])
-def turn_led_on():
-    GPIO.output(LED_PIN, GPIO.HIGH)
-    return "LED Turned ON", 200
-
-@app.route('/light/off', methods=['POST'])
-def turn_led_off():
-    GPIO.output(LED_PIN, GPIO.LOW)
-    return "LED Turned OFF", 200
-
-@app.route('/temp', methods=['GET'])
-def get_temperature():
-    return jsonify({
-        "rtd_temp": data.get("rtd_temp"),
-        "thermo_temp": data.get("thermo_temp"),
-        "internal_temp": data.get("internal_temp"),
-        "fault": data.get("fault"),
-        "last_update": data.get("last_update"),
-    })
+Expected output:
+```
+==================================================
+Orange Pi 4 Pro - LED Blink Test
+Pin: PE3 (Physical pin 21, wPi pin 12)
+==================================================
+✓ GPIO initialized: wPi pin 12 set as OUTPUT
+Blinking LED 5 times (delay: 0.5s)
+  [1/5] LED ON
+  [1/5] LED OFF
+  ...
+✓ Blink test completed successfully
+✓ Cleanup complete
 ```
 
-### Current API Capabilities
-
-* **LED Control** → `/light/on`, `/light/off`
-* **Temperature Data** → `/temp` (RTD, thermocouple, internal, fault, timestamp)
-* **PLC Control** → `/plc/on`, `/plc/off`
-* **Setpoints** → `/setpoint` (GET/POST)
-* **PID Params** → `/pid` (GET/POST)
-* **Trend Data** → `/trend`
-* **Video Feed Proxy** → `/video_feed`
+**LED should blink 5 times if connected to physical pin 21 (PE3).**
 
 ---
 
-## 🔹 Cloudflare Worker (Backend Proxy)
+## 📌 GPIO Pin Configuration
 
-Your Worker acts as a **secure middle layer** between the browser and your Orange Pi.
+- **Physical Pin:** 18
+- **GPIO Name:** PL2
+- **wPi Number:** 10 (used in code via wiringpi)
 
-Example from `worker.js`:
-
-```js
-if (url.pathname === '/start_light') {
-  const response = await fetch("https://orangepi.plc-web.online/light/on", {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  });
-  return new Response(await response.text(), {
-    status: response.status,
-    headers: corsHeaders,
-  });
-}
-```
-
-* Accepts requests from **plc-web.online** frontend
-* Adds **CORS headers**
-* Forwards traffic to `https://orangepi.plc-web.online/...`
-* Returns results to the browser
-
----
-
-## 🔹 System Management
-
-### Restart after code change
-
+Check available pins:
 ```bash
-sudo systemctl restart flaskserver
-```
-
-### Check live logs
-
-```bash
-sudo journalctl -u flaskserver -f
-```
-
-### Stop the service
-
-```bash
-sudo systemctl stop flaskserver
+gpio readall
 ```
 
 ---
 
-## 🔹 Cloudflare Tunnel Setup
+## 🔹 Run Services
 
-Route traffic from Cloudflare → Flask once:
+### 1. Standalone Flask API
 
 ```bash
-cloudflared tunnel route dns orangepi_tunnel orange.plc-web.online
+source venv/bin/activate
+sudo ./venv/bin/python web_api.py
 ```
 
-Start tunnel after reboot:
+API endpoints:
+- `POST /light/on` → Turn LED on
+- `POST /light/off` → Turn LED off
+- `GET /temp` → Get temperature readings
+- `GET /control_status` → Get current status
+- `POST /setpoint` → Update setpoint
+- `POST /pid` → Update PID parameters
+
+### 2. Systemd Services (Auto-Start on Boot)
 
 ```bash
-cloudflared tunnel token orangepi_tunnel
-sudo cloudflared tunnel run orangepi_tunnel
-```
-
-Test:
-
-```bash
-curl -X POST https://orangepi.plc-web.online/led/on
-```
-
-
-## 🚀 PART 2: Auto-Start Services on OrangePi
-
-This project uses **systemd** services to automatically run:
-
-* **Flask API Service** (`flaskserver.service`) →
-  Starts the **sensor reading loop** (`temp_reading.py`) and the **Flask API** (`web_api.py`).
-* **Cloudflare Tunnel Service** (`cloudflared.service`) →
-  Keeps the secure tunnel alive after reboot.
-
-Both service files are already included in the repo.
-After cloning, just copy them into the systemd directory:
-
-```bash
-# From inside the cloned repo
 sudo cp flaskserver.service /etc/systemd/system/
 sudo cp cloudflared.service /etc/systemd/system/
-```
 
-### Enable and start at boot
-
-```bash
 sudo systemctl enable flaskserver cloudflared
 sudo systemctl start flaskserver cloudflared
 ```
 
----
-
-### 🔧 Service Management
+### Service Management
 
 ```bash
-# Restart after making code changes
+# Restart after code changes
 sudo systemctl restart flaskserver
 
-# View logs (live)
+# View live logs
 sudo journalctl -u flaskserver -f
 
 # Stop service
 sudo systemctl stop flaskserver
+
+# Disable auto-start
+sudo systemctl disable flaskserver cloudflared
 ```
 
 ---
 
-✅ With this setup:
+## 🔹 Modbus TCP Configuration
 
-* Your Orange Pi will **auto-start** the Flask API + Cloudflare Tunnel on boot.
-* If the Pi reboots, your backend will reconnect automatically.
+- **Port:** 1502
+- **Input Registers (IR):** Temperature, status (read-only from PLC)
+- **Holding Registers (HR):** Setpoint, PID values (read/write from PLC)
 
----
-## 🚀 PART 3: Modbus TCP on OrangePi
-
-The orangepi also communicate with PLC through modbus TCP, through temp_reading.py code. This code read temperature from MAX31865 then store in a commom share data. It then send the shared data to PLC including the plc status and temperature.
-
-i use IR for sending variables
-
-
-### 🔹 1. Difference between IR and HR in Modbus
-
-* **Input Registers (IR, function code `0x04`)** → **Read-only** registers, PLC can only **read** values (like sensor measurements).
-* **Holding Registers (HR, function code `0x03`)** → **Read/Write** registers, PLC can **read** or **write** values (good for commands, setpoints, modes).
-
-👉 Since you want to **send status (mode, plc)** from OrangePi to PLC, **use Input Registers (IR)** if PLC only reads them.
-👉 If PLC should also be able to change them, then **use Holding Registers (HR)**.
-
-From my case:
-
-* **Temperatures** → IR ✅ (already done).
-* **Mode & PLC status** → IR is fine if PLC only reads. 
----
-
-### 🔹 4. Register mapping (for PLC side)
-
-With the above, your **Input Registers (IR)** will look like this:
-
-| Register (IR) | Value                    |
-| ------------- | ------------------------ |
-| IR0, IR1      | Thermocouple (float)     |
-| IR2, IR3      | setpoint (float)         |
-| IR4, IR5      | RTD (float)              |
-| IR6           | Mode (0=Manual, 1=Auto)  |
-| IR7           | PLC Status (0=Off, 1=On) |
-| IR8           | online (0=HMI, 1=Web) |
-
+| Register | Value |
+|----------|-------|
+| IR0-IR1 | RTD Temperature (float) |
+| IR2-IR3 | Setpoint (float) |
+| IR4-IR5 | Manual MV (float) |
+| IR6 | Mode (0=Manual, 1=Auto, 2=Tune) |
+| IR7 | PLC Status (0=Off, 1=On) |
+| IR8 | Light Status (0=Off, 1=On) |
 
 ---
-
 
 ## 🔹 Useful Commands
 
 ```bash
+# Check system info
 lscpu
 free -h
 df -h
-lsblk
-ssh-keygen -R 192.168.1.xx
-cat /proc/meminfo | grep MemTotal
-cat /etc/os-release
-ls /dev/spi*
+
+# Check GPIO
+gpio readall
 
 # Check Wi-Fi
 iw dev wlan0 link
-ip a show wlan0
+ip addr show wlan0
+
+# System logs
+sudo journalctl -u flaskserver -f
+
+# Check running processes
+ps aux | grep python
 ```
 
 ---
 
-## 🔹 Debugging
+## ⚠️ Important Notes
+
+### wiringOP-Python (Not on PyPI!)
+
+- **Must be built from source**—not available via `pip install wiringpi`
+- The setup.sh automates this: `git clone --recursive` + `generate-bindings.py` + `python3 setup.py install`
+- **GPIO always needs `sudo`** even if installed in venv (hardware access requirement)
+
+### Previous OPi.GPIO Migration
+
+If migrating from **OPi.GPIO** (Orange Pi Zero 3):
+- OPi.GPIO is **not compatible** with Orange Pi 4 Pro
+- Use **wiringpi** (wiringOP-Python) instead
+- Pin numbering changed from "PC14" strings to wPi numbers (e.g., wPi pin 12)
+
+---
+
+## 🐛 Troubleshooting
+
+### `ModuleNotFoundError: No module named 'wiringpi'`
 
 ```bash
-sudo systemctl restart flaskserver.service
-tail -f mv_log.txt
-journalctl -u cloudflared -f
+# Re-run setup to rebuild wiringpi
+cd /tmp
+rm -rf wiringOP-Python
+git clone --recursive https://github.com/orangepi-xunlong/wiringOP-Python.git -b next
+cd wiringOP-Python
+git submodule update --init --remote
+python3 generate-bindings.py > bindings.i
+python3 setup.py install
+```
+
+### GPIO Permission Denied
+
+```bash
+# Ensure user is in gpio group
+sudo usermod -aG gpio orangepi
+
+# Log out and back in
+logout
+```
+
+### Flask Service Won't Start
+
+```bash
+# Check logs
+sudo journalctl -u flaskserver -n 50
+
+# Check if port 5000 is already in use
+sudo lsof -i :5000
 ```
 
 ---
+
 ## 📚 Reference
 
-* Orange Pi Zero 3 Ubuntu server: [🔗 Orangepi webpage](https://fusion-automate.notion.site/Orange-Pi-165e22c060cf8080b61fd17102fd2562)
-
----
+- [Orange Pi Official Docs](https://orangepi.org/)
+- [wiringOP GitHub](https://github.com/orangepi-xunlong/wiringOP-Python)
+- [Modbus TCP Spec](http://www.modbus.org/tech.php)
