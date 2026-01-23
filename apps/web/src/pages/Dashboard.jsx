@@ -13,6 +13,11 @@ export default function Dashboard() {
     const [temp, setTemp] = useState('--');
     const [lastUpdate, setLastUpdate] = useState('--');
 
+    // Gateway Status
+    const [gatewayStatus, setGatewayStatus] = useState('offline'); // offline | alive
+    const [gatewayTimestamp, setGatewayTimestamp] = useState('--');
+    const lastGatewaySeenRef = useRef(0);
+
     // Control States
     const [controlStatus, setControlStatus] = useState({ light: 0, web: 0, plc: 0, mode: -1 });
     const [pidParams, setPidParams] = useState({ pb: 0, ti: 0, td: 0 });
@@ -76,9 +81,34 @@ export default function Dashboard() {
         }
     };
 
+    const pollGatewayHeartbeat = async () => {
+        try {
+            const heartbeat = await api.getGatewayHeartbeat();
+            lastGatewaySeenRef.current = Date.now();
+            setGatewayStatus('alive');
+            if (heartbeat.timestamp) {
+                setGatewayTimestamp(heartbeat.timestamp);
+            }
+        } catch (e) {
+            // Keep last seen timestamp, will check timeout below
+        }
+
+        // Check if gateway is offline (no successful heartbeat for 10 seconds)
+        if (Date.now() - lastGatewaySeenRef.current > 10000) {
+            setGatewayStatus('offline');
+        }
+    };
+
     const optionsPoll = async () => {
         let tData = null;
         let cStatus = null;
+
+        // Poll Gateway Heartbeat
+        try {
+            await pollGatewayHeartbeat();
+        } catch (e) {
+            // Gateway polling error handled in pollGatewayHeartbeat
+        }
 
         // Try each API call independently
         try {
@@ -355,6 +385,15 @@ export default function Dashboard() {
                                     <h6>Process Data</h6>
                                     <div>Temp: <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span></div>
                                     <div className="text-muted small">Last Update: {lastUpdate}</div>
+
+                                    <div className="mt-2">
+                                        <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'} className="me-2">
+                                            Gateway: {gatewayStatus.toUpperCase()}
+                                        </Badge>
+                                        {gatewayStatus === 'alive' && gatewayTimestamp !== '--' && (
+                                            <span className="text-muted small">Last: {gatewayTimestamp}</span>
+                                        )}
+                                    </div>
                                 </div>
 
                             </Card.Body>

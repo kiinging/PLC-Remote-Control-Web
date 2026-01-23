@@ -41,6 +41,9 @@ export const deleteUser = async (username) => (await api.post('/api/user/delete'
 export const getRelayStatus = async () => (await api.get('/relay')).data;
 export const setRelay = async (state) => (await api.post('/relay', { relay: state })).data;
 
+// Gateway Heartbeat
+export const getGatewayHeartbeat = async () => (await api.get('/heartbeat')).data;
+
 export const getControlStatus = async () => (await api.get('/control_status')).data;
 export const getTemp = async () => (await api.get('/temp')).data;
 
