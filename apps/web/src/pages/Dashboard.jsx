@@ -295,24 +295,23 @@ export default function Dashboard() {
                             <Card.Body>
                                 {/* System Status Indicators */}
                                 <div className="mb-3 pb-3 border-bottom">
-                                    <strong>System Status</strong>
-                                    <div className="d-flex gap-3 mt-2">
-                                        <div>
-                                            <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'}>
-                                                Gateway: {gatewayStatus.toUpperCase()}
-                                            </Badge>
-                                            {gatewayTimestamp && gatewayTimestamp !== '--' && (
-                                                <small className="text-muted ms-2">Last: {gatewayTimestamp}</small>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>
-                                                Camera: {cameraStatus.toUpperCase()}
-                                            </Badge>
-                                            {cameraTimestamp && cameraTimestamp !== '--' && (
-                                                <small className="text-muted ms-2">Last: {cameraTimestamp}</small>
-                                            )}
-                                        </div>
+                                    <div className="d-flex align-items-center flex-wrap gap-2">
+                                        <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'}>
+                                            Gateway: {gatewayStatus.toUpperCase()}
+                                        </Badge>
+                                        <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>
+                                            Camera: {cameraStatus.toUpperCase()}
+                                        </Badge>
+                                        <strong className="ms-2">System Status</strong>
+                                    </div>
+                                    <div className="d-flex gap-3 align-items-center mt-1">
+                                        {/* Timestamps in a small row below if needed, or keeping it clean */}
+                                        {gatewayTimestamp && gatewayTimestamp !== '--' && (
+                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>GW Last: {gatewayTimestamp}</small>
+                                        )}
+                                        {cameraTimestamp && cameraTimestamp !== '--' && (
+                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {cameraTimestamp}</small>
+                                        )}
                                     </div>
 
                                     {/* Process Power Control */}
@@ -439,46 +438,38 @@ export default function Dashboard() {
                                     <h6>Process Data</h6>
                                     <div>Temp: <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span></div>
                                     <div className="text-muted small">Last Update: {lastUpdate}</div>
-
-                                    <div className="mt-2">
-                                        <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'} className="me-2">
-                                            Gateway: {gatewayStatus.toUpperCase()}
-                                        </Badge>
-                                        {gatewayStatus === 'alive' && gatewayTimestamp !== '--' && (
-                                            <span className="text-muted small">Last: {gatewayTimestamp}</span>
-                                        )}
-                                    </div>
                                 </div>
+                            </div>
 
-                            </Card.Body>
-                        </Card>
-                    </Col>
+                        </Card.Body>
+                    </Card>
+                </Col>
 
-                    {/* Video Column */}
-                    <Col lg={6}>
-                        <Card className="text-center">
-                            <Card.Header>Live Video</Card.Header>
-                            <Card.Body className="p-0 bg-black" style={{ minHeight: '360px', position: 'relative' }}>
-                                {videoSrc && (
-                                    <img src={videoSrc} alt="Live Feed" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                                )}
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
+                {/* Video Column */}
+                <Col lg={6}>
+                    <Card className="text-center">
+                        <Card.Header>Live Video</Card.Header>
+                        <Card.Body className="p-0 bg-black" style={{ minHeight: '360px', position: 'relative' }}>
+                            {videoSrc && (
+                                <img src={videoSrc} alt="Live Feed" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
 
-                {/* Full-width Chart Row */}
-                <Row className="mt-4">
-                    <Col lg={12}>
-                        <Card>
-                            <Card.Header>MV & PV Trends</Card.Header>
-                            <Card.Body style={{ height: '450px' }}>
-                                <TrendChart dataPoints={chartData} />
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
-            </Container>
+            {/* Full-width Chart Row */}
+            <Row className="mt-4">
+                <Col lg={12}>
+                    <Card>
+                        <Card.Header>MV & PV Trends</Card.Header>
+                        <Card.Body style={{ height: '450px' }}>
+                            <TrendChart dataPoints={chartData} />
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+        </Container >
         </>
     );
 }
