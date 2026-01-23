@@ -18,6 +18,11 @@ export default function Dashboard() {
     const [gatewayTimestamp, setGatewayTimestamp] = useState('--');
     const lastGatewaySeenRef = useRef(0);
 
+    // Camera Status
+    const [cameraStatus, setCameraStatus] = useState('offline'); // offline | degraded | alive
+    const [cameraTimestamp, setCameraTimestamp] = useState('--');
+    const lastCameraSeenRef = useRef(0);
+
     // Control States
     const [controlStatus, setControlStatus] = useState({ light: 0, web: 0, plc: 0, mode: -1 });
     const [pidParams, setPidParams] = useState({ pb: 0, ti: 0, td: 0 });
@@ -33,7 +38,7 @@ export default function Dashboard() {
     const [chartData, setChartData] = useState([]);
 
     // Video
-    const [videoSrc, setVideoSrc] = useState('');
+    const [videoSrc, setVideoSrc] = useState('/video_feed');
     const [countdown, setCountdown] = useState(0);
 
     // Load Initial Data
@@ -94,8 +99,33 @@ export default function Dashboard() {
         }
 
         // Check if gateway is offline (no successful heartbeat for 10 seconds)
-        if (Date.now() - lastGatewaySeenRef.current > 10000) {
+        if (lastGatewaySeenRef.current !== 0 && Date.now() - lastGatewaySeenRef.current > 10000) {
             setGatewayStatus('offline');
+        }
+    };
+
+    const pollCameraHealth = async () => {
+        try {
+            const health = await api.getCameraHealth();
+            lastCameraSeenRef.current = Date.now();
+
+            // Check frame age to determine if camera is degraded
+            if (health.frame_age_sec != null && health.frame_age_sec > 5) {
+                setCameraStatus('degraded');
+            } else {
+                setCameraStatus('alive');
+            }
+
+            if (health.timestamp) {
+                setCameraTimestamp(health.timestamp);
+            }
+        } catch (e) {
+            // Keep last seen timestamp, will check timeout below
+        }
+
+        // Check if camera is offline (no successful health check for 10 seconds)
+        if (lastCameraSeenRef.current !== 0 && Date.now() - lastCameraSeenRef.current > 10000) {
+            setCameraStatus('offline');
         }
     };
 
@@ -108,6 +138,19 @@ export default function Dashboard() {
             await pollGatewayHeartbeat();
         } catch (e) {
             // Gateway polling error handled in pollGatewayHeartbeat
+        }
+
+        // Poll Camera Health
+        try {
+            await pollCameraHealth();
+        } catch (e) {
+            // Camera polling error handled in pollCameraHealth
+        }
+
+        try {
+            refreshRelay();
+        } catch (e) {
+            // Keep last known relay status
         }
 
         // Try each API call independently
@@ -124,12 +167,6 @@ export default function Dashboard() {
             setControlStatus(cStatus);
         } catch (e) {
             // Keep last known control status
-        }
-
-        try {
-            refreshRelay();
-        } catch (e) {
-            // Keep last known relay status
         }
 
         try {
@@ -170,7 +207,6 @@ export default function Dashboard() {
         } else {
             setRelayStatus('offline');
             setRelay(false);
-            // setVideoSrc(''); // Keep video trying to connect
         }
 
         // Always try to load video
@@ -251,31 +287,49 @@ export default function Dashboard() {
             </Navbar>
 
             <Container>
-                {/* Device Power Row */}
-                <Row className="mb-4">
-                    <Col md={12}>
-                        <Card>
-                            <Card.Body className="d-flex justify-content-between align-items-center">
-                                <h5 className="mb-0">Device Power (ESP32 Relay)</h5>
-                                <div className="d-flex align-items-center gap-2">
-                                    <Badge bg={relayStatus === 'alive' ? 'success' : relayStatus === 'booting' ? 'warning' : 'danger'}>
-                                        {relayStatus.toUpperCase()}
-                                    </Badge>
-                                    <Button variant="success" size="sm" onClick={() => handleRelayToggle(true)} disabled={relay}>ON</Button>
-                                    <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay}>OFF</Button>
-                                    {countdown > 0 && <span className="text-muted small ms-2">Booting: {countdown}s</span>}
-                                </div>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
-
                 <Row className="g-4">
                     {/* Controls Column */}
                     <Col lg={6}>
                         <Card className="mb-3">
                             <Card.Header>Control Panel</Card.Header>
                             <Card.Body>
+                                {/* System Status Indicators */}
+                                <div className="mb-3 pb-3 border-bottom">
+                                    <strong>System Status</strong>
+                                    <div className="d-flex gap-3 mt-2">
+                                        <div>
+                                            <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'}>
+                                                Gateway: {gatewayStatus.toUpperCase()}
+                                            </Badge>
+                                            {gatewayTimestamp && gatewayTimestamp !== '--' && (
+                                                <small className="text-muted ms-2">Last: {gatewayTimestamp}</small>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>
+                                                Camera: {cameraStatus.toUpperCase()}
+                                            </Badge>
+                                            {cameraTimestamp && cameraTimestamp !== '--' && (
+                                                <small className="text-muted ms-2">Last: {cameraTimestamp}</small>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Process Power Control */}
+                                    <div className="mt-3">
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <strong>Process Power (Relay)</strong>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <Badge bg={relayStatus === 'alive' ? 'success' : relayStatus === 'booting' ? 'warning' : 'danger'}>
+                                                    {relayStatus.toUpperCase()}
+                                                </Badge>
+                                                <Button variant="success" size="sm" onClick={() => handleRelayToggle(true)} disabled={relay}>ON</Button>
+                                                <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay}>OFF</Button>
+                                                {countdown > 0 && <span className="text-muted small ms-2">Booting: {countdown}s</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 {/* Light */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
@@ -400,27 +454,25 @@ export default function Dashboard() {
                         </Card>
                     </Col>
 
-                    {/* Video & Chart Column */}
+                    {/* Video Column */}
                     <Col lg={6}>
-                        {/* Video Feed */}
-                        <Card className="mb-3 text-center">
+                        <Card className="text-center">
                             <Card.Header>Live Video</Card.Header>
-                            <Card.Body className="p-0 bg-black" style={{ minHeight: '240px', position: 'relative' }}>
-                                {relayStatus === 'booting' && (
-                                    <div className="d-flex align-items-center justify-content-center text-white h-100" style={{ position: 'absolute', width: '100%', top: 0 }}>
-                                        Booting Camera...
-                                    </div>
-                                )}
+                            <Card.Body className="p-0 bg-black" style={{ minHeight: '360px', position: 'relative' }}>
                                 {videoSrc && (
                                     <img src={videoSrc} alt="Live Feed" style={{ width: '100%', height: 'auto', display: 'block' }} />
                                 )}
                             </Card.Body>
                         </Card>
+                    </Col>
+                </Row>
 
-                        {/* Chart */}
+                {/* Full-width Chart Row */}
+                <Row className="mt-4">
+                    <Col lg={12}>
                         <Card>
                             <Card.Header>MV & PV Trends</Card.Header>
-                            <Card.Body style={{ height: '300px' }}>
+                            <Card.Body style={{ height: '450px' }}>
                                 <TrendChart dataPoints={chartData} />
                             </Card.Body>
                         </Card>

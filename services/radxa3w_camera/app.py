@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.INFO)
 # Authorization Config
 app.config['BASIC_AUTH_USERNAME'] = 'radxa'
 app.config['BASIC_AUTH_PASSWORD'] = 'radxa'
-app.config['BASIC_AUTH_FORCE'] = True # Protect entire app
+app.config['BASIC_AUTH_FORCE'] = False # Allow public endpoints like /health
 
 basic_auth = BasicAuth(app)
 print(f"🔐 Protection Enabled. User: {app.config['BASIC_AUTH_USERNAME']}")
@@ -159,6 +159,11 @@ threading.Thread(target=heartbeat_loop, daemon=True).start()
 @basic_auth.required
 def index():
     return render_template('index.html')
+
+@app.route('/health')
+def health():
+    """Public health check endpoint."""
+    return {"status": "alive", "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 @app.route('/video_feed')
 @basic_auth.required

@@ -43,6 +43,7 @@ export const setRelay = async (state) => (await api.post('/relay', { relay: stat
 
 // Gateway Heartbeat
 export const getGatewayHeartbeat = async () => (await api.get('/heartbeat')).data;
+export const getCameraHealth = async () => (await api.get('/camera_health')).data;
 
 export const getControlStatus = async () => (await api.get('/control_status')).data;
 export const getTemp = async () => (await api.get('/temp')).data;

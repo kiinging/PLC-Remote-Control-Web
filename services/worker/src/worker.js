@@ -244,6 +244,39 @@ export default {
       return withCors(request, await r.text(), r.status);
     }
 
+    // ---- Gateway Heartbeat ----
+    if (url.pathname === "/heartbeat" && request.method === "GET") {
+      const session = await validateSession(request, env);
+      if (!session) return withCors(request, "Unauthorized", 401);
+
+      try {
+        const r = await fetch("https://orangepi.plc-web.online/heartbeat");
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      } catch (e) {
+        return withCors(request, JSON.stringify({ status: "offline" }), 503, { "Content-Type": "application/json" });
+      }
+    }
+
+    // ---- Camera Health Check ----
+    if (url.pathname === "/camera_health" && request.method === "GET") {
+      const session = await validateSession(request, env);
+      if (!session) return withCors(request, "Unauthorized", 401);
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+        const r = await fetch("https://cam.plc-web.online/health", {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      } catch (e) {
+        return withCors(request, JSON.stringify({ status: "offline" }), 503, { "Content-Type": "application/json" });
+      }
+    }
+
     if (url.pathname === "/video_feed") {
       const session = await validateSession(request, env);
       if (!session) return withCors(request, "Unauthorized", 401);
