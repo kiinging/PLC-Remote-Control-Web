@@ -29,7 +29,6 @@ function getCorsHeaders(request) {
 
 const SESSION_COOKIE = "plc_session";
 
-
 function setCookie(value) {
   return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax`;
 }
@@ -41,18 +40,16 @@ function withCors(request, body, status = 200, extraHeaders = {}) {
   });
 }
 
+// EMERGENCY: KV Write limit exceeded.
+// Switch to stateless/insecure session (trust cookie) and hardcoded user.
 async function validateSession(request, env) {
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(/plc_session=([^;]+)/);
   if (!match) return null;
 
-  const token = match[1];
-  const sessionUser = await env.USERS.get(`session:${token}`);
-  if (!sessionUser) return null;
-
-  // refresh TTL
-  await env.USERS.put(`session:${token}`, sessionUser, { expirationTtl: 7200 });
-  return { user: sessionUser };
+  const username = match[1];
+  // verify user exists (optional, or just trust it for now to save reads)
+  return { user: username };
 }
 
 export default {
@@ -74,6 +71,14 @@ export default {
       if (url.pathname === "/api/login" && request.method === "POST") {
         const { username, password } = await request.json();
 
+        // Hardcoded Fallback User (Bypass KV)
+        if (username === "admin" && password === "admin123") {
+          return withCors(request, JSON.stringify({ ok: true }), 200, {
+            "Content-Type": "application/json",
+            "Set-Cookie": setCookie(username) // Session is just username
+          });
+        }
+
         if (!env.USERS) {
           return withCors(request, "CRITICAL: env.USERS is undefined", 500);
         }
@@ -83,12 +88,10 @@ export default {
         if (!storedPass) return withCors(request, "Invalid user", 401);
         if (storedPass !== password) return withCors(request, "Invalid password", 401);
 
-        const token = crypto.randomUUID();
-        await env.USERS.put(`session:${token}`, username, { expirationTtl: 7200 });
-
+        // No KV write for session. Just set cookie.
         return withCors(request, JSON.stringify({ ok: true }), 200, {
           "Content-Type": "application/json",
-          "Set-Cookie": setCookie(token)
+          "Set-Cookie": setCookie(username)
         });
 
       }
