@@ -64,9 +64,9 @@ def setup_camera():
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)   # ✅ ADD THIS LINE
             ret, _ = cap.read()
             if ret:
-            logger.info(f"Camera opened OK: {name}")
-            camera = cap
-            return True
+                logger.info(f"Camera opened OK: {name}")
+                camera = cap
+                return True
         cap.release()
 
     logger.warning("GStreamer failed. Trying VideoCapture(0)...")
