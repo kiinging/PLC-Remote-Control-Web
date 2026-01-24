@@ -12,6 +12,8 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    const [isSignUp, setIsSignUp] = useState(false);
+
     useEffect(() => {
         if (user) {
             navigate('/dashboard');
@@ -24,12 +26,22 @@ const Login = () => {
         setError(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-            if (error) throw error;
-            // AuthContext will handle the state change
+            if (isSignUp) {
+                const { error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                });
+                if (error) throw error;
+                setError("Account created! You may need to verify your email.");
+                setIsSignUp(false);
+            } else {
+                const { error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+                if (error) throw error;
+                // AuthContext will handle the state change
+            }
         } catch (error) {
             setError(error.message);
         } finally {
@@ -55,11 +67,11 @@ const Login = () => {
                     <Card className="shadow-lg border-0 rounded-4">
                         <Card.Body className="p-5">
                             <div className="text-center mb-4">
-                                <h2 className="fw-bold mb-2">Welcome Back</h2>
-                                <p className="text-muted">Sign in to access your lab</p>
+                                <h2 className="fw-bold mb-2">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
+                                <p className="text-muted">{isSignUp ? 'Sign up to access your lab' : 'Sign in to access your lab'}</p>
                             </div>
 
-                            {error && <Alert variant="danger">{error}</Alert>}
+                            {error && <Alert variant={error.includes("Account created") ? "success" : "danger"}>{error}</Alert>}
 
                             <Form onSubmit={handleLogin}>
                                 <Form.Group className="mb-3">
@@ -90,9 +102,21 @@ const Login = () => {
                                     className="w-100 py-2 fw-semibold mb-3"
                                     disabled={loading}
                                 >
-                                    {loading ? 'Signing in...' : 'Sign In'}
+                                    {loading ? (isSignUp ? 'Creating Account...' : 'Signing in...') : (isSignUp ? 'Sign Up' : 'Sign In')}
                                 </Button>
                             </Form>
+
+                            <div className="text-center mb-3">
+                                <small>
+                                    {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                                    <span
+                                        onClick={() => { setIsSignUp(!isSignUp); setError(null); }}
+                                        style={{ cursor: 'pointer', color: '#0d6efd', fontWeight: 'bold' }}
+                                    >
+                                        {isSignUp ? 'Sign In' : 'Sign Up'}
+                                    </span>
+                                </small>
+                            </div>
 
                             <div className="text-center mb-3">
                                 <span className="text-muted">or</span>

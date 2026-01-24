@@ -68,6 +68,13 @@ export default {
         return new Response("pong from worker");
       }
 
+      // ---- DEBUG ENV
+      if (url.pathname === "/debug_env") {
+        return new Response(JSON.stringify(Object.keys(env)), {
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
       // ---- LOGIN
       if (url.pathname === "/api/login" && request.method === "POST") {
         const { username, password } = await request.json();
@@ -483,7 +490,14 @@ export default {
 
 
       // ---- Default: serve static files
-      return env.ASSETS.fetch(request);
+      if (env.ASSETS) {
+        return env.ASSETS.fetch(request);
+      } else {
+        // Fallback: Redirect to the Pages URL if ASSETS execution binding is missing
+        // This isolates the API worker from the frontend serving if necessary
+        const pagesUrl = "https://cloud-ui-4ws.pages.dev"; // Based on project ID seen in preview
+        return Response.redirect(`${pagesUrl}${url.pathname}${url.search}`, 302);
+      }
 
     } catch (e) {
       return withCors(request, JSON.stringify({ error: e.message, stack: e.stack }), 500, {
