@@ -1,29 +1,85 @@
 #include <WiFi.h>
-#include <WiFiClientSecure.h>
+#include <WebServer.h>
 #include <ArduinoJson.h>
 
 // ======== WiFi Configuration ========
 const char* ssid = "GL-SFT1200-b6e";
 const char* password = "goodlife";
 
-// ======== Worker Configuration ========
-const char* workerHost = "cloud-worker.wongkiinging.workers.dev";
-const int httpsPort = 443;
+// ======== API Security ========
+const char* apiKey = "plc-secret-key-123"; // Must match OPi Gateway
 
 // ======== GPIO ========
 const int relayPin = 18; // Active LOW relay
 
 // ======== Variables ========
-bool relayState = false;       // Actual relay output
-bool lastPollFalse = false;    // Track last poll result
-unsigned long lastPrintTime = 0;
-unsigned long lastPollTime = 0;
+bool relayState = false;       // Logic state (true = ON)
+unsigned long lastCommandTime = 0;
+const unsigned long FAILSAFE_TIMEOUT = 15000; // 15 seconds
+
+WebServer server(80);
+
+// ======== Helper: Apply Relay State ========
+void applyRelay() {
+  // Relay is Active LOW
+  digitalWrite(relayPin, relayState ? LOW : HIGH);
+}
+
+// ======== API: POST /relay ========
+void handleRelay() {
+  if (!server.hasHeader("X-API-Key") || server.header("X-API-Key") != apiKey) {
+    server.send(403, "application/json", "{\"error\":\"Unauthorized\"}");
+    return;
+  }
+
+  if (server.method() != HTTP_POST) {
+    server.send(405, "application/json", "{\"error\":\"Method Not Allowed\"}");
+    return;
+  }
+
+  if (server.hasArg("plain") == false) {
+    server.send(400, "application/json", "{\"error\":\"Body missing\"}");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, server.arg("plain"));
+  if (error) {
+    server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+    return;
+  }
+
+  bool reqOn = doc["on"];
+  relayState = reqOn;
+  lastCommandTime = millis();
+  applyRelay();
+
+  server.send(200, "application/json", "{\"success\":true, \"relay\":" + String(relayState ? "true" : "false") + "}");
+}
+
+// ======== API: GET /status ========
+void handleStatus() {
+  if (!server.hasHeader("X-API-Key") || server.header("X-API-Key") != apiKey) {
+    server.send(403, "application/json", "{\"error\":\"Unauthorized\"}");
+    return;
+  }
+
+  JsonDocument doc;
+  doc["relay"] = relayState;
+  doc["uptime_ms"] = millis();
+  doc["last_cmd_ms_ago"] = millis() - lastCommandTime;
+  doc["failsafe_active"] = (millis() - lastCommandTime > FAILSAFE_TIMEOUT);
+
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
 
 // ======== Setup ========
 void setup() {
   Serial.begin(115200);
   pinMode(relayPin, OUTPUT);
-  digitalWrite(relayPin, HIGH); // Relay off (Active LOW)
+  applyRelay(); // Initialize state
 
   Serial.println("\nBooting...");
   WiFi.begin(ssid, password);
@@ -35,78 +91,33 @@ void setup() {
   Serial.println("\n✅ WiFi connected!");
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
-}
 
-// ======== Fetch Relay Command from Cloud ========
-bool fetchRelayCommand(bool &outRelay) {
-  WiFiClientSecure client;
-  client.setInsecure();
+  // Setup Server
+  server.on("/relay", handleRelay);
+  server.on("/status", handleStatus);
+  
+  // Important: register headers we want to read
+  const char * headerkeys[] = {"X-API-Key"} ;
+  size_t headerkeyssize = sizeof(headerkeys)/sizeof(char*);
+  server.collectHeaders(headerkeys, headerkeyssize);
 
-  if (!client.connect(workerHost, httpsPort)) {
-    Serial.println("⚠️ Connection failed");
-    return false;
-  }
-
-  client.println("GET /relay HTTP/1.1");
-  client.println("Host: " + String(workerHost));
-  client.println("Connection: close");
-  client.println();
-
-  // Skip headers
-  while (client.connected()) {
-    String line = client.readStringUntil('\n');
-    if (line == "\r") break;
-  }
-
-  String response = client.readString();
-  client.stop();
-
-  JsonDocument doc;
-  if (deserializeJson(doc, response)) {
-    Serial.println("❌ JSON parse error");
-    return false;
-  }
-
-  outRelay = doc["relay"];
-  return true;
+  server.begin();
+  Serial.println("HTTP Server started");
+  lastCommandTime = millis(); // Reset timer on boot
 }
 
 // ======== Main Loop ========
 void loop() {
-  unsigned long now = millis();
+  server.handleClient();
 
-  // Print relay state every 1s
-  if (now - lastPrintTime >= 1000) {
-    Serial.print("Relay state: ");
-    Serial.println(relayState ? "ON (LOW)" : "OFF (HIGH)");
-    lastPrintTime = now;
-  }
-
-  // Poll Cloud every 2s
-  if (WiFi.status() == WL_CONNECTED && now - lastPollTime >= 2000) {
-    bool cloudRelay;
-    if (fetchRelayCommand(cloudRelay)) {
-      if (!cloudRelay) {
-        // second consecutive false → turn OFF
-        if (lastPollFalse) {
-          relayState = false;
-        } else {
-          lastPollFalse = true;
-        }
-      } else {
-        // any true → stay ON
-        relayState = true;
-        lastPollFalse = false;
-      }
-
-      // Apply state to GPIO
-      digitalWrite(relayPin, relayState ? LOW : HIGH);
+  // Failsafe Check
+  if (millis() - lastCommandTime > FAILSAFE_TIMEOUT) {
+    if (relayState) {
+      Serial.println("⚠️ Failsafe triggered: Turning Relay OFF");
+      relayState = false;
+      applyRelay();
     }
-    lastPollTime = now;
-  } else if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("⚠️ WiFi disconnected, retrying...");
-    WiFi.reconnect();
   }
 
-  delay(50);
+  delay(10);
 }

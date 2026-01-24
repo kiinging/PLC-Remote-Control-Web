@@ -8,7 +8,7 @@ import wiringpi
 from shared_data import data
 import time
 import os
-
+import esp32_client
 app = Flask(__name__)
 
 # ---------------- GPIO Setup ----------------
@@ -352,6 +352,35 @@ def tune_status():
         "tuning_active": data.get("tune_in_progress", False),
         "tune_completed": data.get("tune_completed", False)
     })
+
+
+# =========================================================
+# ---------------- Relay Control (ESP32) -----------------
+# =========================================================
+@app.route('/relay', methods=['POST'])
+def relay_control():
+    try:
+        req = request.get_json()
+        target_state = req.get("on") # true or false
+        if target_state is None:
+             return jsonify({"error": "Missing 'on' field"}), 400
+
+        result = esp32_client.set_relay(target_state)
+        
+        if result:
+            return jsonify(result), 200
+        else:
+            return jsonify({"error": "ESP32 Unavailable"}), 503
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/relay_status', methods=['GET'])
+def relay_status():
+    result = esp32_client.get_status()
+    if result:
+        return jsonify(result), 200
+    else:
+        return jsonify({"error": "ESP32 Unavailable"}), 503
 
 
 # ---------------- Main ----------------

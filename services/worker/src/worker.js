@@ -431,37 +431,50 @@ export default {
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ---- RELAY CONTROL (ESP32-S3) ----
-      if (url.pathname === "/relay") {
-        if (request.method === "POST") {
-          const data = await request.json();
-          relayState = !!data.relay;
+      // ============================================
+      // RELAY / HEATER Control (PROXIED TO GATEWAY)
+      // ============================================
+      if (url.pathname === "/relay" && request.method === "POST") {
+        try {
+          const body = await request.clone().json();
 
-          if (relayState) {
-            lastRelayOn = Date.now(); // record when relay turned on
-          }
-
-          return withCors(request, JSON.stringify({ ok: true, relay: relayState }), 200, {
-            "Content-Type": "application/json"
+          // Forward to Orange Pi Gateway
+          const gatewayUrl = "https://orangepi.plc-web.online/relay";
+          const r = await fetch(gatewayUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
           });
-        }
-        if (request.method === "GET") {
-          const alive = (Date.now() - lastRadxaPing < 15000);
-          const booting = relayState && !alive && (Date.now() - lastRelayOn < 60000);
 
-          return withCors(request, JSON.stringify({ relay: relayState, alive, booting }), 200, {
-            "Content-Type": "application/json"
-          });
+          const respText = await r.text();
+          return withCors(request, respText, r.status, { "Content-Type": "application/json" });
+
+        } catch (e) {
+          return withCors(request, JSON.stringify({ error: e.message }), 500);
         }
       }
 
-      // ---- RADXA HEARTBEAT ----
-      if (url.pathname === "/radxa_heartbeat" && request.method === "POST") {
-        lastRadxaPing = Date.now();
-        radxaAlive = true;
-        return withCors(request, JSON.stringify({ ok: true, time: lastRadxaPing }), 200, {
-          "Content-Type": "application/json"
-        });
+      // Proxy Status Check
+      if (url.pathname === "/relay" && request.method === "GET") {
+        try {
+          // Return consistent structure: { relay: true/false, alive: true/false }
+          // Gateway /relay_status returns { relay, uptime_ms, failsafe_active }
+          const gatewayUrl = "https://orangepi.plc-web.online/relay_status";
+          const r = await fetch(gatewayUrl);
+
+          if (r.ok) {
+            const data = await r.json();
+            return withCors(request, JSON.stringify({
+              relay: data.relay,
+              alive: true,
+              failsafe: data.failsafe_active
+            }), 200, { "Content-Type": "application/json" });
+          } else {
+            return withCors(request, JSON.stringify({ relay: false, alive: false }), 200, { "Content-Type": "application/json" });
+          }
+        } catch (e) {
+          return withCors(request, JSON.stringify({ relay: false, alive: false, error: e.message }), 200, { "Content-Type": "application/json" });
+        }
       }
       // ---- WebSocket relay to Orange Pi ----
       if (url.pathname === "/ws") {
