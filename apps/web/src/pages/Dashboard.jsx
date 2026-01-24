@@ -274,7 +274,7 @@ export default function Dashboard() {
                     <Navbar.Brand>PLC Web Control</Navbar.Brand>
                     <Navbar.Collapse className="justify-content-end">
                         <Navbar.Text className="me-3">
-                            Signed in as: <a href="#login">{user?.username}</a>
+                            Signed in as: <a href="#login">{user?.username || user?.email?.split('@')[0] || 'User'}</a>
                         </Navbar.Text>
                         {user?.username === 'admin' && (
                             <Button variant="outline-warning" size="sm" className="me-2" onClick={() => navigate('/admin')}>
@@ -296,13 +296,13 @@ export default function Dashboard() {
                                 {/* System Status Indicators */}
                                 <div className="mb-3 pb-3 border-bottom">
                                     <div className="d-flex align-items-center flex-wrap gap-2">
+                                        <strong className="me-2">System Status</strong>
                                         <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'}>
                                             Gateway: {gatewayStatus.toUpperCase()}
                                         </Badge>
                                         <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>
                                             Camera: {cameraStatus.toUpperCase()}
                                         </Badge>
-                                        <strong className="ms-2">System Status</strong>
                                     </div>
                                     <div className="d-flex gap-3 align-items-center mt-1">
                                         {/* Timestamps in a small row below if needed, or keeping it clean */}

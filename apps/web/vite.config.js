@@ -19,6 +19,7 @@ export default defineConfig({
         }
       },
       // Proxy other endpoints used by the app
+      '/video_feed': { target: 'https://cloud-worker.wongkiinging.workers.dev', changeOrigin: true, secure: false },
       '/relay': { target: 'https://cloud-worker.wongkiinging.workers.dev', changeOrigin: true, secure: false },
       '/temp': { target: 'https://cloud-worker.wongkiinging.workers.dev', changeOrigin: true, secure: false },
       '/control_status': { target: 'https://cloud-worker.wongkiinging.workers.dev', changeOrigin: true, secure: false },

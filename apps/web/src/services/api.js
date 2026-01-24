@@ -33,6 +33,11 @@ export const checkSession = async () => {
     return response.data;
 };
 
+export const exchangeAuth = async (access_token, user_email) => {
+    const response = await api.post('/api/auth/exchange', { access_token, user_email });
+    return response.data;
+};
+
 // --- Admin API ---
 export const getUsers = async () => (await api.get('/api/users')).data;
 export const deleteUser = async (username) => (await api.post('/api/user/delete', { username })).data;

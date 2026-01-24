@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { checkSession } from '../services/api';
+import { checkSession, exchangeAuth } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -22,8 +22,15 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
 
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                // Should sync with backend if needed, but for now we trust the frontend state
-                // Ideally, we POST session.access_token to /api/auth/exchange here
+                // Sync Supabase session with Backend Worker (sets HTTP-only cookie)
+                if (session?.access_token && session?.user?.email) {
+                    try {
+                        await exchangeAuth(session.access_token, session.user.email);
+                        console.log("Backend session synced for", session.user.email);
+                    } catch (e) {
+                        console.error("Failed to sync backend session", e);
+                    }
+                }
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
             }
