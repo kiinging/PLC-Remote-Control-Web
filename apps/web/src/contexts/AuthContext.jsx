@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { login as apiLogin, logout as apiLogout, checkSession } from '../services/api';
+import { supabase } from '../services/supabase';
+import { checkSession } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -8,28 +9,39 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check if user is already logged in
-        checkSession()
-            .then(data => setUser(data.user))
-            .catch(() => setUser(null))
-            .finally(() => setLoading(false));
+        // 1. Check initial Supabase session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
+
+        // 2. Listen for auth changes (Login, Logout, Auto-refresh)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Supabase Auth Event:", event, session?.user?.email);
+            setUser(session?.user ?? null);
+            setLoading(false);
+
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                // Should sync with backend if needed, but for now we trust the frontend state
+                // Ideally, we POST session.access_token to /api/auth/exchange here
+            } else if (event === 'SIGNED_OUT') {
+                setUser(null);
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
-    const login = async (username, password) => {
-        await apiLogin(username, password);
-        setUser({ username }); // Optimistic update or fetch profile
-    };
-
     const logout = async () => {
-        await apiLogout();
-        setUser(null);
+        await supabase.auth.signOut();
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, logout, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );
 };
 
 export const useAuth = () => useContext(AuthContext);
+

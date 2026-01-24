@@ -439,37 +439,35 @@ export default function Dashboard() {
                                     <div>Temp: <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span></div>
                                     <div className="text-muted small">Last Update: {lastUpdate}</div>
                                 </div>
-                            </div>
+                            </Card.Body>
+                        </Card>
+                    </Col>
 
-                        </Card.Body>
-                    </Card>
-                </Col>
+                    {/* Video Column */}
+                    <Col lg={6}>
+                        <Card className="text-center">
+                            <Card.Header>Live Video</Card.Header>
+                            <Card.Body className="p-0 bg-black" style={{ minHeight: '360px', position: 'relative' }}>
+                                {videoSrc && (
+                                    <img src={videoSrc} alt="Live Feed" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                                )}
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
 
-                {/* Video Column */}
-                <Col lg={6}>
-                    <Card className="text-center">
-                        <Card.Header>Live Video</Card.Header>
-                        <Card.Body className="p-0 bg-black" style={{ minHeight: '360px', position: 'relative' }}>
-                            {videoSrc && (
-                                <img src={videoSrc} alt="Live Feed" style={{ width: '100%', height: 'auto', display: 'block' }} />
-                            )}
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-
-            {/* Full-width Chart Row */}
-            <Row className="mt-4">
-                <Col lg={12}>
-                    <Card>
-                        <Card.Header>MV & PV Trends</Card.Header>
-                        <Card.Body style={{ height: '450px' }}>
-                            <TrendChart dataPoints={chartData} />
-                        </Card.Body>
-                    </Card>
-                </Col>
-            </Row>
-        </Container >
+                {/* Full-width Chart Row */}
+                <Row className="mt-4">
+                    <Col lg={12}>
+                        <Card>
+                            <Card.Header>MV & PV Trends</Card.Header>
+                            <Card.Body style={{ height: '450px' }}>
+                                <TrendChart dataPoints={chartData} />
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+            </Container >
         </>
     );
 }
