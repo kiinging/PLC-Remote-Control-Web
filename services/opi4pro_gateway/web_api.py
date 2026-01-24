@@ -15,12 +15,16 @@ app = Flask(__name__)
 # Using wiringpi for Orange Pi 4 Pro GPIO control
 # wPi pin mapping: Physical pin 18 (PL2) maps to wPi pin 10
 # Initialize wiringpi with BCM pin mode
-wiringpi.wiringPiSetup()
-LIGHT_PIN = 10  # wPi pin 10 for physical pin 18 (PL2) on Orange Pi 4 Pro
-wiringpi.pinMode(LIGHT_PIN, wiringpi.OUTPUT)
-
 # --- Initial state: ensure OFF --------------
-wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
+try:
+    wiringpi.wiringPiSetup()
+    LIGHT_PIN = 10  # wPi pin 10 for physical pin 18 (PL2) on Orange Pi 4 Pro
+    wiringpi.pinMode(LIGHT_PIN, wiringpi.OUTPUT)
+    wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
+    GPIO_AVAILABLE = True
+except Exception as e:
+    print(f"⚠️ GPIO Init Failed: {e}")
+    GPIO_AVAILABLE = False
 data["light"] = 0  #
 data["plc"] = 0  # plc always OFF at boot
 
@@ -81,13 +85,15 @@ def heartbeat():
 # =========================================================
 @app.route('/light/on', methods=['POST'])
 def turn_light_on():
-    wiringpi.digitalWrite(LIGHT_PIN, wiringpi.HIGH)
+    if GPIO_AVAILABLE:
+        wiringpi.digitalWrite(LIGHT_PIN, wiringpi.HIGH)
     data["light"] = 1
     return jsonify({"light": data["light"]}), 200
 
 @app.route('/light/off', methods=['POST'])
 def turn_light_off():
-    wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
+    if GPIO_AVAILABLE:
+        wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
     data["light"] = 0
     return jsonify({"light": data["light"]}), 200
 

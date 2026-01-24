@@ -3,7 +3,7 @@
 
 import time
 from shared_data import data
-from src.sensors import MAX31865, MAX31855  # Sensor driver classes
+from src.sensors import MAX31865  # Sensor driver classes
 
 BUFFER_LENGTH = int(30 * 60 / 2)  # 30 minutes @ 2-second sampling = 900 points
 
@@ -29,20 +29,20 @@ def log_trend_point():
 
 
 def main():
-    rtd_sensor = MAX31865(cs_pin="PC7")
-    thermo_sensor = MAX31855(cs_pin="PC10")
+    # Use CS pin 13 (wPi 13 / PD23) to match test_max31865.py
+    rtd_sensor = MAX31865(cs_pin=13)
 
     try:
         while True:
             # Read sensors
             rtd_temp = rtd_sensor.read_temperature()
-            t_temp, i_temp, fault, _, _, _ = thermo_sensor.read_temp()
-
+            
             # Save to shared memory
             data["rtd_temp"] = rtd_temp
-            data["thermo_temp"] = t_temp
-            data["internal_temp"] = i_temp
-            data["fault"] = fault
+            # data["thermo_temp"] = t_temp  # MAX31855 removed
+            # data["internal_temp"] = i_temp
+            # data["fault"] = fault
+            
             data["last_update"] = time.strftime("%Y-%m-%d %H:%M:%S")
             data["last_update_ts"] = time.time()
 
@@ -56,7 +56,6 @@ def main():
 
     finally:
         rtd_sensor.close()
-        thermo_sensor.close()
 
 if __name__ == "__main__":
     main()
