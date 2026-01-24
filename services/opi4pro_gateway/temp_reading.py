@@ -15,6 +15,10 @@ def log_trend_point():
 
     # Select PV based on control source
     pv = rtd if data.get("pv_source", "rtd") == "rtd" else thermo
+    
+    # Handle None values (initially None in shared_data)
+    if pv is None: pv = 0.0
+    if mv is None: mv = 0.0
 
     # Append trend point
     new_point = {"time": timestamp, "pv": round(pv, 3), "mv": round(mv, 3)}
