@@ -10,7 +10,16 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         // 1. Check initial Supabase session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
+            if (session?.access_token && session?.user?.email) {
+                try {
+                    // Force sync on reload to ensure cookie is present before app renders
+                    await exchangeAuth(session.access_token, session.user.email);
+                    console.log("Initial session synced");
+                } catch (e) {
+                    console.error("Initial session sync failed", e);
+                }
+            }
             setUser(session?.user ?? null);
             setLoading(false);
         });
