@@ -1,19 +1,20 @@
-#include <WiFi.h>
-#include <WebServer.h>
 #include <ArduinoJson.h>
+#include <WebServer.h>
+#include <WiFi.h>
+
 
 // ======== WiFi Configuration ========
-const char* ssid = "GL-SFT1200-b6e";
-const char* password = "goodlife";
+const char *ssid = "GL-SFT1200-b6e";
+const char *password = "goodlife";
 
 // ======== API Security ========
-const char* apiKey = "plc-secret-key-123"; // Must match OPi Gateway
+const char *apiKey = "plc-secret-key-123"; // Must match OPi Gateway
 
 // ======== GPIO ========
 const int relayPin = 18; // Active LOW relay
 
 // ======== Variables ========
-bool relayState = false;       // Logic state (true = ON)
+bool relayState = false; // Logic state (true = ON)
 unsigned long lastCommandTime = 0;
 const unsigned long FAILSAFE_TIMEOUT = 15000; // 15 seconds
 
@@ -54,7 +55,9 @@ void handleRelay() {
   lastCommandTime = millis();
   applyRelay();
 
-  server.send(200, "application/json", "{\"success\":true, \"relay\":" + String(relayState ? "true" : "false") + "}");
+  server.send(200, "application/json",
+              "{\"success\":true, \"relay\":" +
+                  String(relayState ? "true" : "false") + "}");
 }
 
 // ======== API: GET /status ========
@@ -73,6 +76,10 @@ void handleStatus() {
   String response;
   serializeJson(doc, response);
   server.send(200, "application/json", response);
+
+  // Treat authorized Status Check as a Heartbeat/Keepalive
+  // This allows the OPi to keep the relay ON by simply polling status.
+  lastCommandTime = millis();
 }
 
 // ======== Setup ========
@@ -95,10 +102,10 @@ void setup() {
   // Setup Server
   server.on("/relay", handleRelay);
   server.on("/status", handleStatus);
-  
+
   // Important: register headers we want to read
-  const char * headerkeys[] = {"X-API-Key"} ;
-  size_t headerkeyssize = sizeof(headerkeys)/sizeof(char*);
+  const char *headerkeys[] = {"X-API-Key"};
+  size_t headerkeyssize = sizeof(headerkeys) / sizeof(char *);
   server.collectHeaders(headerkeys, headerkeyssize);
 
   server.begin();

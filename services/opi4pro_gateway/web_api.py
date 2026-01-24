@@ -365,6 +365,9 @@ def relay_control():
         if target_state is None:
              return jsonify({"error": "Missing 'on' field"}), 400
 
+        # Update Desired State
+        data["power_on"] = 1 if target_state else 0
+
         result = esp32_client.set_relay(target_state)
         
         if result:

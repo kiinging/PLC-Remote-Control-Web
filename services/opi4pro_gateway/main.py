@@ -2,6 +2,7 @@
 from multiprocessing import Process
 from temp_reading import main as sensor_main
 from web_api import app
+from relay_service import main as relay_main
 # from modbus_server import main as modbus_main  # ⬅️ DISABLED: pymodbus version incompatibility
 
 def run_flask():
@@ -12,12 +13,15 @@ if __name__ == "__main__":
     print("🔁 Starting sensor and Flask processes...")
     p1 = Process(target=sensor_main)
     p2 = Process(target=run_flask)
-    # p3 = Process(target=modbus_main)  # ⬅️ DISABLED
+    p3 = Process(target=relay_main)
+    # p4 = Process(target=modbus_main)  # ⬅️ DISABLED
 
     p1.start()
     p2.start()
-    # p3.start()  # ⬅️ DISABLED
+    p3.start()
+    # p4.start()
 
     p1.join()
     p2.join()
-    # p3.join()
+    p3.join()
+    # p4.join()
