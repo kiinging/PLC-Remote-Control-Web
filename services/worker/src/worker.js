@@ -308,14 +308,16 @@ export default {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 2500);
 
+          const authHeader = "Basic " + btoa("radxa:radxa");
           const r = await fetch("https://cam.plc-web.online/health", {
-            signal: controller.signal
+            signal: controller.signal,
+            headers: { "Authorization": authHeader }
           });
           clearTimeout(timeoutId);
 
           return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
         } catch (e) {
-          return withCors(request, JSON.stringify({ status: "offline" }), 503, { "Content-Type": "application/json" });
+          return withCors(request, JSON.stringify({ status: "offline", error: e.message }), 200, { "Content-Type": "application/json" });
         }
       }
 

@@ -209,8 +209,8 @@ export default function Dashboard() {
             setRelay(false);
         }
 
-        // Always try to load video
-        if (!videoSrc) setVideoSrc('/video_feed');
+        // Always try to load video (add timestamp to bust cache)
+        if (!videoSrc) setVideoSrc(`/video_feed?t=${Date.now()}`);
     };
 
     const handleRelayToggle = async (state) => {
