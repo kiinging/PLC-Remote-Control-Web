@@ -10,6 +10,7 @@ const Login = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -28,6 +29,9 @@ const Login = () => {
 
         try {
             if (isSignUp) {
+                if (password !== confirmPassword) {
+                    throw new Error("Passwords do not match");
+                }
                 const { error } = await supabase.auth.signUp({
                     email,
                     password,
@@ -98,6 +102,19 @@ const Login = () => {
                                         placeholder="Enter your password"
                                     />
                                 </Form.Group>
+
+                                {isSignUp && (
+                                    <Form.Group className="mb-4">
+                                        <Form.Label>Confirm Password</Form.Label>
+                                        <Form.Control
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                            placeholder="Confirm your password"
+                                        />
+                                    </Form.Group>
+                                )}
 
                                 <Button
                                     variant="primary"
