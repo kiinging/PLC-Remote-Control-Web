@@ -389,25 +389,21 @@ export default function Dashboard() {
                                     </div>
 
                                     {/* Process Power Control */}
-                                    <div className="mt-3">
+                                    <div className="mt-3 mb-2">
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <strong>Process Power (Relay)</strong>
-                                                <div className="d-flex align-items-center gap-2 mt-1">
-                                                    {/* ESP32 Connection Status */}
-                                                    <Badge bg={esp32Alive ? 'success' : 'secondary'}>
-                                                        ESP32: {esp32Alive ? 'ALIVE' : 'OFFLINE'}
-                                                    </Badge>
-                                                    {/* Relay Status */}
-                                                    <Badge bg={relayStatus === 'alive' ? (relay ? 'success' : 'dark') : 'danger'}>
-                                                        {relayStatus === 'alive' ? (relay ? 'ON' : 'OFF') : 'UNKNOWN'}
-                                                    </Badge>
-                                                </div>
+                                            <div className="d-flex align-items-center">
+                                                <strong className="me-2">Process Power (Relay)</strong>
+                                                <Badge bg={esp32Alive ? 'success' : 'secondary'}>
+                                                    {esp32Alive ? 'ESP32: ALIVE' : 'ESP32: OFFLINE'}
+                                                </Badge>
                                             </div>
 
-                                            <div className="d-flex align-items-center gap-2">
-                                                <Button variant="success" size="sm" onClick={() => handleRelayToggle(true)} disabled={relay || !esp32Alive || isReadOnly}>ON</Button>
-                                                <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay || !esp32Alive || isReadOnly}>OFF</Button>
+                                            <div className="d-flex align-items-center">
+                                                <Badge bg={relay ? 'success' : 'secondary'} className="me-2">
+                                                    {relay ? 'ON' : 'OFF'}
+                                                </Badge>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => handleRelayToggle(true)} disabled={relay || !esp32Alive || isReadOnly}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay || !esp32Alive || isReadOnly}>Stop</Button>
                                                 {countdown > 0 && <span className="text-muted small ms-2">Booting: {countdown}s</span>}
                                             </div>
                                         </div>
