@@ -3,6 +3,7 @@ import { Container, Table, Button, Alert, Card, Badge } from 'react-bootstrap';
 import { getUsers, deleteUser } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function Admin() {
     const [users, setUsers] = useState([]);
@@ -44,7 +45,10 @@ export default function Admin() {
         <Container className="mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2>Admin Dashboard</h2>
-                <Button variant="secondary" onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+                <div className="d-flex gap-2">
+                    <ThemeToggle />
+                    <Button variant="secondary" onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+                </div>
             </div>
 
             {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}

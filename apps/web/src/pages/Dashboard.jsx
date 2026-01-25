@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Container, Row, Col, Card, Button, Form, Badge, Alert, InputGroup, Navbar, Nav } from 'react-bootstrap';
 import TrendChart from '../components/TrendChart';
+import ThemeToggle from '../components/ThemeToggle';
 import * as api from '../services/api';
 
 export default function Dashboard() {
@@ -282,6 +283,7 @@ export default function Dashboard() {
                             </Button>
                         )}
                         <Button variant="outline-light" size="sm" onClick={logout}>Logout</Button>
+                        <ThemeToggle className="ms-3" />
                     </Navbar.Collapse>
                 </Container>
             </Navbar>
