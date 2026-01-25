@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Container, Row, Col, Card, Button, Form, Badge, Alert, InputGroup, Navbar, Nav } from 'react-bootstrap';
 import TrendChart from '../components/TrendChart';
@@ -8,6 +9,7 @@ import * as api from '../services/api';
 
 export default function Dashboard() {
     const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
     // Status States
     const [relay, setRelay] = useState(false);
