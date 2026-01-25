@@ -5,12 +5,12 @@ import sys
 # CONFIGURATION
 # ------------------------------------------------------------------
 # REPLACE THIS with the IP address printed on your ESP32 Serial Monitor
-ESP_IP = "192.168.8.xxx" 
+ESP_IP = "192.168.8.191" 
 # ------------------------------------------------------------------
 
 URL = f"http://{ESP_IP}/relay"
 STATUS_URL = f"http://{ESP_IP}/status"
-API_KEY = "plc-secret-key-123"
+API_KEY = "esp32-secret-key-123"
 
 def test_connection():
     headers = {"X-API-Key": API_KEY}
