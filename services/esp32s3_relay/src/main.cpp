@@ -1,35 +1,74 @@
+#include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WebServer.h>
 #include <WiFi.h>
 
 
-// ======== WiFi Configuration ========
-const char *ssid = "GL-SFT1200-b6e";
-const char *password = "goodlife";
+// ==========================================
+// CONFIGURATION
+// ==========================================
+const char *SSID = "GL-SFT1200-b6e";
+const char *PASSWORD = "goodlife";
 
-// ======== API Security ========
-const char *apiKey = "plc-secret-key-123"; // Must match OPi Gateway
+// Security: Only the Gateway (OPi4Pro) calling with this key can control us.
+const char *GATEWAY_API_KEY = "plc-secret-key-123";
 
-// ======== GPIO ========
-const int relayPin = 18; // Active LOW relay
+// Hardware
+const int PIN_RELAY = 18; // Relay Control Pin
+const int PIN_LED = 2;    // Onboard LED (usually 2 on generic ESP32)
 
-// ======== Variables ========
-bool relayState = false; // Logic state (true = ON)
-unsigned long lastCommandTime = 0;
-const unsigned long FAILSAFE_TIMEOUT = 15000; // 15 seconds
+// Safety
+const unsigned long FAILSAFE_MS = 15000; // Turn off if no command for 15s
 
+// ==========================================
+// STATE
+// ==========================================
 WebServer server(80);
+bool relayActive = false;
+unsigned long lastCommandTime = 0;
 
-// ======== Helper: Apply Relay State ========
-void applyRelay() {
-  // Relay is Active LOW
-  digitalWrite(relayPin, relayState ? LOW : HIGH);
+// ==========================================
+// HELPERS
+// ==========================================
+void setRelay(bool state) {
+  relayActive = state;
+  // Relay is often Active LOW. Adjust if your hardware is Active HIGH.
+  // Assuming Active LOW here based on previous code:
+  digitalWrite(PIN_RELAY, relayActive ? LOW : HIGH);
+
+  // Feedback LED: ON when Relay is ON
+  digitalWrite(PIN_LED, relayActive ? HIGH : LOW);
 }
 
-// ======== API: POST /relay ========
-void handleRelay() {
-  if (!server.hasHeader("X-API-Key") || server.header("X-API-Key") != apiKey) {
-    server.send(403, "application/json", "{\"error\":\"Unauthorized\"}");
+void blinkLed(int times) {
+  for (int i = 0; i < times; i++) {
+    digitalWrite(PIN_LED, !digitalRead(PIN_LED));
+    delay(100);
+    digitalWrite(PIN_LED, !digitalRead(PIN_LED));
+    delay(100);
+  }
+  // Restore correct state
+  digitalWrite(PIN_LED, relayActive ? HIGH : LOW);
+}
+
+bool checkAuth() {
+  if (!server.hasHeader("X-API-Key"))
+    return false;
+  if (server.header("X-API-Key") != GATEWAY_API_KEY)
+    return false;
+  return true;
+}
+
+// ==========================================
+// HANDLERS
+// ==========================================
+
+// POST /relay
+// Body: {"on": true}
+void handleRelayControl() {
+  if (!checkAuth()) {
+    server.send(401, "application/json",
+                "{\"error\":\"Unauthorized: Gateway Only\"}");
     return;
   }
 
@@ -38,93 +77,101 @@ void handleRelay() {
     return;
   }
 
-  if (server.hasArg("plain") == false) {
-    server.send(400, "application/json", "{\"error\":\"Body missing\"}");
+  if (!server.hasArg("plain")) {
+    server.send(400, "application/json", "{\"error\":\"Missing Body\"}");
     return;
   }
 
   JsonDocument doc;
-  DeserializationError error = deserializeJson(doc, server.arg("plain"));
-  if (error) {
+  DeserializationError err = deserializeJson(doc, server.arg("plain"));
+  if (err) {
     server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
     return;
   }
 
-  bool reqOn = doc["on"];
-  relayState = reqOn;
+  bool reqState = doc["on"];
+  setRelay(reqState);
   lastCommandTime = millis();
-  applyRelay();
+
+  Serial.printf("Gateway Command: Relay %s\n", reqState ? "ON" : "OFF");
 
   server.send(200, "application/json",
-              "{\"success\":true, \"relay\":" +
-                  String(relayState ? "true" : "false") + "}");
+              "{\"success\":true,\"relay\":" + String(relayActive) + "}");
 }
 
-// ======== API: GET /status ========
+// GET /status
 void handleStatus() {
-  if (!server.hasHeader("X-API-Key") || server.header("X-API-Key") != apiKey) {
-    server.send(403, "application/json", "{\"error\":\"Unauthorized\"}");
+  // Even status checks should come from Gateway ideally, but looser security is
+  // okay here. We'll enforce it to be strict as requested.
+  if (!checkAuth()) {
+    server.send(401, "application/json", "{\"error\":\"Unauthorized\"}");
     return;
   }
 
-  JsonDocument doc;
-  doc["relay"] = relayState;
-  doc["uptime_ms"] = millis();
-  doc["last_cmd_ms_ago"] = millis() - lastCommandTime;
-  doc["failsafe_active"] = (millis() - lastCommandTime > FAILSAFE_TIMEOUT);
-
-  String response;
-  serializeJson(doc, response);
-  server.send(200, "application/json", response);
-
-  // Treat authorized Status Check as a Heartbeat/Keepalive
-  // This allows the OPi to keep the relay ON by simply polling status.
+  // A status check resets the failsafe timer (Heartbeat)
   lastCommandTime = millis();
+
+  JsonDocument doc;
+  doc["relay"] = relayActive;
+  doc["uptime"] = millis();
+  doc["failsafe_active"] = false; // We just reset it
+
+  String resp;
+  serializeJson(doc, resp);
+  server.send(200, "application/json", resp);
+
+  // Blink briefly to show we are alive and being polled
+  digitalWrite(PIN_LED, !digitalRead(PIN_LED));
+  delay(50);
+  digitalWrite(PIN_LED, relayActive ? HIGH : LOW);
 }
 
-// ======== Setup ========
+void handleNotFound() {
+  server.send(404, "text/plain", "ESP32 Relay Node. Only Gateway allowed.");
+}
+
+// ==========================================
+// MAIN
+// ==========================================
 void setup() {
   Serial.begin(115200);
-  pinMode(relayPin, OUTPUT);
-  applyRelay(); // Initialize state
 
-  Serial.println("\nBooting...");
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi ");
+  pinMode(PIN_RELAY, OUTPUT);
+  pinMode(PIN_LED, OUTPUT);
+  setRelay(false); // Start OFF
+
+  Serial.println("\n\n--- ESP32 Relay Node ---");
+  Serial.printf("Connecting to %s...", SSID);
+
+  WiFi.begin(SSID, PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
     delay(500);
+    Serial.print(".");
   }
-  Serial.println("\n✅ WiFi connected!");
+
+  Serial.println("\nWiFi Connected!");
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
-  // Setup Server
-  server.on("/relay", handleRelay);
+  // Define Routes
+  server.on("/relay", handleRelayControl);
   server.on("/status", handleStatus);
+  server.onNotFound(handleNotFound);
 
-  // Important: register headers we want to read
+  // Headers
   const char *headerkeys[] = {"X-API-Key"};
-  size_t headerkeyssize = sizeof(headerkeys) / sizeof(char *);
-  server.collectHeaders(headerkeys, headerkeyssize);
+  server.collectHeaders(headerkeys, 1);
 
   server.begin();
-  Serial.println("HTTP Server started");
-  lastCommandTime = millis(); // Reset timer on boot
+  Serial.println("HTTP Server running.");
 }
 
-// ======== Main Loop ========
 void loop() {
   server.handleClient();
 
-  // Failsafe Check
-  if (millis() - lastCommandTime > FAILSAFE_TIMEOUT) {
-    if (relayState) {
-      Serial.println("⚠️ Failsafe triggered: Turning Relay OFF");
-      relayState = false;
-      applyRelay();
-    }
+  // Failsafe: Turn off if Gateway disappears
+  if (relayActive && (millis() - lastCommandTime > FAILSAFE_MS)) {
+    Serial.println("❌ Failsafe Timeout! Turning Relay OFF.");
+    setRelay(false);
   }
-
-  delay(10);
 }
