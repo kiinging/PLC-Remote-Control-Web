@@ -11,7 +11,7 @@ const char *SSID = "GL-SFT1200-b6e";
 const char *PASSWORD = "goodlife";
 
 // Security: Only the Gateway (OPi4Pro) calling with this key can control us.
-const char *GATEWAY_API_KEY = "plc-secret-key-123";
+const char *GATEWAY_API_KEY = "esp32-secret-key-123";
 
 // Hardware
 const int PIN_RELAY = 18; // Relay Control Pin
