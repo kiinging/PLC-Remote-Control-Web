@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Admin from './pages/Admin';
 import Dashboard from './pages/Dashboard';
+import Booking from './pages/Booking';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
@@ -32,6 +33,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/booking"
+              element={
+                <ProtectedRoute>
+                  <Booking />
                 </ProtectedRoute>
               }
             />

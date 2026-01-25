@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Container, Row, Col, Card, Button, Form, Badge, Alert, InputGroup, Navbar, Nav } from 'react-bootstrap';
 import TrendChart from '../components/TrendChart';
 import ThemeToggle from '../components/ThemeToggle';
+import { bookingService } from '../services/bookingService';
 import * as api from '../services/api';
 
 export default function Dashboard() {
@@ -249,18 +250,22 @@ export default function Dashboard() {
     };
 
     const sendSetpoint = async () => {
+        if (isReadOnly) return;
         await api.setSetpoint(setpoint);
     };
 
     const sendManualMV = async () => {
+        if (isReadOnly) return;
         await api.setManualMV(manualMV);
     };
 
     const handleStartTune = async () => {
+        if (isReadOnly) return;
         await api.startTune();
     };
 
     const handleStopTune = async () => {
+        if (isReadOnly) return;
         await api.stopTune();
     };
 
@@ -268,12 +273,44 @@ export default function Dashboard() {
     const getModeName = (m) => ['Manual', 'Auto', 'Tune'][m] || 'Unknown';
     const getModeColor = (m) => ['danger', 'success', 'warning'][m] || 'secondary';
 
+    // Access Control Logic
+    const [isReadOnly, setIsReadOnly] = useState(true);
+    const [bookingChecked, setBookingChecked] = useState(false);
+
+    const checkAccess = async () => {
+        // Admin always has access
+        if (user?.username === 'admin') {
+            setIsReadOnly(false);
+            setBookingChecked(true);
+            return;
+        }
+
+        try {
+            const hasBooking = await bookingService.hasActiveBooking();
+            setIsReadOnly(!hasBooking);
+        } catch (e) {
+            console.error("Failed to check booking", e);
+            setIsReadOnly(true); // Fail safe
+        } finally {
+            setBookingChecked(true);
+        }
+    };
+
+    useEffect(() => {
+        checkAccess();
+        const interval = setInterval(checkAccess, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, [user]);
+
     return (
         <>
             <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
                 <Container>
                     <Navbar.Brand>PLC Web Control</Navbar.Brand>
                     <Navbar.Collapse className="justify-content-end">
+                        <Nav className="me-auto">
+                            <Nav.Link onClick={() => navigate('/booking')}>Book Lab</Nav.Link>
+                        </Nav>
                         <ThemeToggle className="me-3" />
                         <Navbar.Text className="me-3">
                             Signed in as: <a href="#login">{user?.username || user?.email?.split('@')[0] || 'User'}</a>
@@ -289,6 +326,17 @@ export default function Dashboard() {
             </Navbar>
 
             <Container>
+                {/* Read Only Alert */}
+                {bookingChecked && isReadOnly && (
+                    <Alert variant="warning" className="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Read-Only Mode:</strong> You do not have an active booking for this time slot.
+                            Controls are disabled.
+                        </div>
+                        <Button variant="outline-dark" size="sm" onClick={() => navigate('/booking')}>Book Now</Button>
+                    </Alert>
+                )}
+
                 <Row className="g-4">
                     {/* Controls Column */}
                     <Col lg={6}>
@@ -324,8 +372,8 @@ export default function Dashboard() {
                                                 <Badge bg={relayStatus === 'alive' ? 'success' : relayStatus === 'booting' ? 'warning' : 'danger'}>
                                                     {relayStatus.toUpperCase()}
                                                 </Badge>
-                                                <Button variant="success" size="sm" onClick={() => handleRelayToggle(true)} disabled={relay}>ON</Button>
-                                                <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay}>OFF</Button>
+                                                <Button variant="success" size="sm" onClick={() => handleRelayToggle(true)} disabled={relay || isReadOnly}>ON</Button>
+                                                <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay || isReadOnly}>OFF</Button>
                                                 {countdown > 0 && <span className="text-muted small ms-2">Booting: {countdown}s</span>}
                                             </div>
                                         </div>
@@ -339,8 +387,8 @@ export default function Dashboard() {
                                         <Badge bg={controlStatus.light ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.light ? 'ON' : 'OFF'}
                                         </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('light', 'start')}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('light', 'stop')}>Stop</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('light', 'start')} disabled={isReadOnly}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('light', 'stop')} disabled={isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
@@ -351,8 +399,8 @@ export default function Dashboard() {
                                         <Badge bg={controlStatus.web ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.web ? 'ON' : 'OFF'}
                                         </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')}>Stop</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')} disabled={isReadOnly}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')} disabled={isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
@@ -363,8 +411,8 @@ export default function Dashboard() {
                                         <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.plc ? 'ON' : 'OFF'}
                                         </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')}>Stop</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={isReadOnly}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
@@ -374,9 +422,9 @@ export default function Dashboard() {
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <strong>Mode: <Badge bg={getModeColor(controlStatus.mode)}>{getModeName(controlStatus.mode)}</Badge></strong>
                                     <div>
-                                        <Button variant="danger" size="sm" className="me-1" onClick={() => changeMode('manual')}>Manual</Button>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => changeMode('auto')}>Auto</Button>
-                                        <Button variant="warning" size="sm" onClick={() => changeMode('tune')}>Tune</Button>
+                                        <Button variant="danger" size="sm" className="me-1" onClick={() => changeMode('manual')} disabled={isReadOnly}>Manual</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => changeMode('auto')} disabled={isReadOnly}>Auto</Button>
+                                        <Button variant="warning" size="sm" onClick={() => changeMode('tune')} disabled={isReadOnly}>Tune</Button>
                                     </div>
                                 </div>
 
@@ -386,17 +434,17 @@ export default function Dashboard() {
                                         <h6>PID Settings</h6>
                                         <InputGroup size="sm" className="mb-2">
                                             <InputGroup.Text>Setpoint</InputGroup.Text>
-                                            <Form.Control type="number" value={setpoint} onChange={e => setSetpoint(e.target.value)} />
-                                            <Button onClick={sendSetpoint}>Send</Button>
+                                            <Form.Control type="number" value={setpoint} onChange={e => setSetpoint(e.target.value)} disabled={isReadOnly} />
+                                            <Button onClick={sendSetpoint} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
                                         <InputGroup size="sm">
                                             <InputGroup.Text>PB</InputGroup.Text>
-                                            <Form.Control type="number" value={pidParams.pb} onChange={e => setPidParams({ ...pidParams, pb: e.target.value })} />
+                                            <Form.Control type="number" value={pidParams.pb} onChange={e => setPidParams({ ...pidParams, pb: e.target.value })} disabled={isReadOnly} />
                                             <InputGroup.Text>Ti</InputGroup.Text>
-                                            <Form.Control type="number" value={pidParams.ti} onChange={e => setPidParams({ ...pidParams, ti: e.target.value })} />
+                                            <Form.Control type="number" value={pidParams.ti} onChange={e => setPidParams({ ...pidParams, ti: e.target.value })} disabled={isReadOnly} />
                                             <InputGroup.Text>Td</InputGroup.Text>
-                                            <Form.Control type="number" value={pidParams.td} onChange={e => setPidParams({ ...pidParams, td: e.target.value })} />
-                                            <Button onClick={sendPid}>Send</Button>
+                                            <Form.Control type="number" value={pidParams.td} onChange={e => setPidParams({ ...pidParams, td: e.target.value })} disabled={isReadOnly} />
+                                            <Button onClick={sendPid} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
                                     </div>
                                 )}
@@ -406,8 +454,8 @@ export default function Dashboard() {
                                         <h6>Manual Settings</h6>
                                         <InputGroup size="sm">
                                             <InputGroup.Text>MV (%)</InputGroup.Text>
-                                            <Form.Control type="number" value={manualMV} onChange={e => setManualMV(e.target.value)} />
-                                            <Button onClick={sendManualMV}>Send</Button>
+                                            <Form.Control type="number" value={manualMV} onChange={e => setManualMV(e.target.value)} disabled={isReadOnly} />
+                                            <Button onClick={sendManualMV} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
                                     </div>
                                 )}
@@ -419,13 +467,13 @@ export default function Dashboard() {
                                             Cycling output to find PID values.
                                         </Alert>
                                         <div className="mb-2">
-                                            <Button variant="warning" size="sm" className="me-2" onClick={handleStartTune} disabled={tuneStatus.tuning_active}>Start Tune</Button>
-                                            <Button variant="secondary" size="sm" onClick={handleStopTune}>Stop Tune</Button>
+                                            <Button variant="warning" size="sm" className="me-2" onClick={handleStartTune} disabled={tuneStatus.tuning_active || isReadOnly}>Start Tune</Button>
+                                            <Button variant="secondary" size="sm" onClick={handleStopTune} disabled={isReadOnly}>Stop Tune</Button>
                                         </div>
                                         <InputGroup size="sm" className="mb-2">
                                             <InputGroup.Text>Tune SP</InputGroup.Text>
-                                            <Form.Control type="number" value={tuneSetpoint} onChange={e => setTuneSetpoint(e.target.value)} />
-                                            <Button onClick={async () => await api.setTuneSetpoint(tuneSetpoint)}>Send</Button>
+                                            <Form.Control type="number" value={tuneSetpoint} onChange={e => setTuneSetpoint(e.target.value)} disabled={isReadOnly} />
+                                            <Button onClick={async () => await api.setTuneSetpoint(tuneSetpoint)} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
                                         <div className="small">
                                             <strong>Results: </strong>
