@@ -198,6 +198,7 @@ export default function Booking() {
                                     {slots.map((slot, idx) => {
                                         const taken = isSlotTaken(slot);
                                         const bookedByMe = isMyBooking(slot);
+                                        const hasActiveBooking = myBookings.length > 0;
 
                                         let variant = 'outline-primary';
                                         let text = 'Book';
@@ -211,6 +212,10 @@ export default function Booking() {
                                             variant = 'secondary';
                                             text = 'Taken';
                                             disabled = true;
+                                        } else if (hasActiveBooking) {
+                                            variant = 'outline-secondary';
+                                            text = 'Max 1 Booking';
+                                            disabled = true;
                                         }
 
                                         return (
@@ -221,7 +226,7 @@ export default function Booking() {
                                                     size="sm"
                                                     disabled={disabled}
                                                     onClick={() => handleBook(slot)}
-                                                    style={{ minWidth: '80px' }}
+                                                    style={{ minWidth: '100px' }}
                                                 >
                                                     {text}
                                                 </Button>
