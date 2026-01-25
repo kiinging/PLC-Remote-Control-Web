@@ -274,6 +274,7 @@ export default function Dashboard() {
                 <Container>
                     <Navbar.Brand>PLC Web Control</Navbar.Brand>
                     <Navbar.Collapse className="justify-content-end">
+                        <ThemeToggle className="me-3" />
                         <Navbar.Text className="me-3">
                             Signed in as: <a href="#login">{user?.username || user?.email?.split('@')[0] || 'User'}</a>
                         </Navbar.Text>
@@ -283,7 +284,6 @@ export default function Dashboard() {
                             </Button>
                         )}
                         <Button variant="outline-light" size="sm" onClick={logout}>Logout</Button>
-                        <ThemeToggle className="ms-3" />
                     </Navbar.Collapse>
                 </Container>
             </Navbar>
