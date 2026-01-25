@@ -3,7 +3,7 @@ import requests
 import time
 
 # Configuration
-ESP32_IP = "192.168.8.196" # Replace with actual IP or hostname if known. Defaulting to a likely address for now, user needs to update.
+ESP32_IP = "192.168.8.191" # Updated based on user testing
 API_KEY = "plc-secret-key-123"
 TIMEOUT = 2.0  # seconds
 

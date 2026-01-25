@@ -368,9 +368,14 @@ def relay_control():
         # Update Desired State
         data["power_on"] = 1 if target_state else 0
 
+        # Send command to ESP32
         result = esp32_client.set_relay(target_state)
         
-        if result:
+        if result and result.get("success"):
+            # OPTIMIZATION: Update cache immediately on success
+            data["esp32_connected"] = True
+            data["esp32_last_seen"] = time.time()
+            data["relay_actual"] = target_state # Assume success means state changed
             return jsonify(result), 200
         else:
             return jsonify({"error": "ESP32 Unavailable"}), 503
@@ -379,11 +384,26 @@ def relay_control():
 
 @app.route('/relay_status', methods=['GET'])
 def relay_status():
-    result = esp32_client.get_status()
-    if result:
-        return jsonify(result), 200
-    else:
-        return jsonify({"error": "ESP32 Unavailable"}), 503
+    """
+    Return cached status from background polling service (relay_service.py).
+    Decouples frontend latency from ESP32 network latency.
+    """
+    last_seen = data.get("esp32_last_seen", 0)
+    now = time.time()
+    age = now - last_seen
+    
+    connected = data.get("esp32_connected", False)
+    
+    # If data is too old (>15s), mark as offline/stale even if flag says connected
+    if age > 15:
+        connected = False
+        
+    return jsonify({
+        "alive": connected,
+        "relay": data.get("relay_actual") if connected else None, # Return null if stale
+        "last_seen_s": float(f"{age:.1f}"), # seconds since last successful poll
+        "desired": bool(data.get("power_on", 0))
+    }), 200
 
 
 # ---------------- Main ----------------

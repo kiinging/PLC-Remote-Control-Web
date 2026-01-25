@@ -199,27 +199,49 @@ export default function Dashboard() {
         }
     };
 
-    const refreshRelay = async () => {
-        const r = await api.getRelayStatus();
-        if (r.alive) {
-            setRelayStatus('alive');
-            setRelay(true);
-            if (!videoSrc) setVideoSrc('/video_feed');
-        } else if (r.booting) {
-            setRelayStatus('booting');
-            setRelay(true);
-        } else {
-            setRelayStatus('offline');
-            setRelay(false);
-        }
+    const [esp32Alive, setEsp32Alive] = useState(false);
+    const [esp32LastSeen, setEsp32LastSeen] = useState('--');
 
-        // Always try to load video (add timestamp to bust cache)
-        if (!videoSrc) setVideoSrc(`/video_feed?t=${Date.now()}`);
+    const refreshRelay = async () => {
+        try {
+            const r = await api.getRelayStatus();
+            // New API returns: { alive: bool, relay: bool|null, last_seen_s: number, desired: bool }
+
+            setEsp32Alive(r.alive);
+            setEsp32LastSeen(r.last_seen_s);
+
+            if (r.alive) {
+                setRelayStatus('alive');
+                setRelay(r.relay === true); // Explicitly check true, as it might be null
+                if (!videoSrc) setVideoSrc('/video_feed');
+            } else {
+                setRelayStatus('offline');
+                setRelay(false); // Default to off in UI if unknown, or maybe keep last known?
+                // r.desired could be used to show "pending" state if needed
+            }
+
+            // Always try to load video (add timestamp to bust cache)
+            if (!videoSrc) setVideoSrc(`/video_feed?t=${Date.now()}`);
+        } catch (e) {
+            console.warn("Relay status check failed", e);
+            setEsp32Alive(false);
+            setRelayStatus('offline');
+        }
     };
 
     const handleRelayToggle = async (state) => {
-        await api.setRelay(state);
-        refreshRelay();
+        // Optimistic update
+        setRelay(state);
+
+        try {
+            await api.setRelay(state);
+            refreshRelay();
+        } catch (e) {
+            console.error("Failed to toggle relay", e);
+            // Revert state if failed (next poll would fix it too)
+            refreshRelay();
+        }
+
         if (state) {
             // Start countdown
             setCountdown(60);
@@ -369,13 +391,23 @@ export default function Dashboard() {
                                     {/* Process Power Control */}
                                     <div className="mt-3">
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <strong>Process Power (Relay)</strong>
+                                            <div>
+                                                <strong>Process Power (Relay)</strong>
+                                                <div className="d-flex align-items-center gap-2 mt-1">
+                                                    {/* ESP32 Connection Status */}
+                                                    <Badge bg={esp32Alive ? 'success' : 'secondary'}>
+                                                        ESP32: {esp32Alive ? 'ALIVE' : 'OFFLINE'}
+                                                    </Badge>
+                                                    {/* Relay Status */}
+                                                    <Badge bg={relayStatus === 'alive' ? (relay ? 'success' : 'dark') : 'danger'}>
+                                                        {relayStatus === 'alive' ? (relay ? 'ON' : 'OFF') : 'UNKNOWN'}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+
                                             <div className="d-flex align-items-center gap-2">
-                                                <Badge bg={relayStatus === 'alive' ? 'success' : relayStatus === 'booting' ? 'warning' : 'danger'}>
-                                                    {relayStatus.toUpperCase()}
-                                                </Badge>
-                                                <Button variant="success" size="sm" onClick={() => handleRelayToggle(true)} disabled={relay || isReadOnly}>ON</Button>
-                                                <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay || isReadOnly}>OFF</Button>
+                                                <Button variant="success" size="sm" onClick={() => handleRelayToggle(true)} disabled={relay || !esp32Alive || isReadOnly}>ON</Button>
+                                                <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay || !esp32Alive || isReadOnly}>OFF</Button>
                                                 {countdown > 0 && <span className="text-muted small ms-2">Booting: {countdown}s</span>}
                                             </div>
                                         </div>
