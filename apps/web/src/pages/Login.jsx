@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Form, Button, Alert } from 'react-bootstrap';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useEffect, useState } from 'react';
 
 const Login = () => {
@@ -60,8 +61,10 @@ const Login = () => {
         }
     };
 
+    const { theme } = useTheme();
+
     return (
-        <Container className="vh-100 d-flex align-items-center justify-content-center bg-light">
+        <Container className="vh-100 d-flex align-items-center justify-content-center">
             <Row className="w-100 justify-content-center">
                 <Col md={6} lg={4}>
                     <Card className="shadow-lg border-0 rounded-4">
@@ -123,7 +126,7 @@ const Login = () => {
                             </div>
 
                             <Button
-                                variant="outline-dark"
+                                variant={theme === 'dark' ? 'outline-light' : 'outline-dark'}
                                 className="w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2"
                                 onClick={handleGoogleLogin}
                             >
