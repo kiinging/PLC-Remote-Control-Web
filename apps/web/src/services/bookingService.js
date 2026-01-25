@@ -5,7 +5,7 @@ export const bookingService = {
     async getBookings(start, end) {
         const { data, error } = await supabase
             .from('bookings')
-            .select('*, profiles:user_id(email)') // Assuming you might have public profile, else just user_id
+            .select('*')
             .gte('end_time', start)
             .lte('start_time', end)
             .order('start_time', { ascending: true });
