@@ -16,24 +16,20 @@ const char *GATEWAY_API_KEY = "esp32-secret-key-123";
 const int PIN_RELAY = 2; // Relay Control Pin
 const int PIN_LED = 3;   // Onboard LED (usually 2 on generic ESP32)
 
-// Safety
-const unsigned long FAILSAFE_MS = 15000; // Turn off if no command for 15s
-
 // ==========================================
 // STATE
 // ==========================================
 WebServer server(80);
 bool relayActive = false;
-unsigned long lastCommandTime = 0;
 
 // ==========================================
 // HELPERS
 // ==========================================
 void setRelay(bool state) {
   relayActive = state;
-  // Relay is often Active LOW. Adjust if your hardware is Active HIGH.
-  // Assuming Active LOW here based on previous code:
-  digitalWrite(PIN_RELAY, relayActive ? LOW : HIGH);
+  // NPN Transistor Logic: Active HIGH
+  // HIGH -> Transistor ON -> Collector LOW -> SSR ON
+  digitalWrite(PIN_RELAY, relayActive ? HIGH : LOW);
 
   // Feedback LED: ON when Relay is ON
   digitalWrite(PIN_LED, relayActive ? HIGH : LOW);
@@ -90,7 +86,6 @@ void handleRelayControl() {
 
   bool reqState = doc["on"];
   setRelay(reqState);
-  lastCommandTime = millis();
 
   Serial.printf("Gateway Command: Relay %s\n", reqState ? "ON" : "OFF");
 
@@ -107,13 +102,9 @@ void handleStatus() {
     return;
   }
 
-  // A status check resets the failsafe timer (Heartbeat)
-  lastCommandTime = millis();
-
   JsonDocument doc;
   doc["relay"] = relayActive;
   doc["uptime"] = millis();
-  doc["failsafe_active"] = false; // We just reset it
 
   String resp;
   serializeJson(doc, resp);
@@ -136,6 +127,7 @@ void setup() {
   Serial.begin(115200);
 
   pinMode(PIN_RELAY, OUTPUT);
+  digitalWrite(PIN_RELAY, LOW); // Ensure OFF at boot
   pinMode(PIN_LED, OUTPUT);
   setRelay(false); // Start OFF
 
@@ -168,9 +160,9 @@ void setup() {
 void loop() {
   server.handleClient();
 
-  // Failsafe: Turn off if Gateway disappears
-  if (relayActive && (millis() - lastCommandTime > FAILSAFE_MS)) {
-    Serial.println("❌ Failsafe Timeout! Turning Relay OFF.");
-    setRelay(false);
-  }
+  // Failsafe removed as per user request
+  //  if (relayActive && (millis() - lastCommandTime > FAILSAFE_MS)) {
+  //    Serial.println("❌ Failsafe Timeout! Turning Relay OFF.");
+  //    setRelay(false);
+  //  }
 }
