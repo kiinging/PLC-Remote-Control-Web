@@ -43,7 +43,7 @@ export default function Dashboard() {
 
     // Video
     const [videoSrc, setVideoSrc] = useState('/video_feed');
-    const [countdown, setCountdown] = useState(0);
+
 
     // Load Initial Data
     useEffect(() => {
@@ -242,19 +242,7 @@ export default function Dashboard() {
             refreshRelay();
         }
 
-        if (state) {
-            // Start countdown
-            setCountdown(60);
-            const timer = setInterval(() => {
-                setCountdown(prev => {
-                    if (prev <= 1) {
-                        clearInterval(timer);
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        }
+
     };
 
     // Generic Control Handlers
@@ -404,7 +392,7 @@ export default function Dashboard() {
                                                 </Badge>
                                                 <Button variant="success" size="sm" className="me-1" onClick={() => handleRelayToggle(true)} disabled={relay || !esp32Alive || isReadOnly}>Start</Button>
                                                 <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay || !esp32Alive || isReadOnly}>Stop</Button>
-                                                {countdown > 0 && <span className="text-muted small ms-2">Booting: {countdown}s</span>}
+
                                             </div>
                                         </div>
                                     </div>

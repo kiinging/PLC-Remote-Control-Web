@@ -4,7 +4,7 @@ import time
 
 # Configuration
 ESP32_IP = "192.168.8.191" # Updated based on user testing
-API_KEY = "plc-secret-key-123"
+API_KEY = "esp32-secret-key-123"
 TIMEOUT = 2.0  # seconds
 
 def set_relay(on: bool):

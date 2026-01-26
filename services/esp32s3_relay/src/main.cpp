@@ -3,7 +3,6 @@
 #include <WebServer.h>
 #include <WiFi.h>
 
-
 // ==========================================
 // CONFIGURATION
 // ==========================================
@@ -14,8 +13,8 @@ const char *PASSWORD = "goodlife";
 const char *GATEWAY_API_KEY = "esp32-secret-key-123";
 
 // Hardware
-const int PIN_RELAY = 18; // Relay Control Pin
-const int PIN_LED = 2;    // Onboard LED (usually 2 on generic ESP32)
+const int PIN_RELAY = 2; // Relay Control Pin
+const int PIN_LED = 3;   // Onboard LED (usually 2 on generic ESP32)
 
 // Safety
 const unsigned long FAILSAFE_MS = 15000; // Turn off if no command for 15s

@@ -32,7 +32,7 @@ def main():
             print(f"❌ Relay Service Error: {e}")
             data["esp32_connected"] = False
         
-        time.sleep(2.0) # Poll every 2 seconds (well within 15s failsafe)
+        time.sleep(1.0) # Poll every 1 second
 
 if __name__ == "__main__":
     main()

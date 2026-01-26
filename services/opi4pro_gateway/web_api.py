@@ -363,7 +363,10 @@ def relay_control():
         req = request.get_json()
         target_state = req.get("on") # true or false
         if target_state is None:
-             return jsonify({"error": "Missing 'on' field"}), 400
+            target_state = req.get("relay")
+        
+        if target_state is None:
+             return jsonify({"error": "Missing 'on' or 'relay' field"}), 400
 
         # Update Desired State
         data["power_on"] = 1 if target_state else 0
