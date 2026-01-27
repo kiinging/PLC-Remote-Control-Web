@@ -10,13 +10,21 @@ class GpioManager:
         try:
             import wiringpi
             self.wiringpi = wiringpi
-            # wiringpi.wiringPiSetup() # Do not call setup here, call it explicitly or lazy load?
-            # Standard wiringpi usage requires setup first.
-            if self.wiringpi.wiringPiSetup() != -1:
-                self.available = True
-                logger.info("✅ WiringPi initialized successfully.")
+            
+            # Check permissions first to prevent hard crash (OS Abort)
+            import os
+            # WiringPi needs access to /dev/mem or /dev/gpiomem
+            # If we are not root and can't access these, fallback to mock immediately.
+            if os.geteuid() != 0 and not os.access("/dev/gpiomem", os.W_OK):
+                 logger.warning("⚠️ No ROOT or GPIO access. Skipping WiringPi setup to prevent crash.")
+                 self.available = False
             else:
-                logger.error("❌ WiringPi Setup Returned -1")
+                if self.wiringpi.wiringPiSetup() != -1:
+                    self.available = True
+                    logger.info("✅ WiringPi initialized successfully.")
+                else:
+                    logger.error("❌ WiringPi Setup Returned -1")
+
         except ImportError:
             logger.warning("⚠️ WiringPi library not found. GPIO operations will be mocked.")
         except Exception as e:
