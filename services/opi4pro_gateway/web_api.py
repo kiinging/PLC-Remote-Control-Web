@@ -9,7 +9,7 @@ import time
 import os
 import esp32_client
 import config
-from src.gpio_manager import gpio
+import wiringpi
 
 app = Flask(__name__)
 
@@ -18,10 +18,15 @@ app = Flask(__name__)
 # wPi pin mapping: Physical pin 18 (PL2) maps to wPi pin 10
 # Initialize wiringpi with BCM pin mode
 # --- Initial state: ensure OFF --------------
-# Use safe GPIO manager
-gpio.setup_output(config.LIGHT_PIN)
-gpio.write(config.LIGHT_PIN, 0)
-GPIO_AVAILABLE = gpio.available
+try:
+    wiringpi.wiringPiSetup()
+    wiringpi.pinMode(config.LIGHT_PIN, wiringpi.OUTPUT)
+    wiringpi.digitalWrite(config.LIGHT_PIN, 0)
+    GPIO_AVAILABLE = True
+except Exception as e:
+    print(f"Wait, no root? GPIO failed: {e}")
+    GPIO_AVAILABLE = False
+
 # Initialize defaults in DB if missing
 if db.get_state("light") is None: db.set_state("light", 0)
 if db.get_state("plc") is None: db.set_state("plc", 0)
@@ -84,14 +89,14 @@ def heartbeat():
 @app.route('/light/on', methods=['POST'])
 def turn_light_on():
     if GPIO_AVAILABLE:
-        gpio.write(config.LIGHT_PIN, 1)
+        wiringpi.digitalWrite(config.LIGHT_PIN, 1)
     db.set_state("light", 1)
     return jsonify({"light": 1}), 200
 
 @app.route('/light/off', methods=['POST'])
 def turn_light_off():
     if GPIO_AVAILABLE:
-        gpio.write(config.LIGHT_PIN, 0)
+        wiringpi.digitalWrite(config.LIGHT_PIN, 0)
     db.set_state("light", 0)
     return jsonify({"light": 0}), 200
 

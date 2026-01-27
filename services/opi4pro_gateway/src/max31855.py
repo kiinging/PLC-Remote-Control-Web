@@ -124,9 +124,6 @@ if __name__ == "__main__":
             if not fault:
                 print(f"  Thermo: {t_temp:.2f} °C | Internal: {i_temp:.2f} °C")
         
-        sensor.close()
-        print("\n✓ Test complete")
-        
     except Exception as e:
         print(f"✗ Error: {e}")
         import traceback

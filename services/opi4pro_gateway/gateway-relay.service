@@ -3,8 +3,8 @@ Description=Gateway Relay Service
 After=network.target
 
 [Service]
-User=orangepi
-Group=orangepi
+User=root
+Group=root
 WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
 ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_relay.py
 Restart=always
