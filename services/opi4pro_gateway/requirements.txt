@@ -1,6 +1,6 @@
 flask
 requests
 wiringpi
-pymodbus
+pymodbus==3.6.8
 pyserial
 spidev
