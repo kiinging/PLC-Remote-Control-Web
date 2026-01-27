@@ -405,8 +405,8 @@ export default function Dashboard() {
                                         <Badge bg={controlStatus.light ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.light ? 'ON' : 'OFF'}
                                         </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('light', 'start')} disabled={isReadOnly}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('light', 'stop')} disabled={isReadOnly}>Stop</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('light', 'start')} disabled={!!controlStatus.light || isReadOnly}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('light', 'stop')} disabled={!controlStatus.light || isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
@@ -417,8 +417,8 @@ export default function Dashboard() {
                                         <Badge bg={controlStatus.web ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.web ? 'ON' : 'OFF'}
                                         </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')} disabled={isReadOnly}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')} disabled={isReadOnly}>Stop</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')} disabled={!!controlStatus.web || isReadOnly}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')} disabled={!controlStatus.web || isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
@@ -429,8 +429,8 @@ export default function Dashboard() {
                                         <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.plc ? 'ON' : 'OFF'}
                                         </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={isReadOnly}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={isReadOnly}>Stop</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
