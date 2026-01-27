@@ -4,8 +4,9 @@
 import time
 from shared_data import data
 from src.sensors import MAX31865  # Sensor driver classes
+import config
 
-BUFFER_LENGTH = int(30 * 60 / 2)  # 30 minutes @ 2-second sampling = 900 points
+BUFFER_LENGTH = config.TREND_BUFFER_LENGTH
 
 def log_trend_point():
     rtd = data.get("rtd_temp", 0.0)
@@ -33,8 +34,8 @@ def log_trend_point():
 
 
 def main():
-    # Use CS pin 13 (wPi 13 / PD23) to match test_max31865.py
-    rtd_sensor = MAX31865(cs_pin=13)
+    # Use CS pin from config
+    rtd_sensor = MAX31865(cs_pin=config.RTD_CS_PIN)
 
     try:
         while True:
@@ -53,7 +54,7 @@ def main():
             # Log PV + MV to trend buffer
             log_trend_point()
 
-            time.sleep(2)
+            time.sleep(config.SENSOR_SAMPLE_INTERVAL)
 
     except KeyboardInterrupt:
         print("Sensor loop stopped.")

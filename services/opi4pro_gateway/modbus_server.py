@@ -10,14 +10,25 @@ from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSlaveContext, Mo
 from pymodbus.device import ModbusDeviceIdentification
 import shared_data
 
+import config
+import logging.handlers
+
 # Setup logger
 logger = logging.getLogger("modbus_server")
-logger.setLevel(logging.INFO)
+logger.setLevel(config.LOG_LEVEL)
 
-file_handler = logging.FileHandler('/home/orangepi/projects/flask/mv_log.txt')
-file_formatter = logging.Formatter('%(asctime)s - %(message)s')
+# Use RotatingFileHandler to prevent disk filling (5MB max, 3 backups)
+file_handler = logging.handlers.RotatingFileHandler(
+    config.MODBUS_LOG_FILE, maxBytes=5*1024*1024, backupCount=3
+)
+file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(file_formatter)
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(file_formatter)
+
 logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 # Modbus data store
 store = ModbusSlaveContext(
@@ -230,8 +241,8 @@ def main():
     threading.Thread(target=update_modbus_registers, daemon=True).start()
 
     # Run Modbus TCP server
-    logger.info("Starting Modbus TCP Server at 0.0.0.0:1502")
-    StartTcpServer(context, identity=identity, address=("0.0.0.0", 1502))
+    logger.info(f"Starting Modbus TCP Server at {config.MODBUS_HOST}:{config.MODBUS_PORT}")
+    StartTcpServer(context, identity=identity, address=(config.MODBUS_HOST, config.MODBUS_PORT))
 
 
 if __name__ == "__main__":

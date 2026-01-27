@@ -9,6 +9,9 @@ from shared_data import data
 import time
 import os
 import esp32_client
+import config
+from src.gpio_manager import gpio
+
 app = Flask(__name__)
 
 # ---------------- GPIO Setup ----------------
@@ -16,15 +19,10 @@ app = Flask(__name__)
 # wPi pin mapping: Physical pin 18 (PL2) maps to wPi pin 10
 # Initialize wiringpi with BCM pin mode
 # --- Initial state: ensure OFF --------------
-try:
-    wiringpi.wiringPiSetup()
-    LIGHT_PIN = 10  # wPi pin 10 for physical pin 18 (PL2) on Orange Pi 4 Pro
-    wiringpi.pinMode(LIGHT_PIN, wiringpi.OUTPUT)
-    wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
-    GPIO_AVAILABLE = True
-except Exception as e:
-    print(f"⚠️ GPIO Init Failed: {e}")
-    GPIO_AVAILABLE = False
+# Use safe GPIO manager
+gpio.setup_output(config.LIGHT_PIN)
+gpio.write(config.LIGHT_PIN, 0)
+GPIO_AVAILABLE = gpio.available
 data["light"] = 0  #
 data["plc"] = 0  # plc always OFF at boot
 
@@ -86,14 +84,14 @@ def heartbeat():
 @app.route('/light/on', methods=['POST'])
 def turn_light_on():
     if GPIO_AVAILABLE:
-        wiringpi.digitalWrite(LIGHT_PIN, wiringpi.HIGH)
+        gpio.write(config.LIGHT_PIN, 1)
     data["light"] = 1
     return jsonify({"light": data["light"]}), 200
 
 @app.route('/light/off', methods=['POST'])
 def turn_light_off():
     if GPIO_AVAILABLE:
-        wiringpi.digitalWrite(LIGHT_PIN, wiringpi.LOW)
+        gpio.write(config.LIGHT_PIN, 0)
     data["light"] = 0
     return jsonify({"light": data["light"]}), 200
 
@@ -411,7 +409,7 @@ def relay_status():
 
 # ---------------- Main ----------------
 def main():
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host=config.FLASK_HOST, port=config.FLASK_PORT)
 
 
 if __name__ == "__main__":

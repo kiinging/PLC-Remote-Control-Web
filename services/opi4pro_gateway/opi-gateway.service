@@ -1,0 +1,20 @@
+[Unit]
+Description=OrangePi Gateway Service
+After=network.target
+
+[Service]
+# Adjust User/Group as needed
+User=orangepi
+Group=orangepi
+WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
+ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 main.py
+
+# Auto-restart if the main process crashes (which ideally shouldn't happen due to ProcessManager)
+Restart=always
+RestartSec=5
+
+# Environment variables
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

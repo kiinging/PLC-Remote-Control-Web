@@ -1,5 +1,6 @@
-Flask
-spidev
+flask
 requests
-gunicorn
+wiringpi
 pymodbus
+pyserial
+spidev
