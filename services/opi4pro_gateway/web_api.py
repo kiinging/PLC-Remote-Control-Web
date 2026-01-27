@@ -4,7 +4,6 @@
 
 # web_api.py
 from flask import Flask, jsonify, request, send_from_directory
-import wiringpi
 from database import db
 import time
 import os
