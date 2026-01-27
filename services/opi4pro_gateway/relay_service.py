@@ -1,7 +1,10 @@
+# relay_service.py
+# Polls ESP32 and syncs state with SQLite
 
 import time
-from shared_data import data
+from database import db
 import esp32_client
+import config
 
 def main():
     print("🔁 Starting Relay Keepalive Service...")
@@ -12,12 +15,12 @@ def main():
             status = esp32_client.get_status()
             
             if status:
-                data["esp32_connected"] = True
-                data["esp32_last_seen"] = time.time()
-                data["relay_actual"] = status.get("relay", False)
+                db.set_state("esp32_connected", True)
+                db.set_state("esp32_last_seen", time.time())
+                db.set_state("relay_actual", status.get("relay", False))
                 
                 # 2. Consistency Check
-                desired = bool(data.get("power_on", 0))
+                desired = bool(db.get_state("power_on", 0))
                 actual = bool(status.get("relay", False))
                 
                 if desired != actual:
@@ -25,14 +28,13 @@ def main():
                     esp32_client.set_relay(desired)
             
             else:
-                data["esp32_connected"] = False
-                # If disconnected, we can't do much but retry
+                db.set_state("esp32_connected", False)
         
         except Exception as e:
             print(f"❌ Relay Service Error: {e}")
-            data["esp32_connected"] = False
+            db.set_state("esp32_connected", False)
         
-        time.sleep(1.0) # Poll every 1 second
+        time.sleep(config.RELAY_POLL_INTERVAL)
 
 if __name__ == "__main__":
     main()

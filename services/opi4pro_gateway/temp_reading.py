@@ -1,58 +1,49 @@
 # temp_reading.py
-# Sensor loop for MAX31865 and MAX31855, logs PV and MV to shared memory
+# Sensor loop for MAX31865, logs PV and MV to SQLite
 
 import time
-from shared_data import data
-from src.sensors import MAX31865  # Sensor driver classes
+from database import db
+from src.sensors import MAX31865
 import config
 
-BUFFER_LENGTH = config.TREND_BUFFER_LENGTH
+PROBE_INTERVAL = 60 # Prune every 60 seconds
 
 def log_trend_point():
-    rtd = data.get("rtd_temp", 0.0)
-    thermo = data.get("thermo_temp", 0.0)
-    mv = data.get("mv", 0.0)
-    timestamp = time.strftime("%H:%M:%S")
-
-    # Select PV based on control source
-    pv = rtd if data.get("pv_source", "rtd") == "rtd" else thermo
-    
-    # Handle None values (initially None in shared_data)
-    if pv is None: pv = 0.0
-    if mv is None: mv = 0.0
-
-    # Append trend point
-    new_point = {"time": timestamp, "pv": round(pv, 3), "mv": round(mv, 3)}
-
-    trend = list(data["trend"])  # Convert manager.list to a normal list
-
-    trend.append(new_point)
-    if len(trend) > BUFFER_LENGTH:
-        trend.pop(0)  # Trim oldest entry
-
-    data["trend"] = trend  # Replace with updated list
-
+    try:
+        rtd = db.get_state("rtd_temp", 0.0)
+        # mv/sp might be None in DB, default to 0.0
+        mv = db.get_state("mv", 0.0)
+        setpoint = db.get_state("setpoint", 0.0)
+        
+        # Log to SQLite
+        db.log_trend(pv=rtd, sp=setpoint, mv=mv)
+        
+    except Exception as e:
+        print(f"Error logging trend: {e}")
 
 def main():
     # Use CS pin from config
     rtd_sensor = MAX31865(cs_pin=config.RTD_CS_PIN)
-
+    last_prune = 0
+    
     try:
         while True:
             # Read sensors
             rtd_temp = rtd_sensor.read_temperature()
             
-            # Save to shared memory
-            data["rtd_temp"] = rtd_temp
-            # data["thermo_temp"] = t_temp  # MAX31855 removed
-            # data["internal_temp"] = i_temp
-            # data["fault"] = fault
+            # Save to SQLite
+            db.set_state("rtd_temp", rtd_temp)
+            db.set_state("last_update", time.strftime("%Y-%m-%d %H:%M:%S"))
+            db.set_state("last_update_ts", time.time())
             
-            data["last_update"] = time.strftime("%Y-%m-%d %H:%M:%S")
-            data["last_update_ts"] = time.time()
-
             # Log PV + MV to trend buffer
             log_trend_point()
+
+            # Prune old data periodically
+            now = time.time()
+            if now - last_prune > PROBE_INTERVAL:
+                db.prune_trend(keep_seconds=3600)
+                last_prune = now
 
             time.sleep(config.SENSOR_SAMPLE_INTERVAL)
 

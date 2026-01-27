@@ -4,6 +4,10 @@ import logging
 # Base Directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Database
+# Default to local folder for dev, overridable by systemd env
+DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE_DIR, "gateway.db"))
+
 # Logging
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 os.makedirs(LOG_DIR, exist_ok=True)

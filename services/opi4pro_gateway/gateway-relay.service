@@ -1,0 +1,16 @@
+[Unit]
+Description=Gateway Relay Service
+After=network.target
+
+[Service]
+User=orangepi
+Group=orangepi
+WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
+ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_relay.py
+Restart=always
+RestartSec=2
+Environment=DB_PATH=/var/lib/opi4pro_gateway/gateway.db
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

@@ -1,253 +1,68 @@
-# Orange Pi 4 Pro — Flask + MAX31865 + Modbus + wiringpi
+# Gateway Services Setup (Microservices Architecture)
 
-Control and monitoring hub for Omron NJ301 PLC running on **Orange Pi 4 Pro** with **Ubuntu 22.04 LTS**.
+The gateway has been refactored into **4 independent microservices** communicating via a shared **SQLite database**.
 
----
+## Services Overview
 
-## 🔑 Core Components
+1.  **`gateway-api.service`**: Flask Web API (Port 5000). Handles dashboard requests.
+2.  **`gateway-sensor.service`**: MAX31865 Sensor Loop. Reads temp every 2s.
+3.  **`gateway-relay.service`**: ESP32 Relay Monitor. Polls ESP32 status.
+4.  **`gateway-modbus.service`**: Modbus TCP Server (Port 1502). Bridges data to PLC.
 
-| File | Purpose |
-|------|---------|
-| `web_api.py` | Flask REST API for web/Cloudflare Worker |
-| `temp_reading.py` | Reads MAX31865 (RTD) & MAX31855 (thermocouple) sensors |
-| `modbus_server.py` | Modbus TCP bridge (port 1502) to PLC |
-| `shared_data.py` | Shared memory for inter-process communication |
+## Setup Instructions
 
----
+### 1. System Requirements
 
-## 🚀 Quick Start (Fresh Device Setup)
+-   **OS**: Armbian / Linux (Orange Pi)
+-   **Hardware**: Orange Pi 4 Pro (or compatible) with SPI enabled.
+-   **Python**: Python 3.9+
 
-### 1️⃣ Clone the Repository
+### 2. Prepare Database Directory
+The services need a shared directory for `gateway.db`.
 
 ```bash
-git clone https://github.com/kiinging/PLC-Remote-Control-Web.git
-cd PLC-Remote-Control-Web/services/opi4pro_gateway
+sudo mkdir -p /var/lib/opi4pro_gateway
+sudo chown orangepi:orangepi /var/lib/opi4pro_gateway
 ```
 
-### 2️⃣ Create Symbolic Link (Optional)
-
-If you want quick access from home directory:
-
+### 3. Install Dependencies
 ```bash
-cd ~
-ln -s /home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway opi4pro_gateway
-cd opi4pro_gateway
-```
-
-### 3️⃣ Run Setup Script
-
-```bash
-bash setup.sh
-```
-
-**What it does:**
-- Updates system packages
-- Installs: `python3-venv`, `git`, `swig`, `python3-setuptools`, `build-essential`, etc.
-- Creates virtual environment (`venv/`)
-- Clones and builds **wiringOP-Python from source** (required—not on PyPI)
-- Installs Flask, pymodbus, requests, gunicorn
-
-⚠️ **Note on wiringOP-Python:** The setup includes a critical step: `python3 generate-bindings.py > bindings.i` which generates SWIG bindings needed for compilation.
-
-### 4️⃣ Configure GPIO Group (Optional but Recommended)
-
-To run GPIO scripts without `sudo` every time, add `orangepi` user to `gpio` group:
-
-```bash
-sudo usermod -aG gpio orangepi
-sudo usermod -aG spi orangepi
-```
-
-Then log out and log back in for group changes to take effect:
-
-```bash
-logout
-# Re-login
-```
-
-### 5️⃣ Test LED Blink
-
-Activate venv and test GPIO control:
-
-```bash
+cd services/opi4pro_gateway
+python3 -m venv venv
 source venv/bin/activate
-sudo python test/test_blink.py
+pip install -r requirements.txt
 ```
 
-Expected output:
-```
-==================================================
-Orange Pi 4 Pro - LED Blink Test
-Pin: PE3 (Physical pin 21, wPi pin 12)
-==================================================
-✓ GPIO initialized: wPi pin 12 set as OUTPUT
-Blinking LED 5 times (delay: 0.5s)
-  [1/5] LED ON
-  [1/5] LED OFF
-  ...
-✓ Blink test completed successfully
-✓ Cleanup complete
-```
-
-**LED should blink 5 times if connected to physical pin 21 (PE3).**
-
----
-
-## 📌 GPIO Pin Configuration
-
-- **Physical Pin:** 18
-- **GPIO Name:** PL2
-- **wPi Number:** 10 (used in code via wiringpi)
-
-Check available pins:
-```bash
-gpio readall
-```
-
----
-
-## 🔹 Run Services
-
-### 1. Standalone Flask API
+### 4. Install Systemd Services
+Copy the unit files to the systemd directory.
 
 ```bash
-source venv/bin/activate
-sudo ./venv/bin/python web_api.py
+sudo cp gateway-*.service /etc/systemd/system/
+sudo systemctl daemon-reload
 ```
 
-API endpoints:
-- `POST /light/on` → Turn LED on
-- `POST /light/off` → Turn LED off
-- `GET /temp` → Get temperature readings
-- `GET /control_status` → Get current status
-- `POST /setpoint` → Update setpoint
-- `POST /pid` → Update PID parameters
-
-### 2. Systemd Services (Auto-Start on Boot)
-
+### 5. Enable and Start
 ```bash
-sudo cp flaskserver.service /etc/systemd/system/
-sudo cp cloudflared.service /etc/systemd/system/
-
-sudo systemctl enable flaskserver cloudflared
-sudo systemctl start flaskserver cloudflared
+sudo systemctl enable gateway-api gateway-sensor gateway-relay gateway-modbus
+sudo systemctl restart gateway-api gateway-sensor gateway-relay gateway-modbus
 ```
 
-### Service Management
+## Verification
 
+Check status of all services:
 ```bash
-# Restart after code changes
-sudo systemctl restart flaskserver
-
-# View live logs
-sudo journalctl -u flaskserver -f
-
-# Stop service
-sudo systemctl stop flaskserver
-
-# Disable auto-start
-sudo systemctl disable flaskserver cloudflared
+sudo systemctl status gateway-*
 ```
 
----
-
-## 🔹 Modbus TCP Configuration
-
-- **Port:** 1502
-- **Input Registers (IR):** Temperature, status (read-only from PLC)
-- **Holding Registers (HR):** Setpoint, PID values (read/write from PLC)
-
-| Register | Value |
-|----------|-------|
-| IR0-IR1 | RTD Temperature (float) |
-| IR2-IR3 | Setpoint (float) |
-| IR4-IR5 | Manual MV (float) |
-| IR6 | Mode (0=Manual, 1=Auto, 2=Tune) |
-| IR7 | PLC Status (0=Off, 1=On) |
-| IR8 | Light Status (0=Off, 1=On) |
-
----
-
-## 🔹 Useful Commands
-
+Check logs (e.g., Sensor):
 ```bash
-# Check system info
-lscpu
-free -h
-df -h
-
-# Check GPIO
-gpio readall
-
-# Check Wi-Fi
-iw dev wlan0 link
-ip addr show wlan0
-
-# System logs
-sudo journalctl -u flaskserver -f
-
-# Check running processes
-ps aux | grep python
+journalctl -u gateway-sensor -f
 ```
 
----
-
-## ⚠️ Important Notes
-
-### wiringOP-Python (Not on PyPI!)
-
-- **Must be built from source**—not available via `pip install wiringpi`
-- The setup.sh automates this: `git clone --recursive` + `generate-bindings.py` + `python3 setup.py install`
-- **GPIO always needs `sudo`** even if installed in venv (hardware access requirement)
-
-### Previous OPi.GPIO Migration
-
-If migrating from **OPi.GPIO** (Orange Pi Zero 3):
-- OPi.GPIO is **not compatible** with Orange Pi 4 Pro
-- Use **wiringpi** (wiringOP-Python) instead
-- Pin numbering changed from "PC14" strings to wPi numbers (e.g., wPi pin 12)
-
----
-
-## 🐛 Troubleshooting
-
-### `ModuleNotFoundError: No module named 'wiringpi'`
-
+Check API:
 ```bash
-# Re-run setup to rebuild wiringpi
-cd /tmp
-rm -rf wiringOP-Python
-git clone --recursive https://github.com/orangepi-xunlong/wiringOP-Python.git -b next
-cd wiringOP-Python
-git submodule update --init --remote
-python3 generate-bindings.py > bindings.i
-python3 setup.py install
+curl http://localhost:5000/temp
 ```
 
-### GPIO Permission Denied
-
-```bash
-# Ensure user is in gpio group
-sudo usermod -aG gpio orangepi
-
-# Log out and back in
-logout
-```
-
-### Flask Service Won't Start
-
-```bash
-# Check logs
-sudo journalctl -u flaskserver -n 50
-
-# Check if port 5000 is already in use
-sudo lsof -i :5000
-```
-
----
-
-## 📚 Reference
-
-- [Orange Pi Official Docs](https://orangepi.org/)
-- [wiringOP GitHub](https://github.com/orangepi-xunlong/wiringOP-Python)
-- [Modbus TCP Spec](http://www.modbus.org/tech.php)
+## Configuration
+Edit `config.py` to change pins, ports, and logging settings.
