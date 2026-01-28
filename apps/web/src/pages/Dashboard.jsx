@@ -524,7 +524,15 @@ export default function Dashboard() {
                             <Card.Header>Live Video</Card.Header>
                             <Card.Body className="p-0 bg-black" style={{ minHeight: '360px', position: 'relative' }}>
                                 {cameraStatus === 'alive' && videoSrc && (
-                                    <img src={videoSrc} alt="Live Feed" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                                    <img
+                                        src={videoSrc}
+                                        alt="Live Feed"
+                                        style={{ width: '100%', height: 'auto', display: 'block' }}
+                                        onError={() => {
+                                            console.log("Video stream failed, retrying in 1s...");
+                                            setTimeout(() => setVideoSrc(`/video_feed?t=${Date.now()}`), 1000);
+                                        }}
+                                    />
                                 )}
                                 {cameraStatus !== 'alive' && (
                                     <div className="d-flex align-items-center justify-content-center text-white" style={{ height: '360px' }}>
