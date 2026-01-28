@@ -5,7 +5,7 @@ Description=Gunicorn Flask Camera Application
 After=network.target dev-video0.device
 
 [Service]
-ExecStartPre=/bin/sleep 5
+
 User=radxa
 WorkingDirectory=/home/radxa/PLC-Remote-Control-Web/services/radxa3w_camera
 Environment="PATH=/home/radxa/PLC-Remote-Control-Web/services/radxa3w_camera/venv/bin:/usr/bin"

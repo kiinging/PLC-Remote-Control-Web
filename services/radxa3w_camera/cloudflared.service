@@ -2,8 +2,8 @@
 # Cloudflare Tunnel for radxa3w-camera
 [Unit]
 Description=Cloudflare Tunnel
-After=network-online.target camera_app.service
-Wants=network-online.target
+After=network.target camera_app.service
+Wants=network.target
 
 [Service]
 User=radxa
@@ -14,7 +14,7 @@ ExecStart=/usr/bin/cloudflared \
   --no-autoupdate \
   tunnel run radxa3w_camera
 
-Restart=on-failure
+Restart=always
 RestartSec=5s
 
 [Install]
