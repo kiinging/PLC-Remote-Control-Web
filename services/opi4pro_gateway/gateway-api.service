@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 User=root
-Group=root
+Group=orangepi
 WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
 ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_api.py
 Restart=always
