@@ -3,12 +3,18 @@ Description=Gateway Modbus Server
 After=network.target
 
 [Service]
-User=root
-Group=root
+User=orangepi
+Group=orangepi
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
 ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_modbus.py
+
 Restart=always
-RestartSec=2
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
 Environment=DB_PATH=/var/lib/opi4pro_gateway/gateway.db
 Environment="PYTHONUNBUFFERED=1"
 
