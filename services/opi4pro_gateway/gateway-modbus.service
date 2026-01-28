@@ -5,8 +5,7 @@ After=network.target
 [Service]
 User=orangepi
 Group=orangepi
-AmbientCapabilities=CAP_NET_BIND_SERVICE
-CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
 WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
 ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_modbus.py
 
