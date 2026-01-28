@@ -1,68 +1,86 @@
-# Gateway Services Setup (Microservices Architecture)
+# Orange Pi 4 Pro Gateway Setup
 
-The gateway has been refactored into **4 independent microservices** communicating via a shared **SQLite database**.
+This guide details how to set up the gateway services from a fresh OS installation.
 
-## Services Overview
+## 1. System Requirements & Preparation
+*   **Hardware**: Orange Pi 4 Pro.
+*   **OS**: Orange Pi OS (Arch) or Armbian (Ubuntu Jammy recommended).
+*   **Network**: Ethernet or robust WiFi connection.
+*   **User**: Default user `orangepi`.
 
-1.  **`gateway-api.service`**: Flask Web API (Port 5000). Handles dashboard requests.
-2.  **`gateway-sensor.service`**: MAX31865 Sensor Loop. Reads temp every 2s.
-3.  **`gateway-relay.service`**: ESP32 Relay Monitor. Polls ESP32 status.
-4.  **`gateway-modbus.service`**: Modbus TCP Server (Port 1502). Bridges data to PLC.
-
-## Setup Instructions
-
-### 1. System Requirements
-
--   **OS**: Armbian / Linux (Orange Pi)
--   **Hardware**: Orange Pi 4 Pro (or compatible) with SPI enabled.
--   **Python**: Python 3.9+
-
-### 2. Prepare Database Directory
-The services need a shared directory for `gateway.db`.
-
+### Clone the Repository
 ```bash
-sudo mkdir -p /var/lib/opi4pro_gateway
-sudo chown orangepi:orangepi /var/lib/opi4pro_gateway
+cd /home/orangepi
+git clone https://github.com/kiinging/PLC-Remote-Control-Web.git
+cd PLC-Remote-Control-Web
 ```
 
-### 3. Install Dependencies
+## 2. Install Dependencies (Automated)
+We use a setup script to install system packages, compile `wiringOP-Python`, and create the Python virtual environment.
+
 ```bash
 cd services/opi4pro_gateway
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+chmod +x setup.sh
+./setup.sh
 ```
+*This may take 5-10 minutes as it compiles libraries from source.*
 
-### 4. Install Systemd Services
-Copy the unit files to the systemd directory.
+## 3. Deploy Services
+The `setup.sh` script installs software but does not configure the system services. You must do this manually to ensure they run on boot.
 
+### Copy Service Files
 ```bash
-sudo cp gateway-*.service /etc/systemd/system/
+# Copy all 4 service definitions to the system folder
+sudo cp gateway-api.service /etc/systemd/system/
+sudo cp gateway-sensor.service /etc/systemd/system/
+sudo cp gateway-relay.service /etc/systemd/system/
+sudo cp gateway-modbus.service /etc/systemd/system/
+
+# Reload systemd to recognize new files
 sudo systemctl daemon-reload
 ```
 
-### 5. Enable and Start
+## 4. Fix Permissions (CRITICAL)
+This is the most important step. Without this, services will crash due to permission errors on the shared database and log files.
+
+### Database Permissions
+Allow all services (root and orangepi) to read/write the shared database.
 ```bash
+# Create directory if it doesn't exist
+sudo mkdir -p /var/lib/opi4pro_gateway
+
+# Set ownership to orangepi group
+sudo chown -R orangepi:orangepi /var/lib/opi4pro_gateway/
+
+# Set read/write permissions for the group
+sudo chmod -R 770 /var/lib/opi4pro_gateway/
+
+# Set SGID bit (Crucial: New files inherit 'orangepi' group automatically)
+sudo chmod g+s /var/lib/opi4pro_gateway/
+```
+
+### Log Directory Permissions
+Ensure the `orangepi` user can write logs.
+```bash
+sudo chown -R orangepi:orangepi /home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/logs/
+```
+
+## 5. Enable and Start
+```bash
+# Enable services to run on boot
 sudo systemctl enable gateway-api gateway-sensor gateway-relay gateway-modbus
+
+# Start them now
 sudo systemctl restart gateway-api gateway-sensor gateway-relay gateway-modbus
 ```
 
-## Verification
+## 6. Verification
+Check that all services are `active (running)`.
 
-Check status of all services:
 ```bash
 sudo systemctl status gateway-*
 ```
 
-Check logs (e.g., Sensor):
-```bash
-journalctl -u gateway-sensor -f
-```
-
-Check API:
-```bash
-curl http://localhost:5000/temp
-```
-
-## Configuration
-Edit `config.py` to change pins, ports, and logging settings.
+### Common Issues
+*   **Modbus crashing?** Check logs: `sudo journalctl -u gateway-modbus -n 50`
+*   **Database Locked?** Re-run the "Fix Permissions" steps above.
