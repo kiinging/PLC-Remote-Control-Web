@@ -19,10 +19,17 @@ def main():
                 db.set_state("esp32_last_seen", time.time())
                 db.set_state("relay_actual", status.get("relay", False))
                 
-                # 2. Consistency Check
-                desired = bool(db.get_state("power_on", 0))
+                # 2. Consistency Check - with robust type safety and logging
+                val_raw = db.get_state("power_on", 0)
+                try:
+                    desired = int(val_raw) == 1
+                except (ValueError, TypeError):
+                    desired = False
+
                 actual = bool(status.get("relay", False))
                 
+                print(f"[DEBUG] Raw: {val_raw} | Desired: {desired} | Actual: {actual}")
+
                 if desired != actual:
                     print(f"⚠️ State Mismatch! Desired: {desired}, Actual: {actual}. Resending command...")
                     esp32_client.set_relay(desired)
