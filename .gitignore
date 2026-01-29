@@ -15,3 +15,7 @@ node_modules/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Runtime logs
+logs/
+*.log
