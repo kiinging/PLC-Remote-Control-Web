@@ -30,6 +30,7 @@ except Exception as e:
 # Initialize defaults in DB if missing
 if db.get_state("light") is None: db.set_state("light", 0)
 if db.get_state("plc") is None: db.set_state("plc", 0)
+if db.get_state("power_on") is None: db.set_state("power_on", 0)
 
 # =========================================================
 # ------------ Static Files / HTML Pages -----------------
