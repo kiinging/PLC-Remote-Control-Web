@@ -115,11 +115,10 @@ def update_modbus_registers():
                 db.set_state("tune_stop_pending", False)
                 db.set_state("tune_in_progress", False)
 
-            # --- Manual Mode: Sync Power State to PLC (HR21) ---
-            # In Manual, Gateway is master of power_on. We tell PLC the state.
-            if mode_status == 0:
-                pwr = db.get_state("power_on", 0)
-                store.setValues(3, 21, [1 if pwr else 0])
+            # --- Sync Power State to PLC (HR21) ---
+            # Gateway is ALWAYS master of power_on (controls power TO the PLC)
+            pwr = db.get_state("power_on", 0)
+            store.setValues(3, 21, [1 if pwr else 0])
 
             # --- Read back from PLC (Holding Registers) ---
             hr_values = store.getValues(3, 0, count=31)
@@ -169,17 +168,12 @@ def update_modbus_registers():
 
             # 8. Read Status & MV
             sensor_select = hr_values[20]
-            power_on_plc = hr_values[21]
+            # HR21 (power_on) is ignored here because we are the master
             mv = struct.unpack(">f", struct.pack(">HH", hr_values[22], hr_values[23]))[0]
 
             db.set_state("sensor_select", sensor_select)
             
-            # Only update DB from PLC if NOT in Manual
-            # In Manual, we ignore PLC's power state (which might be 0/default)
-            if mode_status != 0:
-                db.set_state("power_on", power_on_plc)
-                
-            db.set_state("power_on_plc_feedback", power_on_plc) # Optional: log what PLC thinks
+            # db.set_state("power_on", power_on) -- REMOVED to prevent reset loop
             db.set_state("mv", mv)
             db.set_state("pv_source", "thermo" if sensor_select == 0 else "rtd")
 
