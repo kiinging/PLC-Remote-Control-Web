@@ -21,9 +21,11 @@ def set_relay(on: bool):
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        print(f"✅ Relay command {'ON' if on else 'OFF'} sent. Response: {result}")
+        return result
     except requests.exceptions.RequestException as e:
-        print(f"ESP32 Relay request failed: {e}")
+        print(f"❌ ESP32 Relay request failed: {e}")
         return None
 
 def get_status():
@@ -38,7 +40,9 @@ def get_status():
     try:
         response = requests.get(url, headers=headers, timeout=TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        result = response.json()
+        print(f"✅ ESP32 Status: {result}")
+        return result
     except requests.exceptions.RequestException as e:
-        print(f"ESP32 Status request failed: {e}")
+        print(f"❌ ESP32 Status request failed: {e}")
         return None

@@ -9,6 +9,9 @@ import config
 def main():
     print("🔁 Starting Relay Keepalive Service...")
     
+    last_sync_time = 0  # Track last time we synced to avoid rapid re-commands
+    MIN_SYNC_INTERVAL = 0.5  # Minimum time between sync attempts (seconds)
+    
     while True:
         try:
             # 1. Poll Status (Keepalive)
@@ -19,7 +22,7 @@ def main():
                 db.set_state("esp32_last_seen", time.time())
                 db.set_state("relay_actual", status.get("relay", False))
                 
-                # 2. Consistency Check - with robust type safety and logging
+                # 2. Consistency Check - with debouncing to prevent rapid re-commands
                 val_raw = db.get_state("power_on", 0)
                 try:
                     desired = int(val_raw) == 1
@@ -30,9 +33,15 @@ def main():
                 
                 print(f"[DEBUG] Raw: {val_raw} | Desired: {desired} | Actual: {actual}")
 
+                # Only attempt to sync if states differ AND enough time has passed
+                current_time = time.time()
                 if desired != actual:
-                    print(f"⚠️ State Mismatch! Desired: {desired}, Actual: {actual}. Resending command...")
-                    esp32_client.set_relay(desired)
+                    if current_time - last_sync_time >= MIN_SYNC_INTERVAL:
+                        print(f"⚠️ State Mismatch! Desired: {desired}, Actual: {actual}. Resending command...")
+                        esp32_client.set_relay(desired)
+                        last_sync_time = current_time
+                    else:
+                        print(f"⏳ State mismatch detected, but debouncing sync (waited {current_time - last_sync_time:.1f}s)")
             
             else:
                 db.set_state("esp32_connected", False)

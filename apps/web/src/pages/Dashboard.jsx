@@ -242,7 +242,9 @@ export default function Dashboard() {
 
         try {
             await api.setRelay(state);
-            refreshRelay();
+            // Don't refresh immediately - let the next poll (1s interval) update the real state
+            // This prevents race conditions where the UI gets reverted before the backend processes it
+            console.log("Relay command sent, awaiting backend confirmation...");
         } catch (e) {
             console.error("Failed to toggle relay", e);
             // Revert state if failed (next poll would fix it too)
