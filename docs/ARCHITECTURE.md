@@ -41,4 +41,30 @@ The Gateway runs a **Modbus TCP Server** on port `502` (or `1502`).
     -   **Gateway → PLC**: Setpoint, Mode, PID Params, Power State (Inputs).
     -   **PLC → Gateway**: Calculated MV (Auto), Status Feedback (Outputs).
 
+
 For the detailed Register Map, see [MODBUS_MAP.md](./MODBUS_MAP.md).
+
+---
+
+## Gateway API Endpoints
+The Flask API (`gateway-api.service`) runs on Port 5000.
+
+### Control & Status
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/control_status` | GET | Returns structure of light, plc, web, mode status. |
+| `/temp` | GET | Returns current temperature and timestamps. |
+| `/heartbeat` | GET | **Enhanced Health Check**. Returns system status, timestamps, and age of sensor/modbus loops. (Checks if services are stalled). |
+
+### Action Commands
+| Endpoint | Method | Payload | Description |
+| :--- | :--- | :--- | :--- |
+| `/relay` | POST | `{"on": true/false}` | Controls Main Power Relay (ESP32). |
+| `/setpoint` | POST | `{"setpoint": 45.5}` | Updates Target Temperature. |
+| `/mode/[manual/auto/tune]` | POST | - | Switches Control Mode. |
+| `/tune_start` / `/tune_stop` | POST | - | Controls Auto-Tune Process. |
+
+### Video Stream
+-   **URL**: `/video_feed` (Proxied via Cloudflare Worker)
+-   **Direct**: `http://<radxa-ip>:5000/video_feed`
+
