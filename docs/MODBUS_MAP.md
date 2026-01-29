@@ -1,0 +1,53 @@
+# Modbus Register Map
+**Target Device**: Orange Pi Gateway (Modbus TCP Server)
+**Port**: 1502 (or 502)
+**Unit ID**: 1
+
+The Gateway acts as the **Modbus Server**. The PLC (Client) reads/writes to these registers.
+
+## 1. Input Registers (PLC Reads Only)
+*These values are set by the Web UI/Gateway.*
+
+| Reg Address | Function | Data Type | Description |
+| :--- | :--- | :--- | :--- |
+| **IR0 - IR1** | `thermo_temp` | Float | Thermocouple Temp (if available) |
+| **IR2 - IR3** | `rtd_temp` | Float | RTD Process Temp |
+| **IR4** | `mode` | Int | Control Mode (0=Manual, 1=Auto, 2=Tune) |
+| **IR5** | `plc_status` | Int | PLC Enabled Flag (1=Enabled) |
+| **IR6** | `web_status` | Int | Web Enabled Flag (1=Enabled) |
+
+*(Note: Data stored as big-endian float, usually spanning 2 registers)*
+
+## 2. Holding Registers (Read/Write)
+*These are used for control signals, handshakes, and PLC feedback.*
+
+### System Control (Gateway → PLC)
+*PLC should read these to know the system state.*
+
+| Reg Address | Name | Direction | Description |
+| :--- | :--- | :--- | :--- |
+| **HR21** | `power_on` | **Gateway → PLC** | **Main Power Relay State**<br>1 = ON (Power is supplied to PLC)<br>0 = OFF (System is dead)<br>**Do NOT overwrite this from PLC.** |
+| **HR20** | `sensor_select`| Gateway → PLC | 0 = Thermocouple, 1 = RTD |
+
+### Process Control Handshakes
+*Gateway writes '1' to the Flag to signal new data. PLC processes it, then resets Flag to '0' to Acknowledge.*
+
+| Data Regs | Flag (Ack) | Parameter | Description |
+| :--- | :--- | :--- | :--- |
+| **HR7-8** | **HR9** | `mv_manual` | Manual Output % (0-100) |
+| **HR22-23**| - | `mv_auto` | **PLC → Gateway** (PLC writes Calculated MV here in Auto) |
+| **HR11-16**| **HR10** | `PID` | PB (11-12), Ti (13-14), Td (15-16) |
+| **HR18-19**| **HR17** | `setpoint` | Target Setpoint (°C) |
+
+### Auto-Tune Handshake
+| Register | Name | Logic |
+| :--- | :--- | :--- |
+| **HR24** | `tune_sp_flag` | Set to 1 by Gateway when new Tune SP is sent (in HR18-19). |
+| **HR25** | `tune_start` | Set to 1 by Gateway to **START** tuning. PLC clears to 0 when started. |
+| **HR26** | `tune_stop` | Set to 1 by Gateway to **STOP** tuning. PLC clears to 0 when stopped. |
+| **HR27** | `tune_done` | Set to 1 by **PLC** when tuning is COMPLETE. Gateway resets to 0. |
+
+## Data Types
+-   **Float**: 32-bit floating point (IEEE 754), Big-Endian. Occupies 2 Registers.
+    -   Example: `sp` at HR18 = High Word, HR19 = Low Word.
+-   **Int**: 16-bit Integer. Occupies 1 Register.
