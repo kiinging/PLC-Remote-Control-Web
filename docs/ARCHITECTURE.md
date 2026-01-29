@@ -15,7 +15,26 @@ The **PLC Remote Control Web** is a microservices-based system running on an Ora
 
 ---
 
-## Inter-Process Communication (IPC)
+## Communication Architecture (Frontend ↔ Gateway)
+
+The system uses a **REST API Polling** architecture, not WebSockets. 
+
+### Why Polling?
+-   **Simplicity**: Easier to debug and implement for educational purposes.
+-   **Robustness**: If the network drops, the next "poll" simply fails and retries. Stateless HTTP requests are more resilient to temporary disruptions than maintaining a persistent WebSocket connection.
+-   **Efficiency**: For a 1-second update interval, HTTP polling overhead is negligible on a local LAN/Cloudflare Tunnel.
+
+### The Polling Loop
+The Frontend (`Dashboard.jsx`) runs a `setInterval` loop every **1000ms** (1 second) to fetch data:
+1.  `GET /temp` (Process Value)
+2.  `GET /control_status` (System State)
+3.  `GET /relay_status` (Power State)
+4.  `GET /heartbeat` (System Health)
+
+---
+
+## Inter-Process Communication (IPC) BEFORE THIS
+All local services communicate by reading/writing to a shared SQLite database. This decouples the processes—if the API crashes, the Modbus loop continues running.
 
 All local services communicate by reading/writing to a shared SQLite database. This decouples the processes—if the API crashes, the Modbus loop continues running.
 
