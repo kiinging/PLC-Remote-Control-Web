@@ -26,7 +26,7 @@ The Gateway acts as the **Modbus Server**. The PLC (Client) reads/writes to thes
 
 | Reg Address | Name | Direction | Description |
 | :--- | :--- | :--- | :--- |
-| **HR21** | `power_on` | **Gateway → PLC** | **Main Power Relay State**<br>1 = ON (Power is supplied to PLC)<br>0 = OFF (System is dead)<br>**Do NOT overwrite this from PLC.** |
+
 | **HR20** | `sensor_select`| Gateway → PLC | 0 = Thermocouple, 1 = RTD |
 
 ### Process Control Handshakes

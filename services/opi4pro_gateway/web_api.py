@@ -30,7 +30,7 @@ except Exception as e:
 # Initialize defaults in DB if missing
 if db.get_state("light") is None: db.set_state("light", 0)
 if db.get_state("plc") is None: db.set_state("plc", 0)
-if db.get_state("power_on") is None: db.set_state("power_on", 0)
+
 
 # =========================================================
 # ------------ Static Files / HTML Pages -----------------
@@ -374,7 +374,7 @@ def relay_control():
              return jsonify({"error": "Missing 'on' or 'relay' field"}), 400
 
         # Update Desired State
-        db.set_state("power_on", 1 if target_state else 0)
+        db.set_state("plc", 1 if target_state else 0)
 
         # Send command to ESP32
         result = esp32_client.set_relay(target_state)
@@ -410,7 +410,7 @@ def relay_status():
         "alive": connected,
         "relay": db.get_state("relay_actual") if connected else None, # Return null if stale
         "last_seen_s": float(f"{age:.1f}"), # seconds since last successful poll
-        "desired": bool(db.get_state("power_on", 0))
+        "desired": bool(db.get_state("plc", 0))
     }), 200
 
 

@@ -45,7 +45,7 @@ All local services communicate by reading/writing to a shared SQLite database. T
 | `setpoint` | Float | Target temperature | Web API |
 | `mv` | Float | Manipulated Variable (Output %) | Modbus Service (Auto) / Web API (Manual) |
 | `mode` | Int | 0=Manual, 1=Auto, 2=Tune | Web API |
-| `power_on` | Int | 0=Off, 1=On (Relay State) | Web API (Master) |
+| `plc` | Int | 0=Off, 1=On (PLC Enabled/Relay State) | Web API (Master) |
 | `pid_pb` | Float | Proportional Band | Web API |
 | `pid_ti` | Float | Integral Time | Web API |
 | `pid_td` | Float | Derivative Time | Web API |

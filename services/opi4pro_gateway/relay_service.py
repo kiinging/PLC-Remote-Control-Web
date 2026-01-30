@@ -23,7 +23,7 @@ def main():
                 db.set_state("relay_actual", status.get("relay", False))
                 
                 # 2. Consistency Check - with debouncing to prevent rapid re-commands
-                val_raw = db.get_state("power_on", 0)
+                val_raw = db.get_state("plc", 0)
                 try:
                     desired = int(val_raw) == 1
                 except (ValueError, TypeError):

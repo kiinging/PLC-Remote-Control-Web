@@ -26,7 +26,7 @@ data["trend"] = manager.list()
 
 # ---------------- Actuator States ----------------
 data["light"] = 0     # light: 0=OFF, 1=ON
-data["power_on"] = 0  # heater element: 0=OFF, 1=ON (Desired State)
+
 data["relay_actual"] = False # Actual state requested from ESP32
 data["esp32_connected"] = False
 data["esp32_last_seen"] = 0
