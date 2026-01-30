@@ -207,12 +207,13 @@ export default {
       }
 
       // ---- DASHBOARD ACCESS
-      if (url.pathname === "/" || url.pathname === "/dashboard.html") {
+      if (url.pathname === "/") {
         const session = await validateSession(request, env);
         if (!session) {
-          return Response.redirect("https://plc-web.online/login.html", 302);
+          return Response.redirect("https://plc-web.online/login", 302);
         }
-        return env.ASSETS.fetch(new Request("/dashboard.html", request));
+        // Serve the SPA (index.html)
+        return env.ASSETS.fetch(new Request("https://plc-web.online/index.html", request));
       }
 
       // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
@@ -506,7 +507,12 @@ export default {
 
       // ---- Default: serve static files
       if (env.ASSETS) {
-        return env.ASSETS.fetch(request);
+        const response = await env.ASSETS.fetch(request);
+        if (response.status === 404 && !url.pathname.startsWith("/api")) {
+          // SPA Fallback: serve index.html for unknown non-API routes
+          return env.ASSETS.fetch(new Request("https://plc-web.online/index.html", request));
+        }
+        return response;
       } else {
         // Fallback: Redirect to the Pages URL if ASSETS execution binding is missing
         // This isolates the API worker from the frontend serving if necessary
