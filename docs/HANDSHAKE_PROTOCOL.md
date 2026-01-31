@@ -15,15 +15,15 @@ We use **Application-Level Handshakes** to ensure the PLC has received and acted
 This simplest form of handshake requires the PLC to continuously "mirror" the status signal.
 
 *   **Trigger**: Gateway writes `1` (or `0`) to `web_status` (HR6).
-*   **PLC Logic**: PLC reads HR6. If HR6 is 1, it writes 1 to `web_ack` (HR28). If HR6 is 0, it writes 0 to `web_ack`.
-*   **Acknowledgement**: Gateway polls HR28.
-    *   If `HR28 == HR6`, the command is considered **Acknowledged**.
+*   **PLC Logic**: PLC reads HR6. If HR6 is 1, it writes 1 to `web_ack` (HR21). If HR6 is 0, it writes 0 to `web_ack`.
+*   **Acknowledgement**: Gateway polls HR21.
+    *   If `HR21 == HR6`, the command is considered **Acknowledged**.
     *   The Web UI shows a spinner until this condition is met.
 
 | Source | Register | Function |
 | :--- | :--- | :--- |
 | **Gateway** | **HR6** | `web_status` (Command) |
-| **PLC** | **HR28** | `web_ack` (Feedback) |
+| **PLC** | **HR21** | `web_ack` (Feedback) |
 
 ---
 

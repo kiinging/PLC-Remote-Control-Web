@@ -115,7 +115,7 @@ def web_stop():
 
 @app.route('/web_ack', methods=['GET'])
 def web_ack_status():
-    """Return whether the latest Web Control update has been acknowledged by PLC (HR28)."""
+    """Return whether the latest Web Control update has been acknowledged by PLC (HR21)."""
     try:
         acknowledged = db.get_state("web_acknowledged", False)
         return jsonify({"acknowledged": acknowledged}), 200

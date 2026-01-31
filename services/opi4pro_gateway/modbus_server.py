@@ -146,10 +146,10 @@ def update_modbus_registers():
                 db.set_state("tune_stop_acknowledged", True)
                 db.set_state("tune_in_progress", False)
 
-            # 9. Web Control Ack (HR28)
+            # 9. Web Control Ack (HR21)
             # Check if PLC has echoed the web status
             web_req = db.get_state("web", 0)
-            web_ack_plc = hr_values[28] # HR28 (index 28 if 0-indexed matches reg addr)
+            web_ack_plc = hr_values[21] # HR21
 
             if web_req == 1 and web_ack_plc == 1:
                 db.set_state("web_acknowledged", True)
