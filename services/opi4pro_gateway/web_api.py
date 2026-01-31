@@ -159,8 +159,15 @@ def get_control_status():
     return jsonify({
         "light": db.get_state("light"),
         "plc": db.get_state("plc"),
-        "web": db.get_state("web"),
-        "mode": db.get_state("mode")
+        # Use acknowledged state for Web, but fallback to 0 if missing.
+        # Logic: If web=1 but ack=0, return 0 (Pending). If web=1 and ack=1, return 1 (On).
+        # Simplification: Just return acknowledged state?
+        # Actually, if we just return confirmed state, "Off" command (Desired=0) will show ON until Ack=0.
+        # So we want "Active State" = (Desired == Ack) ? Ack : (Last Known State?).
+        # Safest: Use confirmed state. If Desired=1 and Ack=0, UI shows Off (correct).
+        "web": 1 if db.get_state("web_acknowledged", False) and db.get_state("web", 0) == 1 else 0,
+        "mode": db.get_state("mode"),
+        "web_desired": db.get_state("web", 0) # For debug/advanced UI
     })
 
 
