@@ -319,27 +319,15 @@ export default function Dashboard() {
         await api.stopTune();
     };
 
-    // --- Web Ack Polling (Reset Spinner) ---
+    // --- Web Ack Logic (Integrated into Main Poll) ---
+    // We remove the separate useEffect and rely on optionsPoll updating controlStatus
+    // When controlStatus.web_ack becomes true, we clear the pending state
+    // We also clear it if we see the web status officially change to what we expect, just in case.
     useEffect(() => {
-        if (!webPending) return;
-
-        const checkWebAck = async () => {
-            try {
-                const ack = await api.getWebAck();
-                if (ack.acknowledged) {
-                    setWebPending(false);
-                    // Refresh full status
-                    const cStatus = await api.getControlStatus();
-                    setControlStatus(cStatus);
-                }
-            } catch (e) {
-                console.warn("Web Ack check failed", e);
-            }
-        };
-
-        const interval = setInterval(checkWebAck, 1000);
-        return () => clearInterval(interval);
-    }, [webPending]);
+        if (webPending && controlStatus.web_ack === true) {
+            setWebPending(false);
+        }
+    }, [controlStatus, webPending]);
 
     // --- Chart Controls ---
     const handleExpand = () => {
