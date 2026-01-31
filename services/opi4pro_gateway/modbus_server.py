@@ -47,7 +47,7 @@ def update_modbus_registers():
             db.set_state("modbus_last_tick_ts", time.time())
             
             # --- Read State from DB ---
-            tc = db.get_state("thermo_temp", 0.0) or 0.0
+            # tc = db.get_state("thermo_temp", 0.0) or 0.0
             rtd = db.get_state("rtd_temp", 0.0) or 0.0
             
             web_status  = 1 if db.get_state("web", 0) else 0

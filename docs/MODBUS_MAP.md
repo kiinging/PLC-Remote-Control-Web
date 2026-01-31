@@ -5,16 +5,16 @@
 
 The Gateway acts as the **Modbus Server**. The PLC (Client) reads/writes to these registers.
 
-## 1. Input Registers (PLC Reads Only)
-*These values are set by the Web UI/Gateway.*
+## 1. Holding Registers (Read Only)
+*These values are set by the Web UI/Gateway. The PLC should READ these using **Fn 03** (Read Holding Registers).*
 
 | Reg Address | Function | Data Type | Description |
 | :--- | :--- | :--- | :--- |
-| **IR0 - IR1** | `thermo_temp` | Float | Thermocouple Temp (if available) |
-| **IR2 - IR3** | `rtd_temp` | Float | RTD Process Temp |
-| **IR4** | `mode` | Int | Control Mode (0=Manual, 1=Auto, 2=Tune) |
-| **IR5** | `plc_status` | Int | PLC Enabled Flag (1=Enabled) |
-| **IR6** | `web_status` | Int | Web Enabled Flag (1=Enabled) |
+| **HR0 - HR1** | `thermo_temp` | Float | Thermocouple Temp (if available) |
+| **HR2 - HR3** | `rtd_temp` | Float | RTD Process Temp |
+| **HR4** | `mode` | Int | Control Mode (0=Manual, 1=Auto, 2=Tune) |
+| **HR5** | `plc_status` | Int | PLC Enabled Flag (1=Enabled) |
+| **HR6** | `web_status` | Int | Web Enabled Flag (1=Enabled) |
 
 *(Note: Data stored as big-endian float, usually spanning 2 registers)*
 

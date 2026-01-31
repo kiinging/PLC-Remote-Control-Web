@@ -30,7 +30,7 @@ LIGHT_PIN = 10
 RTD_CS_PIN = 13  # WiringPi Pin 13 / PD23
 
 # Intervals
-SENSOR_SAMPLE_INTERVAL = 2.0  # Seconds
+SENSOR_SAMPLE_INTERVAL = 1.0  # Seconds
 RELAY_POLL_INTERVAL = 1.0     # Seconds
 MODBUS_UPDATE_INTERVAL = 0.5    # Seconds
 
