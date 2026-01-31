@@ -166,6 +166,7 @@ def get_control_status():
         # So we want "Active State" = (Desired == Ack) ? Ack : (Last Known State?).
         # Safest: Use confirmed state. If Desired=1 and Ack=0, UI shows Off (correct).
         "web": 1 if db.get_state("web_acknowledged", False) and db.get_state("web", 0) == 1 else 0,
+        "web_ack": db.get_state("web_acknowledged", False), # ✅ Explicit Ack Status
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0) # For debug/advanced UI
     })
