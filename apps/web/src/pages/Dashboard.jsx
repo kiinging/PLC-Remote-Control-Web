@@ -321,10 +321,9 @@ export default function Dashboard() {
 
     // --- Web Ack Logic (Integrated into Main Poll) ---
     // We remove the separate useEffect and rely on optionsPoll updating controlStatus
-    // When controlStatus.web_ack becomes true, we clear the pending state
-    // We also clear it if we see the web status officially change to what we expect, just in case.
+    // We use loose equality (== true) or just truthy check to handle 1 vs true
     useEffect(() => {
-        if (webPending && controlStatus.web_ack === true) {
+        if (webPending && controlStatus.web_ack) {
             setWebPending(false);
         }
     }, [controlStatus, webPending]);
