@@ -257,6 +257,11 @@ export default {
         return withCors(request, await r.text(), r.status);
       }
 
+      if (url.pathname === "/web_ack") {
+        const r = await fetch("https://orangepi.plc-web.online/web_ack");
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+
       if (url.pathname === "/start_plc") {
         const r = await fetch("https://orangepi.plc-web.online/plc/on", { method: "POST" });
         return withCors(request, await r.text(), r.status);

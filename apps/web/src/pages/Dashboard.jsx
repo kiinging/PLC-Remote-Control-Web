@@ -33,6 +33,8 @@ export default function Dashboard() {
     const [setpoint, setSetpoint] = useState(0);
     const [manualMV, setManualMV] = useState(0);
 
+    const [webPending, setWebPending] = useState(false);
+
     // Tune States
     const [tuneStatus, setTuneStatus] = useState({ tuning_active: false, tune_completed: false });
     const [tuneSetpoint, setTuneSetpoint] = useState(70);
@@ -269,9 +271,23 @@ export default function Dashboard() {
 
     // Generic Control Handlers
     const toggleProcess = async (type, action) => {
-        if (action === 'start') await api.startProcess(type);
-        else await api.stopProcess(type);
-        // State will update on next poll
+        if (type === 'web') {
+            // Special handling for Web Control with Spinner
+            setWebPending(true);
+            try {
+                if (action === 'start') await api.startProcess(type);
+                else await api.stopProcess(type);
+
+                // Start polling for Ack (handled by main poll loop or specific effect)
+                // We leave webPending = true until the next poll confirms the change
+            } catch (e) {
+                console.error("Failed to toggle web process", e);
+                setWebPending(false); // Stop spinner if gateway call failed
+            }
+        } else {
+            if (action === 'start') await api.startProcess(type);
+            else await api.stopProcess(type);
+        }
     };
 
     const changeMode = async (mode) => {
@@ -302,6 +318,28 @@ export default function Dashboard() {
         if (isReadOnly) return;
         await api.stopTune();
     };
+
+    // --- Web Ack Polling (Reset Spinner) ---
+    useEffect(() => {
+        if (!webPending) return;
+
+        const checkWebAck = async () => {
+            try {
+                const ack = await api.getWebAck();
+                if (ack.acknowledged) {
+                    setWebPending(false);
+                    // Refresh full status
+                    const cStatus = await api.getControlStatus();
+                    setControlStatus(cStatus);
+                }
+            } catch (e) {
+                console.warn("Web Ack check failed", e);
+            }
+        };
+
+        const interval = setInterval(checkWebAck, 1000);
+        return () => clearInterval(interval);
+    }, [webPending]);
 
     // --- Chart Controls ---
     const handleExpand = () => {
@@ -472,13 +510,15 @@ export default function Dashboard() {
 
                                 {/* Web */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
-                                    <strong>Web Control</strong>
+                                    <strong>Web Control
+                                        {webPending && <span className="ms-2 spinner-border spinner-border-sm text-primary" role="status" />}
+                                    </strong>
                                     <div>
                                         <Badge bg={controlStatus.web ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.web ? 'ON' : 'OFF'}
                                         </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')} disabled={!!controlStatus.web || isReadOnly}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')} disabled={!controlStatus.web || isReadOnly}>Stop</Button>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')} disabled={!!controlStatus.web || isReadOnly || webPending}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')} disabled={!controlStatus.web || isReadOnly || webPending}>Stop</Button>
                                     </div>
                                 </div>
 

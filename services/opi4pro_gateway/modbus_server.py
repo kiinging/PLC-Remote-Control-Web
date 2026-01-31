@@ -146,7 +146,17 @@ def update_modbus_registers():
                 db.set_state("tune_stop_acknowledged", True)
                 db.set_state("tune_in_progress", False)
 
-            # 7. Tune Completion (HR27)
+            # 9. Web Control Ack (HR28)
+            # Check if PLC has echoed the web status
+            web_req = db.get_state("web", 0)
+            web_ack_plc = hr_values[28] # HR28 (index 28 if 0-indexed matches reg addr)
+
+            if web_req == 1 and web_ack_plc == 1:
+                db.set_state("web_acknowledged", True)
+            elif web_req == 0 and web_ack_plc == 0:
+                db.set_state("web_acknowledged", True)
+            
+            # --- Tune Completion (HR27)
             if hr_values[27] == 1 and not db.get_state("tune_completed", False):
                 # Read new PID params
                 pb = struct.unpack(">f", struct.pack(">HH", hr_values[11], hr_values[12]))[0]

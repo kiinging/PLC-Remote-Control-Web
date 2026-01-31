@@ -104,12 +104,23 @@ def turn_light_off():
 @app.route('/web/on', methods=['POST'])
 def web_start():
     db.set_state("web", 1)
-    return jsonify({"web": 1}), 200
+    db.set_state("web_acknowledged", False)
+    return jsonify({"web": 1, "status": "pending"}), 200
 
 @app.route('/web/off', methods=['POST'])
 def web_stop():
     db.set_state("web", 0)
-    return jsonify({"web": 0}), 200
+    db.set_state("web_acknowledged", False)
+    return jsonify({"web": 0, "status": "pending"}), 200
+
+@app.route('/web_ack', methods=['GET'])
+def web_ack_status():
+    """Return whether the latest Web Control update has been acknowledged by PLC (HR28)."""
+    try:
+        acknowledged = db.get_state("web_acknowledged", False)
+        return jsonify({"acknowledged": acknowledged}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/plc/on', methods=['POST'])
 def plc_on():

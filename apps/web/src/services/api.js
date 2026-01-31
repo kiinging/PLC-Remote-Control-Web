@@ -57,6 +57,7 @@ export const setMode = async (mode) => (await api.post(`/${mode}_mode`)).data; /
 
 export const startProcess = async (type) => (await api.post(`/start_${type}`)).data; // light, web, plc
 export const stopProcess = async (type) => (await api.post(`/stop_${type}`)).data;
+export const getWebAck = async () => (await api.get('/web_ack')).data;
 
 // PID & Setpoints
 export const getPidParams = async () => (await api.get('/pid_params')).data;

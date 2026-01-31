@@ -46,6 +46,7 @@ The Gateway acts as the **Modbus Server**. The PLC (Client) reads/writes to thes
 | **HR25** | `tune_start` | Set to 1 by Gateway to **START** tuning. PLC clears to 0 when started. |
 | **HR26** | `tune_stop` | Set to 1 by Gateway to **STOP** tuning. PLC clears to 0 when stopped. |
 | **HR27** | `tune_done` | Set to 1 by **PLC** when tuning is COMPLETE. Gateway resets to 0. |
+| **HR28** | `web_ack`   | Set to matching value of `web_status` (HR6) by **PLC** to acknowledge receipt. |
 
 ## Data Types
 -   **Float**: 32-bit floating point (IEEE 754), Big-Endian. Occupies 2 Registers.
