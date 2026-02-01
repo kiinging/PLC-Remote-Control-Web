@@ -589,7 +589,7 @@ export default function Dashboard() {
 
                                 {/* PLC Control (Moved Here) */}
                                 <div className="d-flex justify-content-between align-items-center mb-3 mt-4 pt-3 border-top">
-                                    <strong className="text-uppercase">Heater Control</strong>
+                                    <strong>Heater Control</strong>
                                     <div>
                                         <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.plc ? 'ON' : 'OFF'}
@@ -600,7 +600,6 @@ export default function Dashboard() {
                                 </div>
 
                                 <div className="mt-3">
-                                    <h6>Process Data</h6>
                                     <div className="d-flex justify-content-between align-items-center">
                                         <span>Process Value (Temp)</span>
                                         <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span>
