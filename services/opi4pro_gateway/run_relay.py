@@ -1,4 +1,4 @@
-from relay_service import main
+from service_relay import main
 
 if __name__ == "__main__":
     main()

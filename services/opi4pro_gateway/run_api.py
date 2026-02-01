@@ -1,4 +1,4 @@
-from web_api import main
+from service_web import main
 
 if __name__ == "__main__":
     main()

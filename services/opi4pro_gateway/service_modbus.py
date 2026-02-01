@@ -53,7 +53,7 @@ def update_modbus_registers():
             
             web_status  = 1 if db.get_state("web", 0) else 0
             mode_status = db.get_state("mode", 0)
-            plc_status  = 1 if db.get_state("plc", 0) else 0
+            plc_status  = 1 if db.get_state("plc_status", 0) else 0
 
             # --- Update Input Registers (IR) ---
             # Pack floats
