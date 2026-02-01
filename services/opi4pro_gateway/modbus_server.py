@@ -48,6 +48,7 @@ def update_modbus_registers():
             
             # --- Read State from DB ---
             # tc = db.get_state("thermo_temp", 0.0) or 0.0
+            tc = 0.0 # TC removed, sending 0.0 to HR0-1 to maintain alignment
             rtd = db.get_state("rtd_temp", 0.0) or 0.0
             
             web_status  = 1 if db.get_state("web", 0) else 0

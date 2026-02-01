@@ -10,7 +10,7 @@ The Gateway acts as the **Modbus Server**. The PLC (Client) reads/writes to thes
 
 | Reg Address | Function | Data Type | Description |
 | :--- | :--- | :--- | :--- |
-| **HR0 - HR1** | `thermo_temp` | Float | Thermocouple Temp (if available) |
+| **HR0 - HR1** | - | - | Reserved (was Thermocouple) |
 | **HR2 - HR3** | `rtd_temp` | Float | RTD Process Temp |
 | **HR4** | `mode` | Int | Control Mode (0=Manual, 1=Auto, 2=Tune) |
 | **HR5** | `plc_status` | Int | PLC Enabled Flag (1=Enabled) |
