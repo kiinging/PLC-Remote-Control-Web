@@ -532,7 +532,7 @@ export default function Dashboard() {
                                 {/* Dynamic Controls based on Mode */}
                                 {controlStatus.mode === 1 && ( // Auto
                                     <div className="border p-2 rounded bg-body-secondary">
-                                        <h6>PID Settings</h6>
+                                        <h6>PID Control</h6>
                                         <InputGroup size="sm" className="mb-2">
                                             <InputGroup.Text>Setpoint</InputGroup.Text>
                                             <Form.Control type="number" value={setpoint} onChange={e => setSetpoint(e.target.value)} disabled={isReadOnly} />
@@ -547,12 +547,24 @@ export default function Dashboard() {
                                             <Form.Control type="number" value={pidParams.td} onChange={e => setPidParams({ ...pidParams, td: e.target.value })} disabled={isReadOnly} />
                                             <Button onClick={sendPid} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
+
+                                        <hr className="my-2" />
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <span>Heater Power</span>
+                                            <div>
+                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
+                                                    {controlStatus.plc ? 'ON' : 'OFF'}
+                                                </Badge>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 
                                 {controlStatus.mode === 0 && ( // Manual
                                     <div className="border p-2 rounded bg-body-secondary">
-                                        <h6>Manual Settings</h6>
+                                        <h6>Manual Control</h6>
                                         <InputGroup size="sm">
                                             <InputGroup.Text>MV (%)</InputGroup.Text>
                                             <Form.Control type="number" value={manualMV} onChange={e => setManualMV(e.target.value)} disabled={isReadOnly || mvPending} />
@@ -560,6 +572,18 @@ export default function Dashboard() {
                                                 {mvPending ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> : 'Send'}
                                             </Button>
                                         </InputGroup>
+
+                                        <hr className="my-2" />
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <span>Heater Power</span>
+                                            <div>
+                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
+                                                    {controlStatus.plc ? 'ON' : 'OFF'}
+                                                </Badge>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 
@@ -584,20 +608,23 @@ export default function Dashboard() {
                                             Ti: {tuneStatus.tune_completed ? tuneResults.ti : '--'},
                                             Td: {tuneStatus.tune_completed ? tuneResults.td : '--'}
                                         </div>
+
+                                        <hr className="my-2" />
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <span>Heater Power</span>
+                                            <div>
+                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
+                                                    {controlStatus.plc ? 'ON' : 'OFF'}
+                                                </Badge>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 )}
 
                                 {/* PLC Control (Moved Here) */}
-                                <div className="d-flex justify-content-between align-items-center mb-3 mt-4 pt-3 border-top">
-                                    <strong>Heater Control</strong>
-                                    <div>
-                                        <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
-                                            {controlStatus.plc ? 'ON' : 'OFF'}
-                                        </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
-                                    </div>
-                                </div>
+
 
                                 <div className="mt-3">
                                     <div className="d-flex justify-content-between align-items-center">
