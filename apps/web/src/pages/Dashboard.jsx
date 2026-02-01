@@ -550,7 +550,7 @@ export default function Dashboard() {
 
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>Heater Power</span>
+                                            <span>Auto Control</span>
                                             <div>
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
@@ -575,7 +575,7 @@ export default function Dashboard() {
 
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>Heater Power</span>
+                                            <span>Manual Control</span>
                                             <div>
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
