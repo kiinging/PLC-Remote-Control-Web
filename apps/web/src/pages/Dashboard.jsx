@@ -531,7 +531,7 @@ export default function Dashboard() {
 
                                 {/* Dynamic Controls based on Mode */}
                                 {controlStatus.mode === 1 && ( // Auto
-                                    <div className="border p-2 rounded bg-light">
+                                    <div className="border p-2 rounded bg-body-secondary">
                                         <h6>PID Settings</h6>
                                         <InputGroup size="sm" className="mb-2">
                                             <InputGroup.Text>Setpoint</InputGroup.Text>
@@ -551,7 +551,7 @@ export default function Dashboard() {
                                 )}
 
                                 {controlStatus.mode === 0 && ( // Manual
-                                    <div className="border p-2 rounded bg-light">
+                                    <div className="border p-2 rounded bg-body-secondary">
                                         <h6>Manual Settings</h6>
                                         <InputGroup size="sm">
                                             <InputGroup.Text>MV (%)</InputGroup.Text>
@@ -564,7 +564,7 @@ export default function Dashboard() {
                                 )}
 
                                 {controlStatus.mode === 2 && ( // Tune
-                                    <div className="border p-2 rounded bg-light">
+                                    <div className="border p-2 rounded bg-body-secondary">
                                         <h6>Auto Tune</h6>
                                         <Alert variant="info" className="py-1 small">
                                             Cycling output to find PID values.
