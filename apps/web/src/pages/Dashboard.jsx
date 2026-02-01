@@ -33,6 +33,8 @@ export default function Dashboard() {
     const [setpoint, setSetpoint] = useState(0);
     const [manualMV, setManualMV] = useState(0);
 
+    const [mvPending, setMvPending] = useState(false);
+
     const [webPending, setWebPending] = useState(false);
 
     // Tune States
@@ -306,7 +308,9 @@ export default function Dashboard() {
 
     const sendManualMV = async () => {
         if (isReadOnly) return;
+        setMvPending(true); // Start spinner
         await api.setManualMV(manualMV);
+        // We rely on the generic poll to clear this when ack is received
     };
 
     const handleStartTune = async () => {
@@ -326,7 +330,11 @@ export default function Dashboard() {
         if (webPending && controlStatus.web_ack) {
             setWebPending(false);
         }
-    }, [controlStatus, webPending]);
+        // Also check MV Ack
+        if (mvPending && controlStatus.mv_ack) {
+            setMvPending(false);
+        }
+    }, [controlStatus, webPending, mvPending]);
 
     // --- Chart Controls ---
     const handleExpand = () => {
@@ -547,8 +555,10 @@ export default function Dashboard() {
                                         <h6>Manual Settings</h6>
                                         <InputGroup size="sm">
                                             <InputGroup.Text>MV (%)</InputGroup.Text>
-                                            <Form.Control type="number" value={manualMV} onChange={e => setManualMV(e.target.value)} disabled={isReadOnly} />
-                                            <Button onClick={sendManualMV} disabled={isReadOnly}>Send</Button>
+                                            <Form.Control type="number" value={manualMV} onChange={e => setManualMV(e.target.value)} disabled={isReadOnly || mvPending} />
+                                            <Button onClick={sendManualMV} disabled={isReadOnly || mvPending}>
+                                                {mvPending ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> : 'Send'}
+                                            </Button>
                                         </InputGroup>
                                     </div>
                                 )}
@@ -579,7 +589,7 @@ export default function Dashboard() {
 
                                 {/* PLC Control (Moved Here) */}
                                 <div className="d-flex justify-content-between align-items-center mb-3 mt-4 pt-3 border-top">
-                                    <strong className="text-uppercase">PLC Heater Control</strong>
+                                    <strong className="text-uppercase">Heater Control</strong>
                                     <div>
                                         <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                             {controlStatus.plc ? 'ON' : 'OFF'}
@@ -591,8 +601,11 @@ export default function Dashboard() {
 
                                 <div className="mt-3">
                                     <h6>Process Data</h6>
-                                    <div>Temp: <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span></div>
-                                    <div className="text-muted small">Last Update: {lastUpdate}</div>
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <span>Process Value (Temp)</span>
+                                        <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span>
+                                    </div>
+                                    <div className="text-muted small text-end">Last Update: {lastUpdate}</div>
                                 </div>
                             </Card.Body>
                         </Card>

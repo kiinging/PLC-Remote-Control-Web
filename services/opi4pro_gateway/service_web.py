@@ -30,6 +30,7 @@ except Exception as e:
 # Initialize defaults in DB if missing
 if db.get_state("light") is None: db.set_state("light", 0)
 if db.get_state("plc_status") is None: db.set_state("plc_status", 0)
+if db.get_state("mv_manual") is None: db.set_state("mv_manual", 0)
 
 
 # =========================================================
@@ -167,6 +168,7 @@ def get_control_status():
         # Safest: Use confirmed state. If Desired=1 and Ack=0, UI shows Off (correct).
         "web": 1 if db.get_state("web_acknowledged", False) and db.get_state("web", 0) == 1 else 0,
         "web_ack": db.get_state("web_acknowledged", False), # ✅ Explicit Ack Status
+        "mv_ack": db.get_state("mv_manual_acknowledged", False), # ✅ Explicit MV Ack Status (for Manual Mode)
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0) # For debug/advanced UI
     })
