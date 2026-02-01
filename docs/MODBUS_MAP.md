@@ -34,7 +34,7 @@ The Gateway acts as the **Modbus Server**. The PLC (Client) reads/writes to thes
 
 | Data Regs | Flag (Ack) | Parameter | Description |
 | :--- | :--- | :--- | :--- |
-| **HR7-8** | **HR9** | `mv_manual` | Manual Output % (0-100) |
+| **HR8-9** | **HR7** | `mv_manual` | Manual Output % (0-100) |
 | **HR22-23**| - | `mv_auto` | **PLC → Gateway** (PLC writes Calculated MV here in Auto) |
 | **HR11-16**| **HR10** | `PID` | PB (11-12), Ti (13-14), Td (15-16) |
 | **HR18-19**| **HR17** | `setpoint` | Target Setpoint (°C) |
