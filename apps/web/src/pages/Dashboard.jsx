@@ -495,7 +495,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
-                                {/* Web */}
+                                {/* Web Control Remained Here */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <strong>Web Control
                                         {webPending && <span className="ms-2 spinner-border spinner-border-sm text-primary" role="status" />}
@@ -506,18 +506,6 @@ export default function Dashboard() {
                                         </Badge>
                                         <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')} disabled={!!controlStatus.web || isReadOnly || webPending}>Start</Button>
                                         <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')} disabled={!controlStatus.web || isReadOnly || webPending}>Stop</Button>
-                                    </div>
-                                </div>
-
-                                {/* PLC */}
-                                <div className="d-flex justify-content-between align-items-center mb-3">
-                                    <strong>PLC Control</strong>
-                                    <div>
-                                        <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
-                                            {controlStatus.plc ? 'ON' : 'OFF'}
-                                        </Badge>
-                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
-                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
@@ -588,6 +576,18 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* PLC Control (Moved Here) */}
+                                <div className="d-flex justify-content-between align-items-center mb-3 mt-4 pt-3 border-top">
+                                    <strong className="text-uppercase">PLC Heater Control</strong>
+                                    <div>
+                                        <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
+                                            {controlStatus.plc ? 'ON' : 'OFF'}
+                                        </Badge>
+                                        <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
+                                        <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
+                                    </div>
+                                </div>
 
                                 <div className="mt-3">
                                     <h6>Process Data</h6>
