@@ -36,7 +36,7 @@ store = ModbusSlaveContext(
     co=ModbusSequentialDataBlock(0, [0]*10),
     di=ModbusSequentialDataBlock(0, [0]*10),
     co=ModbusSequentialDataBlock(0, [0]*10),
-    hr=ModbusSequentialDataBlock(0, [0]*50), # ✅ Increased to 50 to cover HR28+ safely
+    hr=ModbusSequentialDataBlock(0, [0]*35), # ✅ Increased to 50 to cover HR28+ safely
     ir=ModbusSequentialDataBlock(0, [0]*20),
 )
 context = ModbusServerContext(slaves=store, single=True)
