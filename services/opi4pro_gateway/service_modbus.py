@@ -34,7 +34,9 @@ logger.addHandler(console_handler)
 store = ModbusSlaveContext(
     di=ModbusSequentialDataBlock(0, [0]*10),
     co=ModbusSequentialDataBlock(0, [0]*10),
-    hr=ModbusSequentialDataBlock(0, [0]*30),
+    di=ModbusSequentialDataBlock(0, [0]*10),
+    co=ModbusSequentialDataBlock(0, [0]*10),
+    hr=ModbusSequentialDataBlock(0, [0]*32), # ✅ Size 32 (Indices 0-31)
     ir=ModbusSequentialDataBlock(0, [0]*20),
 )
 context = ModbusServerContext(slaves=store, single=True)
@@ -119,7 +121,7 @@ def update_modbus_registers():
 
 
             # --- Read back from PLC (Holding Registers) ---
-            hr_values = store.getValues(3, 0, count=31)
+            hr_values = store.getValues(3, 0, count=30) # ✅ Read 0..29 (Size 30) safely
 
             # 1. Manual MV Ack (HR7)
             if hr_values[7] == 0 and not db.get_state("mv_manual_acknowledged", False):
