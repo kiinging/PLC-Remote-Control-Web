@@ -34,9 +34,7 @@ logger.addHandler(console_handler)
 store = ModbusSlaveContext(
     di=ModbusSequentialDataBlock(0, [0]*10),
     co=ModbusSequentialDataBlock(0, [0]*10),
-    di=ModbusSequentialDataBlock(0, [0]*10),
-    co=ModbusSequentialDataBlock(0, [0]*10),
-    hr=ModbusSequentialDataBlock(0, [0]*35), # ✅ Increased to 50 to cover HR28+ safely
+    hr=ModbusSequentialDataBlock(0, [0]*30),
     ir=ModbusSequentialDataBlock(0, [0]*20),
 )
 context = ModbusServerContext(slaves=store, single=True)
@@ -121,7 +119,7 @@ def update_modbus_registers():
 
 
             # --- Read back from PLC (Holding Registers) ---
-            hr_values = store.getValues(3, 0, count=40) # ✅ Cover up to HR39 safely
+            hr_values = store.getValues(3, 0, count=31)
 
             # 1. Manual MV Ack (HR7)
             if hr_values[7] == 0 and not db.get_state("mv_manual_acknowledged", False):
@@ -163,10 +161,6 @@ def update_modbus_registers():
             # Check if PLC has echoed the plc_status (HR5)
             plc_req = db.get_state("plc_status", 0)
             plc_ack_plc = hr_values[28] # HR28
-
-            # Debug Log
-            if plc_req != plc_ack_plc:
-                 logger.debug(f"PLC Handshake Wait: Req={plc_req}, Ack={plc_ack_plc}")
 
             if plc_req == 1 and plc_ack_plc == 1:
                 db.set_state("plc_acknowledged", True)
