@@ -156,6 +156,16 @@ def update_modbus_registers():
                 db.set_state("web_acknowledged", True)
             elif web_req == 0 and web_ack_plc == 0:
                 db.set_state("web_acknowledged", True)
+
+            # 10. PLC Control Ack (HR28)
+            # Check if PLC has echoed the plc_status (HR5)
+            plc_req = db.get_state("plc_status", 0)
+            plc_ack_plc = hr_values[28] # HR28
+
+            if plc_req == 1 and plc_ack_plc == 1:
+                db.set_state("plc_acknowledged", True)
+            elif plc_req == 0 and plc_ack_plc == 0:
+                db.set_state("plc_acknowledged", True)
             
             # --- Tune Completion (HR27)
             if hr_values[27] == 1 and not db.get_state("tune_completed", False):

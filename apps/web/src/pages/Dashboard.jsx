@@ -38,6 +38,10 @@ export default function Dashboard() {
     const [mvPending, setMvPending] = useState(false);
 
     const [webPending, setWebPending] = useState(false);
+    const [plcPending, setPlcPending] = useState(false); // ✅ PLC Pending State
+
+
+
 
     // Tune States
     const [tuneStatus, setTuneStatus] = useState({ tuning_active: false, tune_completed: false });
@@ -294,6 +298,14 @@ export default function Dashboard() {
                 console.error("Failed to toggle web process", e);
                 setWebPending(false); // Stop spinner if gateway call failed
             }
+        } else if (type === 'plc') {
+            setPlcPending(true);
+            try {
+                if (action === 'start') await api.startProcess(type);
+                else await api.stopProcess(type);
+            } catch (e) {
+                setPlcPending(false);
+            }
         } else {
             if (action === 'start') await api.startProcess(type);
             else await api.stopProcess(type);
@@ -338,6 +350,16 @@ export default function Dashboard() {
         if (webPending && controlStatus.web_ack) {
             setWebPending(false);
         }
+        // Also check PLC Ack
+        if (plcPending && controlStatus.plc_ack) {
+            setPlcPending(false);
+        }
+
+        // Also check PLC Ack
+        if (plcPending && controlStatus.plc_ack) {
+            setPlcPending(false);
+        }
+
         // Also check MV Ack
         if (mvPending && controlStatus.mv_ack) {
             setMvPending(false);
@@ -563,8 +585,12 @@ export default function Dashboard() {
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
                                                 </Badge>
-                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
-                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>
+                                                    {plcPending && !controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Start"}
+                                                </Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>
+                                                    {plcPending && controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Stop"}
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -588,8 +614,12 @@ export default function Dashboard() {
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
                                                 </Badge>
-                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
-                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>
+                                                    {plcPending && !controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Start"}
+                                                </Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>
+                                                    {plcPending && controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Stop"}
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>
@@ -624,8 +654,12 @@ export default function Dashboard() {
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
                                                 </Badge>
-                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly}>Start</Button>
-                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly}>Stop</Button>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>
+                                                    {plcPending && !controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Start"}
+                                                </Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>
+                                                    {plcPending && controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Stop"}
+                                                </Button>
                                             </div>
                                         </div>
                                     </div>

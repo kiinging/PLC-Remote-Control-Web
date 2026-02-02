@@ -126,12 +126,16 @@ def web_ack_status():
 @app.route('/plc/on', methods=['POST'])
 def plc_on():
     db.set_state("plc_status", 1)
+    db.set_state("plc_acknowledged", False)
     return jsonify({"plc": 1}), 200
+
 
 @app.route('/plc/off', methods=['POST'])
 def plc_off():
     db.set_state("plc_status", 0)
+    db.set_state("plc_acknowledged", False)
     return jsonify({"plc": 0}), 200
+
 
 # =========================================================
 # ---------------- Mode Control ---------------------------
@@ -169,6 +173,7 @@ def get_control_status():
         "web": 1 if db.get_state("web_acknowledged", False) and db.get_state("web", 0) == 1 else 0,
         "web_ack": db.get_state("web_acknowledged", False), # ✅ Explicit Ack Status
         "mv_ack": db.get_state("mv_manual_acknowledged", False), # ✅ Explicit MV Ack Status (for Manual Mode)
+        "plc_ack": db.get_state("plc_acknowledged", False), # ✅ Explicit PLC Ack Status
         "mv": db.get_state("mv", 0.0), # ✅ Real MV from PLC (HR22-23)
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0) # For debug/advanced UI
