@@ -34,8 +34,6 @@ logger.addHandler(console_handler)
 store = ModbusSlaveContext(
     di=ModbusSequentialDataBlock(0, [0]*10),
     co=ModbusSequentialDataBlock(0, [0]*10),
-    di=ModbusSequentialDataBlock(0, [0]*10),
-    co=ModbusSequentialDataBlock(0, [0]*10),
     hr=ModbusSequentialDataBlock(0, [0]*32), # ✅ Size 32 (Indices 0-31)
     ir=ModbusSequentialDataBlock(0, [0]*20),
 )
