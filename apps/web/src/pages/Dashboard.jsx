@@ -580,18 +580,18 @@ export default function Dashboard() {
 
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>Auto Control</span>
+                                            <span>
+                                                Auto Control
+                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
+                                            </span>
                                             <div>
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
                                                 </Badge>
-                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>
-                                                    {plcPending && !controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Start"}
-                                                </Button>
-                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>
-                                                    {plcPending && controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Stop"}
-                                                </Button>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
                                             </div>
+
                                         </div>
                                     </div>
                                 )}
@@ -609,18 +609,18 @@ export default function Dashboard() {
 
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>Manual Control</span>
+                                            <span>
+                                                Manual Control
+                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
+                                            </span>
                                             <div>
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
                                                 </Badge>
-                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>
-                                                    {plcPending && !controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Start"}
-                                                </Button>
-                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>
-                                                    {plcPending && controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Stop"}
-                                                </Button>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
                                             </div>
+
                                         </div>
                                     </div>
                                 )}
@@ -649,18 +649,18 @@ export default function Dashboard() {
 
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>Heater Power</span>
+                                            <span>
+                                                Heater Power
+                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
+                                            </span>
                                             <div>
                                                 <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
                                                     {controlStatus.plc ? 'ON' : 'OFF'}
                                                 </Badge>
-                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>
-                                                    {plcPending && !controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Start"}
-                                                </Button>
-                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>
-                                                    {plcPending && controlStatus.plc ? <span className="spinner-border spinner-border-sm" /> : "Stop"}
-                                                </Button>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
                                             </div>
+
                                         </div>
                                     </div>
                                 )}
