@@ -169,6 +169,7 @@ def get_control_status():
         "web": 1 if db.get_state("web_acknowledged", False) and db.get_state("web", 0) == 1 else 0,
         "web_ack": db.get_state("web_acknowledged", False), # ✅ Explicit Ack Status
         "mv_ack": db.get_state("mv_manual_acknowledged", False), # ✅ Explicit MV Ack Status (for Manual Mode)
+        "mv": db.get_state("mv", 0.0), # ✅ Real MV from PLC (HR22-23)
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0) # For debug/advanced UI
     })

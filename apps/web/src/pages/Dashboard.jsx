@@ -32,6 +32,8 @@ export default function Dashboard() {
     const [pidParams, setPidParams] = useState({ pb: 0, ti: 0, td: 0 });
     const [setpoint, setSetpoint] = useState(0);
     const [manualMV, setManualMV] = useState(0);
+    const [realMV, setRealMV] = useState(0); // ✅ Real MV from PLC
+
 
     const [mvPending, setMvPending] = useState(false);
 
@@ -192,9 +194,14 @@ export default function Dashboard() {
         try {
             cStatus = await api.getControlStatus();
             setControlStatus(cStatus);
+            // ✅ Update Real MV from PLC status
+            if (cStatus.mv !== undefined) {
+                setRealMV(cStatus.mv);
+            }
         } catch (e) {
             // Keep last known control status
         }
+
 
         try {
             if (cStatus && cStatus.mode === 2) {
@@ -213,7 +220,7 @@ export default function Dashboard() {
                     time: now,
                     pv: tData.rtd_temp,
                     sp: (cStatus?.mode === 2 ? tuneSetpoint : setpoint),
-                    mv: manualMV
+                    mv: cStatus?.mv ?? manualMV // ✅ Use Real MV if available, else fallback
                 };
                 // Append new item, keep last 3600 points (1 hour)
                 const newData = [...prev, newItem];
@@ -221,6 +228,7 @@ export default function Dashboard() {
                 return newData;
             });
         }
+
     };
 
     const [esp32Alive, setEsp32Alive] = useState(false);
@@ -626,13 +634,32 @@ export default function Dashboard() {
                                 {/* PLC Control (Moved Here) */}
 
 
-                                <div className="mt-3">
+                                <div className="mt-4 border-top pt-3">
+                                    {/* MV / Current / Power Display */}
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <span>Manipulated Value (MV)</span>
+                                        <span className="fw-bold">{Number(realMV).toFixed(1)} %</span>
+                                    </div>
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <span>Current (Calculated)</span>
+                                        <span className="fw-bold">{(1.2 * (realMV / 100)).toFixed(2)} A</span>
+                                    </div>
+                                    <div className="d-flex justify-content-between align-items-center mb-3">
+                                        <span>Power (Calculated)</span>
+                                        <span className="fw-bold text-warning">
+                                            {/* P = I^2 * 20 */}
+                                            {(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W
+                                        </span>
+                                    </div>
+
+                                    {/* PV Display */}
                                     <div className="d-flex justify-content-between align-items-center">
-                                        <span>Process Value (Temp)</span>
+                                        <span>Process Value (PV)</span>
                                         <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span>
                                     </div>
-                                    <div className="text-muted small text-end">Last Update: {lastUpdate}</div>
+                                    <div className="text-muted small text-end mt-1">Last Update: {lastUpdate}</div>
                                 </div>
+
                             </Card.Body>
                         </Card>
                     </Col>
