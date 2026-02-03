@@ -1,0 +1,103 @@
+//-----------------------------------------------------------------------------------
+//                                    Modbus TCP Client Fn06 Write Single Register
+// __________________________________________________________________________________
+
+
+Check_StepTime(In:=TCP_Step=2, PT:=T#5s);
+IF Check_StepTime.Q THEN	 // Check if Receive not executed and fixed in step 2
+	Sending:=		FALSE;
+	TCP_Step:=		0;
+	Check_StepTime.In:=FALSE;
+END_IF;
+
+CASE TCP_Step OF
+	
+	0:	//  Waiting for Send Request INPUT
+		IF Enable Then
+			IF Send_Request AND NOT Sending THEN
+				Sending			:=TRUE;
+				TCP_Step			:=INT#1;
+				TCP_Recv_Inst(Execute:=FALSE,RcvDat :=Recv_Data[0]);
+				TCP_Send_Inst(Execute:=FALSE, SendDat:=Send_Data[0]);
+				TCP_ClearBuf_Inst(Execute:=TRUE);
+				Error					:=FALSE;
+				ErrorID				:=16#0;
+			END_IF;
+			IF NOT Send_Request THEN Cmd_Ok:=FALSE;END_IF;
+		ELSE
+			Cmd_Ok	:=FALSE;
+			Error			:=FALSE;
+			ErrorID		:=0;
+		END_IF;	
+	
+	1: //  Send request ----------------------------------------------------------------
+		
+		
+		// Initialize MBAP header
+		Send_Data[0]				:=16#00;
+		Send_Data[1]				:=16#00;
+		Send_Data[2]				:=16#00;
+		Send_Data[3]				:=16#00;
+		Send_Data[4]				:=16#00;
+		Send_Data[5]				:=	16#06;	
+		Send_Data[6]				:=Unit_ID;							// Unit identifier 
+		Send_Data[7]				:= 16#06;								// function code Write Register
+		ToAryByte(Register_Address,_HIGH_LOW,Send_Data[8]);
+		ToAryByte(Set_Value,_HIGH_LOW,Send_Data[10]);	
+		TCP_Send_Inst(	Execute:=TRUE,							// --> send request
+						Socket			:=TCP_Socket,
+						SendDat		:=Send_Data[0],
+						Size				:=UINT#12);
+						
+		IF (TCP_Send_Inst.Done) THEN
+			TCP_Step					:=INT#2;	
+			TCP_Send_Inst(Execute:=FALSE, SendDat:=Send_Data[0]);
+
+		ELSIF (TCP_Send_Inst.Error) THEN
+			Error							:=TRUE;
+			ErrorID						:=TCP_Send_Inst.ErrorID;
+			TCP_Step					:=INT#3;
+			TCP_Send_Inst(Execute:=FALSE, SendDat:=Send_Data[0]);
+
+		END_IF;
+
+
+	2:	// Receive response --------------------------------------------------------------
+
+		TCP_Recv_Inst(	Execute:=TRUE,
+						Socket			:=TCP_Socket,
+						Timeout		:=UINT#20,
+						Size				:=UINT#255,
+						RcvDat			:= Recv_Data[0]);
+					
+		IF (TCP_Recv_Inst.Done)  THEN 
+			
+			IF Recv_Data[7]=16#86 THEN	
+				Error						:=TRUE;
+				ErrorID					:=Recv_Data[8];									// Modbus Exception Error
+
+			ELSIF Recv_Data[7] = 16#06 AND Recv_Data[8] = Send_Data[8] AND Recv_Data[9]=Send_Data[9] THEN 
+				Cmd_Ok				:=TRUE;			
+			END_IF;			
+			TCP_Step					:=INT#3;
+			
+		ELSIF (TCP_Recv_Inst.Error) THEN 
+			Error							:=TRUE;
+			ErrorID						:=TCP_Recv_Inst.ErrorID;							// Receive Error (2006=Timeout)
+			TCP_Recv_Inst(Execute:=FALSE,RcvDat :=Recv_Data[0]);
+			TCP_Step					:=INT#3;
+			
+		END_IF;	
+		
+	
+		
+
+	3:	//Finished -----------------------------------------------------------------------		
+	
+		IF NOT Send_Request THEN 
+			Sending					:=FALSE; 
+			TCP_Step					:=INT#0;
+		END_IF;
+
+
+END_CASE;

@@ -1,0 +1,80 @@
+//-----------------------------------------------------------------------------------
+//                     Modbus TCP Client Connect for NJ101/301/501/NX1P2
+// __________________________________________________________________________________
+
+
+IF TCP_Socket.Handle > 0 THEN					//TCP_Status not available when Socket Handle = 0
+		TCP_Status_Inst(Execute:=TRUE,Socket:=TCP_Socket);
+		IF (TCP_Status_Inst.Done)  OR (TCP_Status_Inst.Error) THEN
+			Socket_Status :=	TCP_Status_Inst.TcpStatus;
+			Connected:=		 (Socket_Status = _ESTABLISHED);
+			TCP_Status_Inst(Execute:=FALSE);
+		END_IF;
+ELSE
+		Connected:=FALSE;
+		TCP_Status_Inst(Execute:=FALSE);
+END_IF;	
+
+CASE TCP_Step OF
+
+	0: 	//Init
+		TCP_Connect_Inst(Execute:=FALSE);
+		TCP_Close_Inst(Execute:=FALSE);
+		Error:=				FALSE;
+		ErrorID:=			0;	
+		TCP_Step:=		1;		
+
+	1:	// Waiting connection ---------------------------------------------------------
+		IF _EIP_EtnOnlineSta THEN
+			IF Connect AND NOT Connected  THEN TCP_Step:=	2;END_IF;
+			EtnConnError:=FALSE;
+		ELSE
+			EtnConnError:=TRUE;
+		END_IF;
+
+
+	2:	//  Connect socket -------------------------------------------------------------
+			Error:=FALSE;
+			IF Port >0 THEN TCP_Port:=Port; ELSE TCP_Port:=UINT#502; END_IF;
+			TCP_Connect_Inst(	Execute:=TRUE,
+								SrcTcpPort:=		LocalPort,
+								DstAdr:=				IPaddress,
+								DstTcpPort:=		TCP_Port ,
+								Socket =>			TCP_Socket);
+			
+				IF (TCP_Connect_Inst.Done) THEN 
+					TCP_Connect_Inst(Execute:=FALSE);
+					Connected:=	TRUE;
+					Error:=				FALSE;
+					ErrorID:=			0;	
+					TCP_Step:=		3;
+				ELSIF (TCP_Connect_Inst.Error) THEN
+					Error:=				TRUE;
+					ErrorID:=			TCP_Connect_Inst.ErrorID;
+					TCP_Connect_Inst(Execute:=FALSE);
+					TCP_Step:=		0;
+				END_IF;	
+
+	3:	// Connected -------------------------------------------------------------------	
+		IF (Connected AND NOT Connect) OR (Connect AND NOT Connected) THEN TCP_Step:=4;END_IF;				// --> Close connection
+		IF NOT _EIP_EtnOnlineSta THEN 
+			TCP_Step:=4; 
+			EtnConnError:=TRUE;
+		END_IF;
+		
+	4:	// Close socket -----------------------------------------------------------------
+
+		TCP_Close_Inst(	Execute:=TRUE,Socket:=Tcp_Socket);	
+		IF TCP_Close_Inst.Done OR TCP_Close_Inst.Error THEN
+			IF TCP_Close_Inst.Error THEN 
+				Error:=			TRUE;
+				ErrorID:=		TCP_Close_Inst.ErrorID;		
+			END_IF;		
+			TCP_Step:=		0;
+		END_IF;
+
+END_CASE;
+
+
+
+	

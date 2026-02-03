@@ -176,7 +176,14 @@ CASE State OF
         END_IF;
 
     20: (* ---------------- PROCESS DATA ---------------- *)
-        
+    
+        (* === STEP 1: PRESERVE GATEWAY DATA (Safety Copy) === *)
+        (* Copy ReadBuf to WriteBuf so we don't overwrite GW values (e.g. RTD) with 0s *)
+        (* This effectively implements a 'Read-Modify-Write' pattern *)
+        FOR i:=0 TO 27 DO
+            G_Modbus_WriteBuf[i] := G_Modbus_ReadBuf[i];
+        END_FOR;
+
         (* === TYPE 1: EVENT HANDSHAKE (Values) === *)
         
         (* 1. Manual MV (Flag: HR8, Data: HR9-10) *)
