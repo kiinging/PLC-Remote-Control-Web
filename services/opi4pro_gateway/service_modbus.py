@@ -47,35 +47,49 @@ def update_modbus_registers():
             db.set_state("modbus_last_tick_ts", time.time())
             
             # --- Read State from DB ---
-            # tc = db.get_state("thermo_temp", 0.0) or 0.0
-            tc = 0.0 # TC removed, sending 0.0 to HR0-1 to maintain alignment
             rtd = db.get_state("rtd_temp", 0.0) or 0.0
             
             web_status  = 1 if db.get_state("web", 0) else 0
             mode_status = db.get_state("mode", 0)
             plc_status  = 1 if db.get_state("plc_status", 0) else 0
 
-            # --- Update Input Registers (IR) ---
-            # Pack floats
-            reg0, reg1 = struct.unpack(">HH", struct.pack(">f", tc))
-            reg2, reg3 = struct.unpack(">HH", struct.pack(">f", rtd))
+            # --- Update Holding Registers (GW -> PLC) ---
+            # HR0-1: RTD
+            reg0, reg1 = struct.unpack(">HH", struct.pack(">f", rtd))
+            
+            # HR3: Mode (HR2 is Mode Ack)
+            reg3 = mode_status
+            
+            # HR5: Web Status (HR4 is Web Ack)
+            reg5 = web_status
+            
+            # HR7: PLC Status (HR6 is PLC Ack)
+            reg7 = plc_status
+            
+            # Write Block HR0..HR7
+            # HR0-1 (RTD)
+            store.setValues(3, 0, [reg0, reg1])
+            
+            # HR3 (Mode)
+            store.setValues(3, 3, [reg3])
+            
+            # HR5 (Web Status)
+            store.setValues(3, 5, [reg5])
+            
+            # HR7 (PLC Status)
+            store.setValues(3, 7, [reg7])
+            
 
-            reg4 = mode_status
-            reg5 = plc_status
-            reg6 = web_status
+            # --- Handshakes (GW -> PLC) ---
 
-            store.setValues(3, 0, [reg0, reg1, reg2, reg3, reg4, reg5, reg6]) # IR0..IR6 (mapped to HR0..6 in code?) 
-            # Note: Context uses '3' as function code for holding registers in setValues? 
-            # The original code used 3 (Holding Registers). We stick to it.
-
-            # --- Manual MV Handshake (HR7-HR9) ---
+            # 1. Manual MV (HR8 Flag, HR9-10 Data)
             if db.get_state("mv_manual_update_pending", False):
                 mv_value = db.get_state("mv_manual", 0.0)
                 mv0, mv1 = struct.unpack(">HH", struct.pack(">f", mv_value))
-                store.setValues(3, 7, [1, mv0, mv1])
+                store.setValues(3, 8, [1, mv0, mv1]) # HR8=1, HR9=mv0, HR10=mv1
                 db.set_state("mv_manual_update_pending", False)
 
-            # --- PID Handshake (HR10-HR16) ---
+            # 2. PID Handshake (HR11 Flag, HR12-17 Data)
             if db.get_state("pid_update_pending", False):
                 pb = db.get_state("pid_pb", 0.0)
                 ti = db.get_state("pid_ti", 0.0)
@@ -85,94 +99,102 @@ def update_modbus_registers():
                 ti0, ti1 = struct.unpack(">HH", struct.pack(">f", ti))
                 td0, td1 = struct.unpack(">HH", struct.pack(">f", td))
                 
-                store.setValues(3, 10, [1, pb0, pb1, ti0, ti1, td0, td1])
+                # HR11=1, HR12-13=PB, HR14-15=TI, HR16-17=TD
+                store.setValues(3, 11, [1, pb0, pb1, ti0, ti1, td0, td1])
                 db.set_state("pid_update_pending", False)
 
-            # --- Setpoint Handshake (HR17-HR19) ---
+            # 3. Setpoint Handshake (HR18 Flag, HR19-20 Data)
+            # Unified for both Auto and Tune modes
             if db.get_state("setpoint_update_pending", False):
                 sp = db.get_state("setpoint", 0.0)
                 sp0, sp1 = struct.unpack(">HH", struct.pack(">f", sp))
-                store.setValues(3, 17, [1])
-                store.setValues(3, 18, [sp0, sp1])
+                store.setValues(3, 18, [1, sp0, sp1]) # HR18=1, HR19=sp0, HR20=sp1
                 db.set_state("setpoint_update_pending", False)
 
-            # --- Tune Setpoint Handshake (HR24) ---
-            if db.get_state("tune_setpoint_update_pending", False):
-                tune_sp = db.get_state("tune_setpoint", 0.0)
-                sp0, sp1 = struct.unpack(">HH", struct.pack(">f", tune_sp))
-                store.setValues(3, 24, [1])
-                store.setValues(3, 18, [sp0, sp1]) # Reusing HR18-19
-                db.set_state("tune_setpoint_update_pending", False)
+            # (Removed separate Tune Setpoint Handshake - using shared HR18-20)
 
-            # --- Tune Start (HR25) ---
+            # 4. Tune Start (HR24 Flag)
             if db.get_state("tune_start_pending", False):
-                store.setValues(3, 25, [1])
+                store.setValues(3, 24, [1])
                 db.set_state("tune_start_pending", False)
                 db.set_state("tune_completed", False)
 
-            # --- Tune Stop (HR26) ---
+            # 5. Tune Stop (HR26 Flag)
             if db.get_state("tune_stop_pending", False):
                 store.setValues(3, 26, [1])
                 db.set_state("tune_stop_pending", False)
                 db.set_state("tune_in_progress", False)
 
 
-
             # --- Read back from PLC (Holding Registers) ---
-            hr_values = store.getValues(3, 0, count=30) # ✅ Read 0..29 (Size 30) safely
+            # Read up to HR27 (Size 28)
+            hr_values = store.getValues(3, 0, count=28) 
 
-            # 1. Manual MV Ack (HR7)
-            if hr_values[7] == 0 and not db.get_state("mv_manual_acknowledged", False):
+            # 1. Mode Ack (HR2)
+            mode_req = db.get_state("mode", 0)
+            mode_ack = hr_values[2]
+            if mode_req == mode_ack:
+                 db.set_state("mode_acknowledged", True)
+            else:
+                 db.set_state("mode_acknowledged", False)
+
+            # 2. Web Ack (HR4)
+            web_req = db.get_state("web", 0)
+            web_ack_plc = hr_values[4] 
+            if (web_req == 1 and web_ack_plc == 1) or (web_req == 0 and web_ack_plc == 0):
+                db.set_state("web_acknowledged", True)
+
+            # 3. PLC Ack (HR6)
+            plc_req = db.get_state("plc_status", 0)
+            plc_ack_plc = hr_values[6]
+            if (plc_req == 1 and plc_ack_plc == 1) or (plc_req == 0 and plc_ack_plc == 0):
+                db.set_state("plc_acknowledged", True)
+
+            # 4. Manual MV Ack (HR8)
+            if hr_values[8] == 0 and not db.get_state("mv_manual_acknowledged", False):
                 db.set_state("mv_manual_acknowledged", True)
 
-            # 2. PID Ack (HR10)
-            if hr_values[10] == 0 and not db.get_state("pid_acknowledged", False):
+            # 5. PID Ack (HR11)
+            if hr_values[11] == 0 and not db.get_state("pid_acknowledged", False):
                 db.set_state("pid_acknowledged", True)
 
-            # 3. Setpoint Ack (HR17)
-            if hr_values[17] == 0 and not db.get_state("setpoint_acknowledged", False):
+            # 6. Setpoint Ack (HR18)
+            if hr_values[18] == 0 and not db.get_state("setpoint_acknowledged", False):
                 db.set_state("setpoint_acknowledged", True)
 
-            # 4. Tune Setpoint Ack (HR24)
-            if hr_values[24] == 0 and not db.get_state("tune_setpoint_acknowledged", False):
-                db.set_state("tune_setpoint_acknowledged", True)
-
-            # 5. Tune Start Ack (HR25)
-            if hr_values[25] == 0 and not db.get_state("tune_start_acknowledged", False):
+            # 7. Tune Start Ack (HR23) -- NEW
+            # If HR23 (Ack) == 1, it means PLC accepted Start command.
+            # We can use this to confirm 'tune_in_progress' state if desired, 
+            # OR we maintain the original logic where we just set it pending.
+            # Ideally: GW sets Flag=1. PLC sets Ack=1.
+            # If we see Ack=1, we can confirm start.
+            tune_start_ack = hr_values[23]
+            if tune_start_ack == 1:
                 db.set_state("tune_start_acknowledged", True)
                 db.set_state("tune_in_progress", True)
+                # Optional: We could clear the Start Flag (HR24) here if we wanted strictly transient,
+                # but usually we let the PLC clear the Ack/Flag or we clear our Flag request.
+                # In this system, logic is often "Write 1, PLC reads, PLC writes 0 to Flag".
+                # If PLC clears Flag (HR24) to 0, that is the Ack.
+                # BUT user requested Explicit Ack Register.
+                # so: GW sets HR24=1. PLC sets HR23=1.
+                # Later, GW sets HR24=0? Or PLC clears it?
+                # Let's assume: PLC copies Flag to Ack.
+                # So if HR24=1 and HR23=1, we are good.
+                pass
 
-            # 6. Tune Stop Ack (HR26)
-            if hr_values[26] == 0 and not db.get_state("tune_stop_acknowledged", False):
+            # 8. Tune Stop Ack (HR25) -- NEW
+            tune_stop_ack = hr_values[25]
+            if tune_stop_ack == 1:
                 db.set_state("tune_stop_acknowledged", True)
                 db.set_state("tune_in_progress", False)
-
-            # 9. Web Control Ack (HR21)
-            # Check if PLC has echoed the web status
-            web_req = db.get_state("web", 0)
-            web_ack_plc = hr_values[21] # HR21
-
-            if web_req == 1 and web_ack_plc == 1:
-                db.set_state("web_acknowledged", True)
-            elif web_req == 0 and web_ack_plc == 0:
-                db.set_state("web_acknowledged", True)
-
-            # 10. PLC Control Ack (HR28)
-            # Check if PLC has echoed the plc_status (HR5)
-            plc_req = db.get_state("plc_status", 0)
-            plc_ack_plc = hr_values[28] # HR28
-
-            if plc_req == 1 and plc_ack_plc == 1:
-                db.set_state("plc_acknowledged", True)
-            elif plc_req == 0 and plc_ack_plc == 0:
-                db.set_state("plc_acknowledged", True)
             
-            # --- Tune Completion (HR27)
+            # 9. Tune Done (HR27)
             if hr_values[27] == 1 and not db.get_state("tune_completed", False):
-                # Read new PID params
-                pb = struct.unpack(">f", struct.pack(">HH", hr_values[11], hr_values[12]))[0]
-                ti = struct.unpack(">f", struct.pack(">HH", hr_values[13], hr_values[14]))[0]
-                td = struct.unpack(">f", struct.pack(">HH", hr_values[15], hr_values[16]))[0]
+                # PID vals at HR12-17
+                pb = struct.unpack(">f", struct.pack(">HH", hr_values[12], hr_values[13]))[0]
+                ti = struct.unpack(">f", struct.pack(">HH", hr_values[14], hr_values[15]))[0]
+                td = struct.unpack(">f", struct.pack(">HH", hr_values[16], hr_values[17]))[0]
                 
                 db.set_state("pid_pb", pb)
                 db.set_state("pid_ti", ti)
@@ -181,19 +203,13 @@ def update_modbus_registers():
                 db.set_state("tune_in_progress", False)
                 db.set_state("tune_completed", True)
                 
-                # Reset HR27
-                store.setValues(3, 27, [0])
+                store.setValues(3, 27, [0]) # Clear Done Flag
 
-            # 8. Read Status & MV
-            sensor_select = hr_values[20]
-
-            mv = struct.unpack(">f", struct.pack(">HH", hr_values[22], hr_values[23]))[0]
-
-            db.set_state("sensor_select", sensor_select)
+            # 10. MV Feedback (HR21-22)
+            mv_val = struct.unpack(">f", struct.pack(">HH", hr_values[21], hr_values[22]))[0]
             
-
-            db.set_state("mv", mv)
-            db.set_state("pv_source", "thermo" if sensor_select == 0 else "rtd")
+            db.set_state("mv", mv_val)
+            db.set_state("pv_source", "rtd")
 
         except Exception as e:
             logger.error(f"Error updating Modbus registers: {e}")

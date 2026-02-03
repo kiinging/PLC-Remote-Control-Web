@@ -45,7 +45,7 @@ export default function Dashboard() {
 
     // Tune States
     const [tuneStatus, setTuneStatus] = useState({ tuning_active: false, tune_completed: false });
-    const [tuneSetpoint, setTuneSetpoint] = useState(70);
+    // const [tuneSetpoint, setTuneSetpoint] = useState(70); // Unused, reusing setpoint
     const [tuneResults, setTuneResults] = useState({ pb: 0, ti: 0, td: 0 });
 
     // Chart Data
@@ -223,7 +223,7 @@ export default function Dashboard() {
                 const newItem = {
                     time: now,
                     pv: tData.rtd_temp,
-                    sp: (cStatus?.mode === 2 ? tuneSetpoint : setpoint),
+                    sp: setpoint, // Unified SP
                     mv: cStatus?.mv ?? manualMV // ✅ Use Real MV if available, else fallback
                 };
                 // Append new item, keep last 3600 points (1 hour)
@@ -637,8 +637,8 @@ export default function Dashboard() {
                                         </div>
                                         <InputGroup size="sm" className="mb-2">
                                             <InputGroup.Text>Tune SP</InputGroup.Text>
-                                            <Form.Control type="number" value={tuneSetpoint} onChange={e => setTuneSetpoint(e.target.value)} disabled={isReadOnly} />
-                                            <Button onClick={async () => await api.setTuneSetpoint(tuneSetpoint)} disabled={isReadOnly}>Send</Button>
+                                            <Form.Control type="number" value={setpoint} onChange={e => setSetpoint(e.target.value)} disabled={isReadOnly} />
+                                            <Button onClick={sendSetpoint} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
                                         <div className="small">
                                             <strong>Results: </strong>
