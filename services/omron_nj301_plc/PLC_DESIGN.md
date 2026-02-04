@@ -162,152 +162,160 @@ This program runs every **60ms**. It manages the TCP connection and the Read-Pro
 ### Structured Text Code
 ```pascal
 (* ============================================= *)
-(*           COMM TASK - MAIN LOOP               *)
+(*        COMM TASK - CONNECTION MANAGER         *)
 (* ============================================= *)
 
-(* --- 1. Manage TCP Connection (Always Active) --- *)
+(* One-shot connect request *)
+IF (NOT Is_Connected) AND (NOT Connect_Req) THEN
+    Connect_Req := TRUE;          (* request connect *)
+ELSIF Is_Connected THEN
+    Connect_Req := FALSE;         (* clear once connected *)
+END_IF;
+
+(* Call connect FB every scan *)
 FB_Connect(
-    Enable := TRUE, 
-    IPaddress := '192.168.8.134',   (* Gateway IP from config *)
-    Port := 1502,                   (* Modbus Port *)
-    Connect := Connect_Req,         (* Set to TRUE in Init *)
+    Enable := TRUE,
+    IPaddress := '192.168.0.134',
+    Port := 1502,
+    Connect := Connect_Req,       (* pulsed when needed *)
     Connected => Is_Connected,
     Error => Error_Flag,
     ErrorID => Error_ID,
-    TCP_Socket => Socket_Data       (* Handle passed to other FBs *)
+    TCP_Socket => TCP_Socket
 );
 
-(* Reset State if Connection Lost *)
+(* If connection drops, reset comm state machine *)
 IF NOT Is_Connected THEN
-    State := 0; 
+    Trigger_Read := FALSE;
+    Trigger_Write := FALSE;
+    State := 0;                  (* Go back to Wait *)
 END_IF;
+
+(* ============================================= *)
+(*              INTERVAL CONTROL                 *)
+(* ============================================= *)
+(* Generate 1s Pulse: Requires 'R_TRIG_Inst' variable of type R_TRIG *)
+R_TRIG_Inst(Clk := Get1sClk());
+Pulse_1s := R_TRIG_Inst.Q; 
 
 (* ============================================= *)
 (*              STATE MACHINE                    *)
 (* ============================================= *)
 CASE State OF
 
-    0: (* INIT: Trigger Connection *)
-        Connect_Req := TRUE;
-        IF Is_Connected THEN
-            State := 10; (* Ready -> Start Read *)
+    0:  (* WAIT CONNECTED & TIMING *)
+        (* Wait for Connection AND the 1-second trigger pulse *)
+        IF Is_Connected AND Pulse_1s THEN
+            State := 10; (* Start Cycle *)
         END_IF;
 
-    (* ------------------------------------------------------------- *)
-    (* STEP 10: READ HOLDING REGISTERS (Fn03) - Read HR0-27          *)
-    (* ------------------------------------------------------------- *)
-    10: 
+
+    10: (* ARM READ TRIGGER (guarantees clean start) *)
         Trigger_Read := TRUE;
-        
+        State := 11;
+
+    11: (* FN03 READ HR0-27 *)
         FB_Read_Fn03(
             Enable := TRUE,
-            TCP_Socket := Socket_Data,
-            Unit_ID := 1,
-            Register_Address := 0,     (* Start at HR0 *)
-            Register_Qty := 28,        (* Read 28 Words *)
+            TCP_Socket := TCP_Socket,
+            Unit_ID := 16#1,
+            Register_Address := 0,
+            Register_Qty := 28,
             Send_Request := Trigger_Read,
-            Register => G_Modbus_ReadBuf, (* Dump to Read Buffer *)
+            Register => G_Modbus_ReadBuf,
             Cmd_Ok => Cmd_Read_Ok,
             Error => Cmd_Read_Err
         );
-        
-        IF Cmd_Read_Ok THEN
-             Trigger_Read := FALSE;    (* Reset Trigger *)
-             State := 20;              (* Success -> Process *)
-        ELSIF Cmd_Read_Err THEN
-             Trigger_Read := FALSE;
-             State := 90;              (* Error recovery *)
+
+        IF Cmd_Read_Ok OR Cmd_Read_Err THEN
+            Trigger_Read := FALSE;   (* REQUIRED: drop low so FB can re-arm *)
+            State := 20;
         END_IF;
 
 
-    (* ------------------------------------------------------------- *)
-    (* STEP 20: PROCESS DATA (Logic & Mapping)                       *)
-    (* ------------------------------------------------------------- *)
-    20: 
-        (* Safety Copy: ReadBuf -> WriteBuf (Applies "Copy-Through" for Unchanged Regs) *)
-        FOR i:=0 TO 27 DO
-            G_Modbus_WriteBuf[i] := G_Modbus_ReadBuf[i];
-        END_FOR;
-
-        (* === EVENT HANDSHAKES (Values) === *)
-        
-        (* 1. Manual MV (Flag: HR8, Data: HR9-10) *)
-        IF (G_Modbus_ReadBuf[8] = 1) THEN
-             G_Manual_MV := FUN_WordsToReal(G_Modbus_ReadBuf[9], G_Modbus_ReadBuf[10]);
-             G_Modbus_WriteBuf[8] := 0; (* Ack *)
+    20: (* PROCESS (only after read finished) *)
+        IF Cmd_Read_Err THEN
+            State := 90;             (* go recover *)
         ELSE
-             G_Modbus_WriteBuf[8] := 0; (* Always Clear ACK if no new request *)
+            (* Safety Copy: ReadBuf -> WriteBuf *)
+            FOR i := 0 TO 27 DO
+                G_Modbus_WriteBuf[i] := G_Modbus_ReadBuf[i];
+            END_FOR;
+
+            (* --- Event handshakes --- *)
+
+            (* Manual MV flag HR8, data HR9-10 *)
+            IF (G_Modbus_ReadBuf[8] = 1) THEN
+                G_Manual_MV := FUN_WordsToReal(G_Modbus_ReadBuf[9], G_Modbus_ReadBuf[10]);
+                G_Modbus_WriteBuf[8] := 0;     (* Ack *)
+            ELSE
+                G_Modbus_WriteBuf[8] := 0;
+            END_IF;
+
+            (* PID params flag HR11, data HR12-17 *)
+            IF (G_Modbus_ReadBuf[11] = 1) THEN
+                G_PID_PB := FUN_WordsToReal(G_Modbus_ReadBuf[12], G_Modbus_ReadBuf[13]);
+                G_PID_Ti := FUN_WordsToReal(G_Modbus_ReadBuf[14], G_Modbus_ReadBuf[15]);
+                G_PID_Td := FUN_WordsToReal(G_Modbus_ReadBuf[16], G_Modbus_ReadBuf[17]);
+                G_Modbus_WriteBuf[11] := 0;
+            ELSE
+                G_Modbus_WriteBuf[11] := 0;
+            END_IF;
+
+            (* Setpoint flag HR18, data HR19-20 *)
+            IF (G_Modbus_ReadBuf[18] = 1) THEN
+                G_Setpoint := FUN_WordsToReal(G_Modbus_ReadBuf[19], G_Modbus_ReadBuf[20]);
+                G_Modbus_WriteBuf[18] := 0;
+            ELSE
+                G_Modbus_WriteBuf[18] := 0;
+            END_IF;
+
+            (* --- Mirror status acks --- *)
+            G_Modbus_WriteBuf[2]  := G_Modbus_ReadBuf[3];
+            G_Modbus_WriteBuf[4]  := G_Modbus_ReadBuf[5];
+            G_Modbus_WriteBuf[6]  := G_Modbus_ReadBuf[7];
+            G_Modbus_WriteBuf[23] := G_Modbus_ReadBuf[24];
+            G_Modbus_WriteBuf[25] := G_Modbus_ReadBuf[26];
+
+            (* --- Update realtime values --- *)
+            FUN_RealToWords(G_Current_MV, G_Modbus_WriteBuf[21], G_Modbus_WriteBuf[22]);
+
+            State := 30;
         END_IF;
 
-        (* 2. PID Params (Flag: HR11, Data: HR12-17) *)
-        IF (G_Modbus_ReadBuf[11] = 1) THEN
-             G_PID_PB := FUN_WordsToReal(G_Modbus_ReadBuf[12], G_Modbus_ReadBuf[13]);
-             G_PID_Ti := FUN_WordsToReal(G_Modbus_ReadBuf[14], G_Modbus_ReadBuf[15]);
-             G_PID_Td := FUN_WordsToReal(G_Modbus_ReadBuf[16], G_Modbus_ReadBuf[17]);
-             G_Modbus_WriteBuf[11] := 0; 
-        ELSE
-             G_Modbus_WriteBuf[11] := 0;
-        END_IF;
 
-        (* 3. Setpoint (Flag: HR18, Data: HR19-20) *)
-        IF (G_Modbus_ReadBuf[18] = 1) THEN
-             G_Setpoint := FUN_WordsToReal(G_Modbus_ReadBuf[19], G_Modbus_ReadBuf[20]);
-             G_Modbus_WriteBuf[18] := 0;
-        ELSE
-             G_Modbus_WriteBuf[18] := 0;
-        END_IF;
-
-        (* === STATE MIRRORING (Status) === *)
-        
-        G_Modbus_WriteBuf[2] := G_Modbus_ReadBuf[3]; (* Mode Ack *)
-        G_Modbus_WriteBuf[4] := G_Modbus_ReadBuf[5]; (* Web Status Ack *)
-        G_Modbus_WriteBuf[6] := G_Modbus_ReadBuf[7]; (* PLC Status Ack *)
-        G_Modbus_WriteBuf[23] := G_Modbus_ReadBuf[24]; (* Tune Start Ack *)
-        G_Modbus_WriteBuf[25] := G_Modbus_ReadBuf[26]; (* Tune Stop Ack *)
-        
-        (* === UPDATE REAL-TIME VALUES === *)
-        (* Convert Current MV to Modbus Words (HR21-22) *)
-        FUN_RealToWords(G_Current_MV, G_Modbus_WriteBuf[21], G_Modbus_WriteBuf[22]);
-
-        State := 30; (* Go to Write *)
-
-
-    (* ------------------------------------------------------------- *)
-    (* STEP 30: WRITE HOLDING REGISTERS (Fn10) - Write HR0-27        *)
-    (* ------------------------------------------------------------- *)
-    30:
+    30: (* ARM WRITE TRIGGER *)
         Trigger_Write := TRUE;
-        
+        State := 31;
+
+    31: (* FN10 WRITE HR0-27 *)
         FB_Write_Fn10(
             Enable := TRUE,
-            TCP_Socket := Socket_Data,
-            Unit_ID := 1,
-            Register_Address := 0,     (* Write HR0 *)
-            Register_Qty := 28,        (* Write 28 Words *)
-            Registers := G_Modbus_WriteBuf, (* Source Data *)
+            TCP_Socket := TCP_Socket,
+            Unit_ID := 16#1,
+            Register_Address := 0,
+            Register_Qty := 28,
+            Registers := G_Modbus_WriteBuf,
             Send_Request := Trigger_Write,
             Cmd_Ok => Cmd_Write_Ok,
             Error => Cmd_Write_Err
         );
-        
-        IF Cmd_Write_Ok THEN
-            Trigger_Write := FALSE;
-            State := 10;               (* Success -> Loop back to Read *)
-        ELSIF Cmd_Write_Err THEN
-            Trigger_Write := FALSE;
-            State := 90;
+
+        IF Cmd_Write_Ok OR Cmd_Write_Err THEN
+            Trigger_Write := FALSE;  (* REQUIRED: drop low so FB can re-arm *)
+            
+            IF Cmd_Write_Err THEN
+                State := 90;
+            ELSE
+                State := 0;         (* SUCCESS: Loop back to WAIT for next 1s pulse *)
+            END_IF;
         END_IF;
 
-
-    (* ------------------------------------------------------------- *)
-    (* ERROR HANDLING                                                *)
-    (* ------------------------------------------------------------- *)
-    90: 
-        (* Simple recovery: wait a bit or just reset to Init to reconnect *)
+    90: (* ERROR RECOVERY *)
         Trigger_Read := FALSE;
         Trigger_Write := FALSE;
-        State := 0; 
-        
+        State := 0; (* Reset to Wait *)
+
 END_CASE;
 ```
 
