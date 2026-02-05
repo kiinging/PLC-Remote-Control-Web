@@ -105,20 +105,18 @@ def turn_light_off():
 @app.route('/web/on', methods=['POST'])
 def web_start():
     db.set_state("web", 1)
-    db.set_state("web_ack", False)
     return jsonify({"web": 1, "status": "pending"}), 200
 
 @app.route('/web/off', methods=['POST'])
 def web_stop():
     db.set_state("web", 0)
-    db.set_state("web_ack", False)
     return jsonify({"web": 0, "status": "pending"}), 200
 
 @app.route('/web_ack', methods=['GET'])
 def web_ack_status():
-    """Return whether the latest Web Control update has been acknowledged by PLC (HR21)."""
+    """Return whether the latest Web Control update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("web_ack", False)
+        acknowledged = db.get_state("modbus_plc_synced", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -126,14 +124,12 @@ def web_ack_status():
 @app.route('/plc/on', methods=['POST'])
 def plc_on():
     db.set_state("plc_status", 1)
-    db.set_state("plc_ack", False)
     return jsonify({"plc": 1}), 200
 
 
 @app.route('/plc/off', methods=['POST'])
 def plc_off():
     db.set_state("plc_status", 0)
-    db.set_state("plc_ack", False)
     return jsonify({"plc": 0}), 200
 
 
@@ -164,15 +160,17 @@ def get_control_status():
     # Check PLC Heartbeat
     plc_last = db.get_state("modbus_plc_last_seen", 0)
     plc_alive = (time.time() - plc_last) < 5.0 # Consider alive if seen in last 5s
+    
+    is_synced = db.get_state("modbus_plc_synced", False)
 
     return jsonify({
         "light": db.get_state("light"),
         "plc": db.get_state("plc_status"),
         # Use acknowledged state for Web, but fallback to 0 if missing.
-        "web": 1 if db.get_state("web_ack", False) and db.get_state("web", 0) == 1 else 0,
-        "web_ack": db.get_state("web_ack", False), # ✅ Explicit Ack Status
-        "mv_ack": db.get_state("mv_ack", False), # ✅ Explicit MV Ack Status (for Manual Mode)
-        "plc_ack": db.get_state("plc_ack", False), # ✅ Explicit PLC Ack Status
+        "web": 1 if is_synced and db.get_state("web", 0) == 1 else 0,
+        "web_ack": is_synced, # ✅ Derived from Sync Status
+        "mv_ack": is_synced, # ✅ Derived from Sync Status
+        "plc_ack": is_synced, # ✅ Derived from Sync Status
         "mv": db.get_state("mv", 0.0), # ✅ Real MV from PLC (HR22-23)
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0), # For debug/advanced UI
@@ -206,8 +204,8 @@ def get_trend_data():
 @app.route('/setpoint', methods=['POST'])
 def update_setpoint():
     """
-    Receive setpoint from browser → save to shared_data → 
-    signal Modbus thread to send via HR18 handshake flag.
+    Receive setpoint from browser → save to shared_data.
+    Modbus service detects change and updates sequence.
     """
     try:
         req = request.get_json()
@@ -218,9 +216,7 @@ def update_setpoint():
 
         # Update shared memory
         db.set_state("setpoint", sp)
-        db.set_state("sp_req", True)
-        db.set_state("sp_ack", False)
-
+        
         return jsonify({
             "status": "pending",
             "setpoint": sp
@@ -233,7 +229,7 @@ def update_setpoint():
 def setpoint_status():
     """Return whether the latest setpoint update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("sp_ack", False)
+        acknowledged = db.get_state("modbus_plc_synced", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -254,10 +250,8 @@ def set_mv_manual():
         if mv_value < 0: mv_value = 0
         if mv_value > 100: mv_value = 100
 
-        # Save MV and trigger handshake
+        # Save MV
         db.set_state("mv_manual", mv_value)
-        db.set_state("mv_req", True)
-        db.set_state("mv_ack", False)
 
         return jsonify({
             "status": "pending",
@@ -271,7 +265,7 @@ def set_mv_manual():
 def get_mv_manual_ack():
     """Return whether the latest manual MV update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("mv_ack", False)
+        acknowledged = db.get_state("modbus_plc_synced", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -296,10 +290,6 @@ def update_pid():
         db.set_state("pid_ti", ti)
         db.set_state("pid_td", td)
 
-        # mark update flags for Modbus loop
-        db.set_state("pid_req", True)
-        db.set_state("pid_ack", False)
-
         return jsonify({
             "status": "pending",
             "pb": pb,
@@ -322,7 +312,7 @@ def get_pid():
 def pid_status():
     """Return whether the latest PID update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("pid_ack", False)
+        acknowledged = db.get_state("modbus_plc_synced", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -346,10 +336,10 @@ def tune_setpoint():
         # We can reuse sp_req if the PLC side has unified SP handling
         # For now, let's assume unified SP logic for simplicity unless specified.
         # But if specifically requested separate tune setpoint:
-        db.set_state("sp_req", True) # Reuse SP handshake? 
+        # db.set_state("sp_req", True) # Reuse SP handshake? 
         # Or if we want strict separation, we'd need a separate flag. 
         # But Modbus Map shows only HR18 for SP Flag. So it IS unified.
-        db.set_state("sp_ack", False)
+        # db.set_state("sp_ack", False)
 
         return jsonify({
             "status": "pending",
@@ -363,7 +353,7 @@ def tune_setpoint():
 def tune_setpoint_ack_status():
     """Return whether the latest tuning setpoint update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("sp_ack", False)
+        acknowledged = db.get_state("modbus_plc_synced", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500

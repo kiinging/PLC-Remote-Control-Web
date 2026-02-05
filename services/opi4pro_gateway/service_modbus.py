@@ -43,7 +43,7 @@ def update_modbus_registers():
     """Reads SQLite and updates Modbus Registers with Sequence Handshake."""
     
     # Internal state to track changes
-    last_tx_state = {} 
+    last_cmd_state = {} 
     gw_tx_seq = 0
     last_plc_heartbeat = -1
     
@@ -52,36 +52,42 @@ def update_modbus_registers():
             # Update heartbeat for Gateway Service itself
             db.set_state("modbus_last_tick_ts", time.time())
             
-            # --- 1. Read Command State from DB ---
-            current_state = {
-                "rtd": db.get_state("rtd_temp", 0.0) or 0.0,
+            # --- 1. Read State from DB ---
+            # Telemetry (Does NOT trigger sequence change)
+            rtd = db.get_state("rtd_temp", 0.0) or 0.0
+            
+            # Commands (Triggers sequence change)
+            command_state = {
                 "web_status": 1 if db.get_state("web", 0) else 0,
                 "mode": db.get_state("mode", 0),
                 "plc_status": 1 if db.get_state("plc_status", 0) else 0,
                 "mv_manual": db.get_state("mv_manual", 0.0),
                 "setpoint": db.get_state("setpoint", 0.0),
+                "tune_cmd": db.get_state("tune_status", 0), # 1=Start, 0=Stop
                 "pid_pb": db.get_state("pid_pb", 0.0),
                 "pid_ti": db.get_state("pid_ti", 0.0),
                 "pid_td": db.get_state("pid_td", 0.0),
-                "tune_cmd": db.get_state("tune_status", 0) # 1=Start, 0=Stop
             }
             
-            # --- 2. Check for Changes (Increment Sequence) ---
-            # Compare current state with last transmitted state
-            # If any value changes, we increment the sequence number.
+            # --- 2. Check for Command Changes (Increment Sequence) ---
+            # Compare current command state with last transmitted state
             has_changed = False
-            for key, val in current_state.items():
-                if key not in last_tx_state or last_tx_state[key] != val:
+            for key, val in command_state.items():
+                if key not in last_cmd_state or last_cmd_state[key] != val:
                     has_changed = True
                     break
             
             if has_changed:
-                gw_tx_seq = (gw_tx_seq + 1) % 65535
-                last_tx_state = current_state.copy()
+                gw_tx_seq = (gw_tx_seq + 1) & 0xFFFF # Fix: wrap to 16-bit
+                last_cmd_state = command_state.copy()
                 logger.info(f"Command changed. Incrementing gw_tx_seq to {gw_tx_seq}")
 
-            # --- 3. Write GW -> PLC Block (HR0 - HR16) ---
-            # HR0: gw_tx_seq
+            # --- 3. Prepare Writes ---
+            # Helper for float packing
+            def pack_float(f):
+                return list(struct.unpack(">HH", struct.pack(">f", f)))
+
+            # Construct Payload (HR1 - HR16)
             # HR1-2: RTD
             # HR3: Web Status
             # HR4: Mode
@@ -93,28 +99,28 @@ def update_modbus_registers():
             # HR13-14: PID Ti
             # HR15-16: PID Td
             
-            registers = [gw_tx_seq] # HR0
+            registers_payload = []
+            registers_payload.extend(pack_float(rtd))                       # HR1-2
+            registers_payload.append(command_state["web_status"])           # HR3
+            registers_payload.append(command_state["mode"])                 # HR4
+            registers_payload.append(command_state["plc_status"])           # HR5
+            registers_payload.extend(pack_float(command_state["mv_manual"]))# HR6-7
+            registers_payload.extend(pack_float(command_state["setpoint"])) # HR8-9
+            registers_payload.append(command_state["tune_cmd"])             # HR10
+            registers_payload.extend(pack_float(command_state["pid_pb"]))   # HR11-12
+            registers_payload.extend(pack_float(command_state["pid_ti"]))   # HR13-14
+            registers_payload.extend(pack_float(command_state["pid_td"]))   # HR15-16
             
-            # Helper for float packing
-            def pack_float(f):
-                return list(struct.unpack(">HH", struct.pack(">f", f)))
-
-            registers.extend(pack_float(current_state["rtd"]))        # HR1-2
-            registers.append(current_state["web_status"])             # HR3
-            registers.append(current_state["mode"])                   # HR4
-            registers.append(current_state["plc_status"])             # HR5
-            registers.extend(pack_float(current_state["mv_manual"]))  # HR6-7
-            registers.extend(pack_float(current_state["setpoint"]))   # HR8-9
-            registers.append(current_state["tune_cmd"])               # HR10
-            registers.extend(pack_float(current_state["pid_pb"]))     # HR11-12
-            registers.extend(pack_float(current_state["pid_ti"]))     # HR13-14
-            registers.extend(pack_float(current_state["pid_td"]))     # HR15-16
+            # --- 4. Write to Modbus Store (Commit Marker Last) ---
             
-            # Write all in one block
-            store.setValues(3, 0, registers)
+            # Step A: Write Payload (HR1 onwards)
+            store.setValues(3, 1, registers_payload)
+            
+            # Step B: Write Sequence (HR0) - The Commit Marker
+            store.setValues(3, 0, [gw_tx_seq])
             
             
-            # --- 4. Read PLC -> GW Block (HR100 - HR110) ---
+            # --- 5. Read PLC -> GW Block (HR100 - HR110) ---
             # Size 11 registers
             plc_data = store.getValues(3, 100, count=11)
             
@@ -124,18 +130,13 @@ def update_modbus_registers():
             # Verify Ack
             if plc_rx_seq == gw_tx_seq:
                 db.set_state("modbus_plc_synced", True)
-                # We could set individual acks here if needed for legacy UI compatibility
-                db.set_state("mode_ack", True)
-                db.set_state("web_ack", True)
-                db.set_state("plc_ack", True)
-                db.set_state("mv_ack", True)
-                db.set_state("sp_ack", True)
-                db.set_state("tune_ack", True) # Legacy name
             else:
                 db.set_state("modbus_plc_synced", False)
 
             # HR101: PLC Heartbeat
             plc_heartbeat = plc_data[1]
+            db.set_state("plc_heartbeat", plc_heartbeat) # Store for debugging
+            
             if plc_heartbeat != last_plc_heartbeat:
                 # Heartbeat changed, PLC is alive
                 db.set_state("modbus_plc_last_seen", time.time())
