@@ -105,20 +105,20 @@ def turn_light_off():
 @app.route('/web/on', methods=['POST'])
 def web_start():
     db.set_state("web", 1)
-    db.set_state("web_acknowledged", False)
+    db.set_state("web_ack", False)
     return jsonify({"web": 1, "status": "pending"}), 200
 
 @app.route('/web/off', methods=['POST'])
 def web_stop():
     db.set_state("web", 0)
-    db.set_state("web_acknowledged", False)
+    db.set_state("web_ack", False)
     return jsonify({"web": 0, "status": "pending"}), 200
 
 @app.route('/web_ack', methods=['GET'])
 def web_ack_status():
     """Return whether the latest Web Control update has been acknowledged by PLC (HR21)."""
     try:
-        acknowledged = db.get_state("web_acknowledged", False)
+        acknowledged = db.get_state("web_ack", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -126,14 +126,14 @@ def web_ack_status():
 @app.route('/plc/on', methods=['POST'])
 def plc_on():
     db.set_state("plc_status", 1)
-    db.set_state("plc_acknowledged", False)
+    db.set_state("plc_ack", False)
     return jsonify({"plc": 1}), 200
 
 
 @app.route('/plc/off', methods=['POST'])
 def plc_off():
     db.set_state("plc_status", 0)
-    db.set_state("plc_acknowledged", False)
+    db.set_state("plc_ack", False)
     return jsonify({"plc": 0}), 200
 
 
@@ -170,10 +170,10 @@ def get_control_status():
         # Actually, if we just return confirmed state, "Off" command (Desired=0) will show ON until Ack=0.
         # So we want "Active State" = (Desired == Ack) ? Ack : (Last Known State?).
         # Safest: Use confirmed state. If Desired=1 and Ack=0, UI shows Off (correct).
-        "web": 1 if db.get_state("web_acknowledged", False) and db.get_state("web", 0) == 1 else 0,
-        "web_ack": db.get_state("web_acknowledged", False), # ✅ Explicit Ack Status
-        "mv_ack": db.get_state("mv_manual_acknowledged", False), # ✅ Explicit MV Ack Status (for Manual Mode)
-        "plc_ack": db.get_state("plc_acknowledged", False), # ✅ Explicit PLC Ack Status
+        "web": 1 if db.get_state("web_ack", False) and db.get_state("web", 0) == 1 else 0,
+        "web_ack": db.get_state("web_ack", False), # ✅ Explicit Ack Status
+        "mv_ack": db.get_state("mv_ack", False), # ✅ Explicit MV Ack Status (for Manual Mode)
+        "plc_ack": db.get_state("plc_ack", False), # ✅ Explicit PLC Ack Status
         "mv": db.get_state("mv", 0.0), # ✅ Real MV from PLC (HR22-23)
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0) # For debug/advanced UI
@@ -217,8 +217,8 @@ def update_setpoint():
 
         # Update shared memory
         db.set_state("setpoint", sp)
-        db.set_state("setpoint_update_pending", True)
-        db.set_state("setpoint_acknowledged", False)
+        db.set_state("sp_req", True)
+        db.set_state("sp_ack", False)
 
         return jsonify({
             "status": "pending",
@@ -232,7 +232,7 @@ def update_setpoint():
 def setpoint_status():
     """Return whether the latest setpoint update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("setpoint_acknowledged", False)
+        acknowledged = db.get_state("sp_ack", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -255,8 +255,8 @@ def set_mv_manual():
 
         # Save MV and trigger handshake
         db.set_state("mv_manual", mv_value)
-        db.set_state("mv_manual_update_pending", True)
-        db.set_state("mv_manual_acknowledged", False)
+        db.set_state("mv_req", True)
+        db.set_state("mv_ack", False)
 
         return jsonify({
             "status": "pending",
@@ -270,7 +270,7 @@ def set_mv_manual():
 def get_mv_manual_ack():
     """Return whether the latest manual MV update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("mv_manual_acknowledged", False)
+        acknowledged = db.get_state("mv_ack", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -296,8 +296,8 @@ def update_pid():
         db.set_state("pid_td", td)
 
         # mark update flags for Modbus loop
-        db.set_state("pid_update_pending", True)
-        db.set_state("pid_acknowledged", False)
+        db.set_state("pid_req", True)
+        db.set_state("pid_ack", False)
 
         return jsonify({
             "status": "pending",
@@ -321,13 +321,16 @@ def get_pid():
 def pid_status():
     """Return whether the latest PID update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("pid_acknowledged", False)
+        acknowledged = db.get_state("pid_ack", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ---------------- Tune Setpoint Control ----------------
 # ---------------- Tune Setpoint (HR18–HR19 + HR24 flag) ----------------
+# Keeping this logic for Setpoint updates during tuning if needed, 
+# but usually it shares the main setpoint logic. 
+# Modifying per user request to use simplified simplified tuning hooks if any.
 @app.route('/tune_setpoint', methods=['POST'])
 def tune_setpoint():
     try:
@@ -337,9 +340,15 @@ def tune_setpoint():
         if tune_sp > 80: tune_sp = 80
         if tune_sp < 0: tune_sp = 0
 
+        # Just reuse main setpoint logic usually, but if distinct:
         db.set_state("tune_setpoint", tune_sp)
-        db.set_state("tune_setpoint_update_pending", True)
-        db.set_state("tune_setpoint_acknowledged", False)
+        # We can reuse sp_req if the PLC side has unified SP handling
+        # For now, let's assume unified SP logic for simplicity unless specified.
+        # But if specifically requested separate tune setpoint:
+        db.set_state("sp_req", True) # Reuse SP handshake? 
+        # Or if we want strict separation, we'd need a separate flag. 
+        # But Modbus Map shows only HR18 for SP Flag. So it IS unified.
+        db.set_state("sp_ack", False)
 
         return jsonify({
             "status": "pending",
@@ -353,7 +362,7 @@ def tune_setpoint():
 def tune_setpoint_ack_status():
     """Return whether the latest tuning setpoint update has been acknowledged by PLC."""
     try:
-        acknowledged = db.get_state("tune_setpoint_acknowledged", False)
+        acknowledged = db.get_state("sp_ack", False)
         return jsonify({"acknowledged": acknowledged}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -362,27 +371,23 @@ def tune_setpoint_ack_status():
 @app.route('/tune_start', methods=['POST'])
 def tune_start():
     """Tell PLC to begin tuning."""
-    db.set_state("tune_start_pending", True)
-    db.set_state("tune_start_acknowledged", False)
-    db.set_state("tune_in_progress", True)
-    db.set_state("tune_completed", False)
+    db.set_state("tune_status", 1)  # 1 = Start Tuning
+    db.set_state("tune_done", False) # Clear done flag
     return jsonify({"status": "pending"}), 200
 
 
 @app.route('/tune_stop', methods=['POST'])
 def tune_stop():
-    db.set_state("tune_stop_pending", True)
-    db.set_state("tune_stop_acknowledged", False)
-    db.set_state("tune_in_progress", False)
+    db.set_state("tune_status", 0) # 0 = Stop Tuning
     return jsonify({"status": "pending"}), 200
 
 
 @app.route('/tune_status', methods=['GET'])
-def tune_status():
+def tune_status_route():
     """Frontend polls this to update indicator."""
     return jsonify({
-        "tuning_active": db.get_state("tune_in_progress", False),
-        "tune_completed": db.get_state("tune_completed", False)
+        "tuning_active": db.get_state("tune_status", 0) == 1,
+        "tune_completed": db.get_state("tune_done", False)
     })
 
 
