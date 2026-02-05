@@ -161,7 +161,8 @@ def get_control_status():
     plc_last = db.get_state("modbus_plc_last_seen", 0)
     plc_alive = (time.time() - plc_last) < 5.0 # Consider alive if seen in last 5s
     
-    is_synced = db.get_state("modbus_plc_synced", False)
+    # Only report Synced if PLC is actually Alive
+    is_synced = plc_alive and db.get_state("modbus_plc_synced", False)
 
     return jsonify({
         "light": db.get_state("light"),
@@ -331,15 +332,8 @@ def tune_setpoint():
         if tune_sp > 80: tune_sp = 80
         if tune_sp < 0: tune_sp = 0
 
-        # Just reuse main setpoint logic usually, but if distinct:
-        db.set_state("tune_setpoint", tune_sp)
-        # We can reuse sp_req if the PLC side has unified SP handling
-        # For now, let's assume unified SP logic for simplicity unless specified.
-        # But if specifically requested separate tune setpoint:
-        # db.set_state("sp_req", True) # Reuse SP handshake? 
-        # Or if we want strict separation, we'd need a separate flag. 
-        # But Modbus Map shows only HR18 for SP Flag. So it IS unified.
-        # db.set_state("sp_ack", False)
+        # Updated: Write to main setpoint key
+        db.set_state("setpoint", tune_sp)
 
         return jsonify({
             "status": "pending",

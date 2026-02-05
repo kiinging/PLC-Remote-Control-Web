@@ -45,7 +45,11 @@ def update_modbus_registers():
     # Internal state to track changes
     last_cmd_state = {} 
     gw_tx_seq = 0
-    last_plc_heartbeat = -1
+    last_tune_done_flag = 0 
+    
+    # Initialize last heartbeat from store to prevent false positive "Alive" on startup
+    # (Default store value is 0, so if we start at -1, 0 != -1 triggers "seen")
+    last_plc_heartbeat = store.getValues(3, 101, count=1)[0]
     
     while True:
         try:
@@ -148,7 +152,7 @@ def update_modbus_registers():
             
             # HR104: Tune Done
             tune_done_flag = plc_data[4]
-            if tune_done_flag == 1:
+            if tune_done_flag == 1 and last_tune_done_flag == 0:
                  # Read Tuned PID Params
                  pid_pb_out = struct.unpack(">f", struct.pack(">HH", plc_data[5], plc_data[6]))[0]
                  pid_ti_out = struct.unpack(">f", struct.pack(">HH", plc_data[7], plc_data[8]))[0]
@@ -164,6 +168,8 @@ def update_modbus_registers():
                  db.set_state("tune_status", 0) # Reset command to 0 automatically
                  
                  # Note: On next loop, tune_cmd will be 0, so PLC should see it and reset tune_done.
+                 
+            last_tune_done_flag = tune_done_flag
                  
         except Exception as e:
             logger.error(f"Error updating Modbus registers: {e}")
