@@ -71,7 +71,7 @@ END_TYPE
 ## 4. Helper Functions (Structured Text)
 
 ### `FUN_WordsToReal`
-Converts two Modbus 16-bit WORDs (Big Endian) to a REAL (Float).
+Converts two Modbus 16-bit WORDs (Big Endian) to a REAL (Float) using `CopyDwordToReal`.
 *Input*: `W_High` (WORD), `W_Low` (WORD)
 *Return*: `REAL`
 
@@ -80,54 +80,48 @@ Converts two Modbus 16-bit WORDs (Big Endian) to a REAL (Float).
 FUNCTION FUN_WordsToReal : REAL
 VAR_INPUT
     W_High : WORD;
-    W_Low : WORD;
+    W_Low  : WORD;
 END_VAR
 VAR
     TempDWord : DWORD;
-    RealPtr : POINTER TO REAL;
 END_VAR
 
 (* Combine High and Low words into a DWORD *)
-(* Assuming Big Endian Transmission: High Word comes first *)
-(* Method: Shift High Word left 16 bits, OR with Low Word *)
+(* Big Endian: High Word shifted left *)
 TempDWord := SHL(WORD_TO_DWORD(W_High), 16) OR WORD_TO_DWORD(W_Low);
 
-(* Convert bit-wise to REAL (Re-interpret cast) *)
-(* In Omron NJ, use the Bit conversion functions if available, or Pointers *)
-(* Safest generic way: *)
-FUN_WordsToReal := DWORD_TO_REAL_BIT(TempDWord); 
+(* Bit-wise cast to REAL *)
+FUN_WordsToReal := CopyDwordToReal(In := TempDWord);
 
-(* Note: If Endianness is wrong, swap W_High and W_Low inputs *)
 END_FUNCTION
 ```
 
-### `FUN_RealToWords`
-Converts a REAL to two 16-bit WORDs (Big Endian) for Modbus.
+### `FB_RealToWords`
+Converts a REAL to two 16-bit WORDs (Big Endian) for Modbus using `CopyRealToDword`.
 *Input*: `InReal` (REAL)
 *Output*: `W_High` (WORD), `W_Low` (WORD)
 
 ```pascal
 (* Sysmac Studio ST *)
-FUNCTION_BLOCK FUN_RealToWords
+FUNCTION_BLOCK FB_RealToWords
 VAR_INPUT
     InReal : REAL;
 END_VAR
 VAR_OUTPUT
     W_High : WORD;
-    W_Low : WORD;
+    W_Low  : WORD;
 END_VAR
 VAR
     TempDWord : DWORD;
 END_VAR
 
-(* Get bits of valid REAL *)
-TempDWord := REAL_TO_DWORD_BIT(InReal);
+(* Copy IEEE754 bits of REAL into DWORD *)
+TempDWord := CopyRealToDword(In := InReal);
 
-(* Extract High Word (Upper 16 bits) *)
+(* Split into High/Low WORD (Big Endian: High first) *)
 W_High := DWORD_TO_WORD(SHR(TempDWord, 16));
+W_Low  := DWORD_TO_WORD(TempDWord AND 16#FFFF);
 
-(* Extract Low Word (Lower 16 bits) *)
-W_Low := DWORD_TO_WORD(TempDWord AND 16#FFFF);
 END_FUNCTION_BLOCK
 ```
 
@@ -135,7 +129,10 @@ END_FUNCTION_BLOCK
 
 ## 5. CommTask Program (Single Program)
 
-This program runs every **60ms**. It manages the TCP connection and the Read-Process-Write cycle using the specific `MTCP` Function Blocks.
+This program runs every **60ms** (or as configured). It manages the TCP connection and the Read-Process-Write cycle using `MTCP` Function Blocks.
+
+> [!NOTE]
+> This implementation uses **Function 16 (Write Multiple Registers)** for Block 2 (HR100-110). This is significantly more efficient than writing registers one by one using Function 06.
 
 ### Variables
 | Name | Type | Comment |
@@ -148,9 +145,17 @@ This program runs every **60ms**. It manages the TCP connection and the Read-Pro
 | **FB_Connect** | `MTCP_Client_Connect` | Instance for Connection |
 | **FB_Read_Fn03** | `MTCP_Client_Fn03` | Instance for Read Holding Regs |
 | **FB_Write_Fn16** | `MTCP_Client_Fn16` | Instance for Write Multiple Regs |
-| `Socket_Data` | `_sSOCKET` | Socket Handle |
-| `Last_Seq_Num` | WORD | Internal State: Last seen Sequence |
+| `TCP_Socket` | `_sSOCKET` | Socket Handle |
+| `Error_Flag` | BOOL | General Error Flag |
+| `Error_ID` | WORD | Error Code |
+| `T_1s` | `TON` | Timer for 1s Throttling |
+| `Last_Seq_Num` | WORD | Internal State: Last seen Sequence (Init 16#FFFF) |
+| `New_Seq` | WORD | Temp sequence holder |
 | `Heartbeat_Ctr` | WORD | Internal State: Heartbeat Counter |
+| **R2W_MV** | `FB_RealToWords` | Helper Instance |
+| **R2W_PB** | `FB_RealToWords` | Helper Instance |
+| **R2W_Ti** | `FB_RealToWords` | Helper Instance |
+| **R2W_Td** | `FB_RealToWords` | Helper Instance |
 
 ### Structured Text Code
 ```pascal
@@ -177,29 +182,30 @@ FB_Connect(
     TCP_Socket => TCP_Socket
 );
 
-(* If connection drops, reset comm state machine *)
+(* Reset comm state if link drops *)
 IF NOT Is_Connected THEN
     Trigger_Read := FALSE;
     Trigger_Write := FALSE;
-    State := 0;                  (* Go back to Wait *)
+    State := 0;
+    Last_Seq_Num := 16#FFFF; (* Force latch on reconnect *)
 END_IF;
-
-(* ============================================= *)
-(*              INTERVAL CONTROL                 *)
-(* ============================================= *)
-(* Generate 1s Pulse: Requires 'R_TRIG_Inst' variable of type R_TRIG *)
-(* Or use Timer. Here we assume this task runs every 60ms and cycles as fast as possible *)
-(* But for Modbus, maybe throttle to 100ms or just run freely *)
-(* Let's just run the state machine freely once connected. *)
 
 (* ============================================= *)
 (*              STATE MACHINE                    *)
 (* ============================================= *)
 CASE State OF
 
-    0:  (* WAIT CONNECTED *)
+    0:  (* WAIT CONNECTED + 1s THROTTLE *)
         IF Is_Connected THEN
-            State := 10;
+            (* Run Timer *)
+            T_1s(IN := TRUE, PT := T#1s);
+            
+            IF T_1s.Q THEN
+                T_1s(IN := FALSE); (* Reset Timer *)
+                State := 10;
+            END_IF;
+        ELSE
+            T_1s(IN := FALSE);
         END_IF;
 
     10: (* ARM READ TRIGGER *)
@@ -214,50 +220,51 @@ CASE State OF
             Register_Address := 0,      (* Start at HR0 *)
             Register_Qty := 17,         (* Read 17 Words *)
             Send_Request := Trigger_Read,
-            Register => G_Modbus_ReadBuf,
+            Register => G_Modbus_ReadBuf, (* Global Buffer *)
             Cmd_Ok => Cmd_Read_Ok,
             Error => Cmd_Read_Err
         );
 
         IF Cmd_Read_Ok OR Cmd_Read_Err THEN
             Trigger_Read := FALSE;   (* REQUIRED: drop low so FB can re-arm *)
-            State := 20;
+            IF Cmd_Read_Err THEN
+                State := 90;
+            ELSE
+                State := 20;
+            END_IF;
         END_IF;
 
     20: (* PROCESS READ DATA *)
-        IF Cmd_Read_Err THEN
-            State := 90;             (* go recover *)
-        ELSE
-            (* --- 1. ALWAYS Update Telemetry (RTD) --- *)
-            (* HR1-2: RTD *)
-            G_RTD_Temp := FUN_WordsToReal(G_Modbus_ReadBuf[1], G_Modbus_ReadBuf[2]);
+        
+        (* --- 1. ALWAYS Update Telemetry (RTD) --- *)
+        (* HR1-2: RTD *)
+        G_RTD_Temp := FUN_WordsToReal(G_Modbus_ReadBuf[1], G_Modbus_ReadBuf[2]);
 
-            (* --- 2. Check Sequence for Commands --- *)
-            (* HR0: Sequence Number *)
-            New_Seq := G_Modbus_ReadBuf[0];
+        (* --- 2. Check Sequence for Commands --- *)
+        (* HR0: Sequence Number *)
+        New_Seq := G_Modbus_ReadBuf[0];
+        
+        IF (New_Seq <> Last_Seq_Num) THEN
+            (* Sequence Changed! Update Command Variables *)
             
-            IF (New_Seq <> Last_Seq_Num) THEN
-                (* Sequence Changed! Update Command Variables *)
-                
-                G_Web_Status := WORD_TO_INT(G_Modbus_ReadBuf[3]);
-                G_Mode       := WORD_TO_INT(G_Modbus_ReadBuf[4]);
-                G_PLC_Status := WORD_TO_INT(G_Modbus_ReadBuf[5]);
-                
-                G_Manual_MV  := FUN_WordsToReal(G_Modbus_ReadBuf[6], G_Modbus_ReadBuf[7]);
-                G_Setpoint   := FUN_WordsToReal(G_Modbus_ReadBuf[8], G_Modbus_ReadBuf[9]);
-                
-                G_Tune_Cmd   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
-                
-                G_PID_PB     := FUN_WordsToReal(G_Modbus_ReadBuf[11], G_Modbus_ReadBuf[12]);
-                G_PID_Ti     := FUN_WordsToReal(G_Modbus_ReadBuf[13], G_Modbus_ReadBuf[14]);
-                G_PID_Td     := FUN_WordsToReal(G_Modbus_ReadBuf[15], G_Modbus_ReadBuf[16]);
-                
-                (* Update Local 'Last Sequence' to match *)
-                Last_Seq_Num := New_Seq;
-            END_IF;
-
-            State := 30;
+            G_Web_Status := WORD_TO_INT(G_Modbus_ReadBuf[3]);
+            G_Mode       := WORD_TO_INT(G_Modbus_ReadBuf[4]);
+            G_PLC_Status := WORD_TO_INT(G_Modbus_ReadBuf[5]);
+            
+            G_Manual_MV  := FUN_WordsToReal(G_Modbus_ReadBuf[6], G_Modbus_ReadBuf[7]);
+            G_Setpoint   := FUN_WordsToReal(G_Modbus_ReadBuf[8], G_Modbus_ReadBuf[9]);
+            
+            G_Tune_Cmd   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
+            
+            G_PID_PB     := FUN_WordsToReal(G_Modbus_ReadBuf[11], G_Modbus_ReadBuf[12]);
+            G_PID_Ti     := FUN_WordsToReal(G_Modbus_ReadBuf[13], G_Modbus_ReadBuf[14]);
+            G_PID_Td     := FUN_WordsToReal(G_Modbus_ReadBuf[15], G_Modbus_ReadBuf[16]);
+            
+            (* Update Local 'Last Sequence' to match *)
+            Last_Seq_Num := New_Seq;
         END_IF;
+
+        State := 30;
 
     30: (* PREPARE WRITE DATA *)
         (* Map internal variables to G_Modbus_WriteBuf (Size 11) *)
@@ -265,21 +272,30 @@ CASE State OF
         (* HR100: Ack Sequence (Mirror the Last Seen Sequence) *)
         G_Modbus_WriteBuf[0] := Last_Seq_Num;
         
-        (* HR101: Heartbeat (Increment every cycle or 1s) *)
-        (* Here, incrementing every message cycle is fine, or restrict to 1s *)
+        (* HR101: Heartbeat *)
         Heartbeat_Ctr := Heartbeat_Ctr + 1;
         G_Modbus_WriteBuf[1] := Heartbeat_Ctr;
         
         (* HR102-103: MV Return *)
-        FUN_RealToWords(G_Current_MV, G_Modbus_WriteBuf[2], G_Modbus_WriteBuf[3]);
+        R2W_MV(InReal := G_Current_MV);
+        G_Modbus_WriteBuf[2] := R2W_MV.W_High;
+        G_Modbus_WriteBuf[3] := R2W_MV.W_Low;
         
         (* HR104: Tune Done Flag *)
         G_Modbus_WriteBuf[4] := INT_TO_WORD(G_Tune_Done);
         
         (* HR105-110: Tuned PID Out *)
-        FUN_RealToWords(G_PID_PB_Out, G_Modbus_WriteBuf[5], G_Modbus_WriteBuf[6]);
-        FUN_RealToWords(G_PID_Ti_Out, G_Modbus_WriteBuf[7], G_Modbus_WriteBuf[8]);
-        FUN_RealToWords(G_PID_Td_Out, G_Modbus_WriteBuf[9], G_Modbus_WriteBuf[10]);
+        R2W_PB(InReal := G_PID_PB_Out);
+        G_Modbus_WriteBuf[5] := R2W_PB.W_High;
+        G_Modbus_WriteBuf[6] := R2W_PB.W_Low;
+
+        R2W_Ti(InReal := G_PID_Ti_Out);
+        G_Modbus_WriteBuf[7] := R2W_Ti.W_High;
+        G_Modbus_WriteBuf[8] := R2W_Ti.W_Low;
+
+        R2W_Td(InReal := G_PID_Td_Out);
+        G_Modbus_WriteBuf[9] := R2W_Td.W_High;
+        G_Modbus_WriteBuf[10] := R2W_Td.W_Low;
 
         State := 40;
 
