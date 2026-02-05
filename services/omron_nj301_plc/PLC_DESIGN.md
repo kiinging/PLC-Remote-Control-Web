@@ -17,49 +17,42 @@
 ## 3. Data Types & Globals
 
 ### Structure: `DUT_Modbus_Map`
-Create this Data Type in Sysmac Studio.
+Create this Data Type in Sysmac Studio. This helps valid variable mapping if you overlay it, but the ST below uses raw arrays.
+
 ```pascal
 TYPE DUT_Modbus_Map :
 STRUCT
-    (* --- Read Block (Gateway -> PLC) --- *)
-    R_RTD_Temp_H : WORD; (* HR0 *)
-    R_RTD_Temp_L : WORD; (* HR1 *)
-    R_Mode_Ack : WORD;   (* HR2 - PLC WRITES *)
-    R_Mode : WORD;       (* HR3 *)
-    R_Web_Ack : WORD;    (* HR4 - PLC WRITES *)
-    R_Web_Status : WORD; (* HR5 *)
-    R_PLC_Ack : WORD;    (* HR6 - PLC WRITES *)
-    R_PLC_Status : WORD; (* HR7 *)
-    
-    (* Handshake: Manual MV *)
-    R_ManMV_Flag : WORD; (* HR8 *)
-    R_ManMV_Val_H : WORD; (* HR9 *)
-    R_ManMV_Val_L : WORD; (* HR10 *)
-    
-    (* Handshake: PID *)
-    R_PID_Flag : WORD;   (* HR11 *)
-    R_PID_PB_H : WORD;   (* HR12 *)
-    R_PID_PB_L : WORD;   (* HR13 *)
-    R_PID_Ti_H : WORD;   (* HR14 *)
-    R_PID_Ti_L : WORD;   (* HR15 *)
-    R_PID_Td_H : WORD;   (* HR16 *)
-    R_PID_Td_L : WORD;   (* HR17 *)
-    
-    (* Handshake: Setpoint *)
-    R_SP_Flag : WORD;    (* HR18 *)
-    R_SP_Val_H : WORD;   (* HR19 *)
-    R_SP_Val_L : WORD;   (* HR20 *)
-    
-    (* Return Values (PLC Write) *)
-    R_MV_Ret_H : WORD;   (* HR21 *)
-    R_MV_Ret_L : WORD;   (* HR22 *)
-    
-    (* Tune Handshakes *)
-    R_Tune_Start_Ack : WORD; (* HR23 - PLC WRITES *)
-    R_Tune_Start : WORD;     (* HR24 *)
-    R_Tune_Stop_Ack : WORD;  (* HR25 - PLC WRITES *)
-    R_Tune_Stop : WORD;      (* HR26 *)
-    R_Tune_Done : WORD;      (* HR27 - PLC WRITES *)
+    (* --- Block 1: Read (GW -> PLC) [HR0 - HR16] --- *)
+    R_Seq_Num : WORD;    (* HR0: Sequence Number *)
+    R_RTD_H : WORD;      (* HR1 *)
+    R_RTD_L : WORD;      (* HR2 *)
+    R_Web_Status : WORD; (* HR3 *)
+    R_Mode : WORD;       (* HR4 *)
+    R_PLC_Status : WORD; (* HR5 *)
+    R_ManMV_H : WORD;    (* HR6 *)
+    R_ManMV_L : WORD;    (* HR7 *)
+    R_SP_H : WORD;       (* HR8 *)
+    R_SP_L : WORD;       (* HR9 *)
+    R_Tune_Cmd : WORD;   (* HR10 *)
+    R_PID_PB_H : WORD;   (* HR11 *)
+    R_PID_PB_L : WORD;   (* HR12 *)
+    R_PID_Ti_H : WORD;   (* HR13 *)
+    R_PID_Ti_L : WORD;   (* HR14 *)
+    R_PID_Td_H : WORD;   (* HR15 *)
+    R_PID_Td_L : WORD;   (* HR16 *)
+
+    (* --- Block 2: Write (PLC -> GW) [HR100 - HR110] --- *)
+    W_Ack_Seq : WORD;    (* HR100 *)
+    W_Heartbeat : WORD;  (* HR101 *)
+    W_MV_Ret_H : WORD;   (* HR102 *)
+    W_MV_Ret_L : WORD;   (* HR103 *)
+    W_Tune_Done : WORD;  (* HR104 *)
+    W_PID_Out_PB_H : WORD; (* HR105 *)
+    W_PID_Out_PB_L : WORD; (* HR106 *)
+    W_PID_Out_Ti_H : WORD; (* HR107 *)
+    W_PID_Out_Ti_L : WORD; (* HR108 *)
+    W_PID_Out_Td_H : WORD; (* HR109 *)
+    W_PID_Out_Td_L : WORD; (* HR110 *)
     
 END_STRUCT
 END_TYPE
@@ -149,15 +142,15 @@ This program runs every **60ms**. It manages the TCP connection and the Read-Pro
 | :--- | :--- | :--- |
 | `State` | INT | State Machine Step |
 | `Trigger_Read` | BOOL | Flag to trigger Fn03 |
-| `Trigger_Write` | BOOL | Flag to trigger Fn10 |
+| `Trigger_Write` | BOOL | Flag to trigger Fn16 |
 | `Connect_Req` | BOOL | Request to Connect (Default TRUE) |
 | `Is_Connected` | BOOL | Output from Connect FB |
 | **FB_Connect** | `MTCP_Client_Connect` | Instance for Connection |
 | **FB_Read_Fn03** | `MTCP_Client_Fn03` | Instance for Read Holding Regs |
-| **FB_Write_Fn10** | `MTCP_Client_Fn10` | Instance for Write Multiple Regs |
-| `Socket_Data` | `_sSOCKET` (or similar) | Socket Handle (Passed between FBs) |
-| `Error_Flag` | BOOL | General Error Flag |
-| `Error_ID` | WORD | Error Code |
+| **FB_Write_Fn16** | `MTCP_Client_Fn16` | Instance for Write Multiple Regs |
+| `Socket_Data` | `_sSOCKET` | Socket Handle |
+| `Last_Seq_Num` | WORD | Internal State: Last seen Sequence |
+| `Heartbeat_Ctr` | WORD | Internal State: Heartbeat Counter |
 
 ### Structured Text Code
 ```pascal
@@ -177,7 +170,7 @@ FB_Connect(
     Enable := TRUE,
     IPaddress := '192.168.0.134',
     Port := 1502,
-    Connect := Connect_Req,       (* pulsed when needed *)
+    Connect := Connect_Req,
     Connected => Is_Connected,
     Error => Error_Flag,
     ErrorID => Error_ID,
@@ -195,32 +188,31 @@ END_IF;
 (*              INTERVAL CONTROL                 *)
 (* ============================================= *)
 (* Generate 1s Pulse: Requires 'R_TRIG_Inst' variable of type R_TRIG *)
-R_TRIG_Inst(Clk := Get1sClk());
-Pulse_1s := R_TRIG_Inst.Q; 
+(* Or use Timer. Here we assume this task runs every 60ms and cycles as fast as possible *)
+(* But for Modbus, maybe throttle to 100ms or just run freely *)
+(* Let's just run the state machine freely once connected. *)
 
 (* ============================================= *)
 (*              STATE MACHINE                    *)
 (* ============================================= *)
 CASE State OF
 
-    0:  (* WAIT CONNECTED & TIMING *)
-        (* Wait for Connection AND the 1-second trigger pulse *)
-        IF Is_Connected AND Pulse_1s THEN
-            State := 10; (* Start Cycle *)
+    0:  (* WAIT CONNECTED *)
+        IF Is_Connected THEN
+            State := 10;
         END_IF;
 
-
-    10: (* ARM READ TRIGGER (guarantees clean start) *)
+    10: (* ARM READ TRIGGER *)
         Trigger_Read := TRUE;
         State := 11;
 
-    11: (* FN03 READ HR0-27 *)
+    11: (* Fn03 READ Block 1 (HR0-16) -> Size 17 *)
         FB_Read_Fn03(
             Enable := TRUE,
             TCP_Socket := TCP_Socket,
             Unit_ID := 16#1,
-            Register_Address := 0,
-            Register_Qty := 28,
+            Register_Address := 0,      (* Start at HR0 *)
+            Register_Qty := 17,         (* Read 17 Words *)
             Send_Request := Trigger_Read,
             Register => G_Modbus_ReadBuf,
             Cmd_Ok => Cmd_Read_Ok,
@@ -232,69 +224,76 @@ CASE State OF
             State := 20;
         END_IF;
 
-
-    20: (* PROCESS (only after read finished) *)
+    20: (* PROCESS READ DATA *)
         IF Cmd_Read_Err THEN
             State := 90;             (* go recover *)
         ELSE
-            (* Safety Copy: ReadBuf -> WriteBuf *)
-            FOR i := 0 TO 27 DO
-                G_Modbus_WriteBuf[i] := G_Modbus_ReadBuf[i];
-            END_FOR;
+            (* --- 1. ALWAYS Update Telemetry (RTD) --- *)
+            (* HR1-2: RTD *)
+            G_RTD_Temp := FUN_WordsToReal(G_Modbus_ReadBuf[1], G_Modbus_ReadBuf[2]);
 
-            (* --- Event handshakes --- *)
-
-            (* Manual MV flag HR8, data HR9-10 *)
-            IF (G_Modbus_ReadBuf[8] = 1) THEN
-                G_Manual_MV := FUN_WordsToReal(G_Modbus_ReadBuf[9], G_Modbus_ReadBuf[10]);
-                G_Modbus_WriteBuf[8] := 0;     (* Ack *)
-            ELSE
-                G_Modbus_WriteBuf[8] := 0;
+            (* --- 2. Check Sequence for Commands --- *)
+            (* HR0: Sequence Number *)
+            New_Seq := G_Modbus_ReadBuf[0];
+            
+            IF (New_Seq <> Last_Seq_Num) THEN
+                (* Sequence Changed! Update Command Variables *)
+                
+                G_Web_Status := WORD_TO_INT(G_Modbus_ReadBuf[3]);
+                G_Mode       := WORD_TO_INT(G_Modbus_ReadBuf[4]);
+                G_PLC_Status := WORD_TO_INT(G_Modbus_ReadBuf[5]);
+                
+                G_Manual_MV  := FUN_WordsToReal(G_Modbus_ReadBuf[6], G_Modbus_ReadBuf[7]);
+                G_Setpoint   := FUN_WordsToReal(G_Modbus_ReadBuf[8], G_Modbus_ReadBuf[9]);
+                
+                G_Tune_Cmd   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
+                
+                G_PID_PB     := FUN_WordsToReal(G_Modbus_ReadBuf[11], G_Modbus_ReadBuf[12]);
+                G_PID_Ti     := FUN_WordsToReal(G_Modbus_ReadBuf[13], G_Modbus_ReadBuf[14]);
+                G_PID_Td     := FUN_WordsToReal(G_Modbus_ReadBuf[15], G_Modbus_ReadBuf[16]);
+                
+                (* Update Local 'Last Sequence' to match *)
+                Last_Seq_Num := New_Seq;
             END_IF;
-
-            (* PID params flag HR11, data HR12-17 *)
-            IF (G_Modbus_ReadBuf[11] = 1) THEN
-                G_PID_PB := FUN_WordsToReal(G_Modbus_ReadBuf[12], G_Modbus_ReadBuf[13]);
-                G_PID_Ti := FUN_WordsToReal(G_Modbus_ReadBuf[14], G_Modbus_ReadBuf[15]);
-                G_PID_Td := FUN_WordsToReal(G_Modbus_ReadBuf[16], G_Modbus_ReadBuf[17]);
-                G_Modbus_WriteBuf[11] := 0;
-            ELSE
-                G_Modbus_WriteBuf[11] := 0;
-            END_IF;
-
-            (* Setpoint flag HR18, data HR19-20 *)
-            IF (G_Modbus_ReadBuf[18] = 1) THEN
-                G_Setpoint := FUN_WordsToReal(G_Modbus_ReadBuf[19], G_Modbus_ReadBuf[20]);
-                G_Modbus_WriteBuf[18] := 0;
-            ELSE
-                G_Modbus_WriteBuf[18] := 0;
-            END_IF;
-
-            (* --- Mirror status acks --- *)
-            G_Modbus_WriteBuf[2]  := G_Modbus_ReadBuf[3];
-            G_Modbus_WriteBuf[4]  := G_Modbus_ReadBuf[5];
-            G_Modbus_WriteBuf[6]  := G_Modbus_ReadBuf[7];
-            G_Modbus_WriteBuf[23] := G_Modbus_ReadBuf[24];
-            G_Modbus_WriteBuf[25] := G_Modbus_ReadBuf[26];
-
-            (* --- Update realtime values --- *)
-            FUN_RealToWords(G_Current_MV, G_Modbus_WriteBuf[21], G_Modbus_WriteBuf[22]);
 
             State := 30;
         END_IF;
 
+    30: (* PREPARE WRITE DATA *)
+        (* Map internal variables to G_Modbus_WriteBuf (Size 11) *)
+        
+        (* HR100: Ack Sequence (Mirror the Last Seen Sequence) *)
+        G_Modbus_WriteBuf[0] := Last_Seq_Num;
+        
+        (* HR101: Heartbeat (Increment every cycle or 1s) *)
+        (* Here, incrementing every message cycle is fine, or restrict to 1s *)
+        Heartbeat_Ctr := Heartbeat_Ctr + 1;
+        G_Modbus_WriteBuf[1] := Heartbeat_Ctr;
+        
+        (* HR102-103: MV Return *)
+        FUN_RealToWords(G_Current_MV, G_Modbus_WriteBuf[2], G_Modbus_WriteBuf[3]);
+        
+        (* HR104: Tune Done Flag *)
+        G_Modbus_WriteBuf[4] := INT_TO_WORD(G_Tune_Done);
+        
+        (* HR105-110: Tuned PID Out *)
+        FUN_RealToWords(G_PID_PB_Out, G_Modbus_WriteBuf[5], G_Modbus_WriteBuf[6]);
+        FUN_RealToWords(G_PID_Ti_Out, G_Modbus_WriteBuf[7], G_Modbus_WriteBuf[8]);
+        FUN_RealToWords(G_PID_Td_Out, G_Modbus_WriteBuf[9], G_Modbus_WriteBuf[10]);
 
-    30: (* ARM WRITE TRIGGER *)
+        State := 40;
+
+    40: (* ARM WRITE TRIGGER *)
         Trigger_Write := TRUE;
-        State := 31;
+        State := 41;
 
-    31: (* FN10 WRITE HR0-27 *)
-        FB_Write_Fn10(
+    41: (* Fn16 WRITE Block 2 (HR100-110) -> Address 100, Qty 11 *)
+        FB_Write_Fn16(
             Enable := TRUE,
             TCP_Socket := TCP_Socket,
             Unit_ID := 16#1,
-            Register_Address := 0,
-            Register_Qty := 28,
+            Register_Address := 100,    (* Start at HR100 *)
+            Register_Qty := 11,         (* Write 11 Words *)
             Registers := G_Modbus_WriteBuf,
             Send_Request := Trigger_Write,
             Cmd_Ok => Cmd_Write_Ok,
@@ -307,7 +306,7 @@ CASE State OF
             IF Cmd_Write_Err THEN
                 State := 90;
             ELSE
-                State := 0;         (* SUCCESS: Loop back to WAIT for next 1s pulse *)
+                State := 0;         (* SUCCESS: Loop back to 0 *)
             END_IF;
         END_IF;
 
