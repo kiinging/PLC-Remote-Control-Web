@@ -161,22 +161,23 @@ def mode_tune():
 # ---------------- Control Status ------------
 @app.route('/control_status', methods=['GET'])
 def get_control_status():
+    # Check PLC Heartbeat
+    plc_last = db.get_state("modbus_plc_last_seen", 0)
+    plc_alive = (time.time() - plc_last) < 5.0 # Consider alive if seen in last 5s
+
     return jsonify({
         "light": db.get_state("light"),
         "plc": db.get_state("plc_status"),
         # Use acknowledged state for Web, but fallback to 0 if missing.
-        # Logic: If web=1 but ack=0, return 0 (Pending). If web=1 and ack=1, return 1 (On).
-        # Simplification: Just return acknowledged state?
-        # Actually, if we just return confirmed state, "Off" command (Desired=0) will show ON until Ack=0.
-        # So we want "Active State" = (Desired == Ack) ? Ack : (Last Known State?).
-        # Safest: Use confirmed state. If Desired=1 and Ack=0, UI shows Off (correct).
         "web": 1 if db.get_state("web_ack", False) and db.get_state("web", 0) == 1 else 0,
         "web_ack": db.get_state("web_ack", False), # ✅ Explicit Ack Status
         "mv_ack": db.get_state("mv_ack", False), # ✅ Explicit MV Ack Status (for Manual Mode)
         "plc_ack": db.get_state("plc_ack", False), # ✅ Explicit PLC Ack Status
         "mv": db.get_state("mv", 0.0), # ✅ Real MV from PLC (HR22-23)
         "mode": db.get_state("mode"),
-        "web_desired": db.get_state("web", 0) # For debug/advanced UI
+        "web_desired": db.get_state("web", 0), # For debug/advanced UI
+        "plc_alive": plc_alive, # ✅ PLC Heartbeat Status
+        "plc_last_seen": plc_last
     })
 
 

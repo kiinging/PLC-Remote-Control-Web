@@ -488,6 +488,9 @@ export default function Dashboard() {
                                         <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>
                                             Camera: {cameraStatus.toUpperCase()}
                                         </Badge>
+                                        <Badge bg={controlStatus.plc_alive ? 'success' : 'secondary'}>
+                                            PLC: {controlStatus.plc_alive ? 'ONLINE' : 'OFFLINE'}
+                                        </Badge>
                                     </div>
                                     <div className="d-flex gap-3 align-items-center mt-1">
                                         {/* Timestamps in a small row below if needed, or keeping it clean */}
@@ -496,6 +499,9 @@ export default function Dashboard() {
                                         )}
                                         {cameraTimestamp && cameraTimestamp !== '--' && (
                                             <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {cameraTimestamp}</small>
+                                        )}
+                                        {controlStatus.plc_last_seen && (
+                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>PLC Last: {new Date(controlStatus.plc_last_seen * 1000).toLocaleTimeString()}</small>
                                         )}
                                     </div>
 

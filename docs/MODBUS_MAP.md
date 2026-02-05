@@ -3,31 +3,45 @@
 **Port**: 1502
 **Unit ID**: 1
 
-The Gateway acts as the **Server**. The PLC (Client) reads/writes these registers using **Function 03** (Read Holding Registers) and **Function 16** (Write Multiple Registers).
+The Gateway acts as the **Server**. The PLC (Client) reads/writes registers using **Function 03** (Read Holding Registers) and **Function 16** (Write Multiple Registers).
 
-## Compacted Register Map (Refactored Keys)
+## Concept: Sequence Handshake
+Instead of individual acknowledgement flags for every command, we use a global sequence number strategy to synchronize state.
 
-| Reg Address | Variable / Function | Data Type | Direction | Handshake Flag | Description |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **HR0-1** | `rtd_temp` | Float | GW → PLC | - | RTD Process Temperature (°C). |
-| **HR2** | `mode_ack` | Int | PLC → GW | - | **Mode Ack**. PLC copies HR3 here. |
-| **HR3** | `mode` | Int | GW → PLC | HR2 | **Control Mode**: 0=Manual, 1=Auto, 2=Tune. |
-| **HR4** | `web_ack` | Int | PLC → GW | - | **Web Control Ack**. PLC copies HR5 here. |
-| **HR5** | `web_status` | Int | GW → PLC | HR4 | **Web Control Start/Stop**. 1=Start, 0=Stop. |
-| **HR6** | `plc_ack` | Int | PLC → GW | - | **PLC Control Ack**. PLC copies HR7 here. |
-| **HR7** | `plc_status` | Int | GW → PLC | HR6 | **Auto Control Start/Stop**. 1=Start/Enabled, 0=Stop. |
-| **HR8** | `mv_req` | Int | GW → PLC | **HR8** | **Handshake Flag** for Manual MV. |
-| **HR9-10** | `mv_manual` | Float | GW → PLC | HR8 | Manual Manipulated Value (0-100%). |
-| **HR11** | `pid_req` | Int | GW → PLC | **HR11** | **Handshake Flag** for PID Params. |
-| **HR12-13** | `pid_pb` | Float | GW ↔ PLC | HR11/Done | Proportional Band. (Read on Done). |
-| **HR14-15** | `pid_ti` | Float | GW ↔ PLC | HR11/Done | Integral Time. (Read on Done). |
-| **HR16-17** | `pid_td` | Float | GW ↔ PLC | HR11/Done | Derivative Time. (Read on Done). |
-| **HR18** | `sp_req` | Int | GW → PLC | **HR18** | **Handshake Flag** for Setpoint (Used for both Auto & Tune). |
-| **HR19-20** | `setpoint` | Float | GW → PLC | HR18 | Target Setpoint. |
-| **HR21-22** | `mv_feedback` | Float | PLC → GW | - | **Real MV Return**. PLC writes actual output %. |
-| **HR23** | `tune_status_ack` | Int | PLC → GW | - | **Tune Status Ack**. PLC copies HR24 here. |
-| **HR24** | `tune_status` | Int | GW → PLC | HR23 | **Tune Command**. 1=Start Tuning, 0=Stop Tuning. |
-| **HR25** | `tune_done` | Int | PLC → GW | - | **Tune Done Flag**. Set 1 by PLC when complete. |
-| **HR26-27** | *Reserved* | - | - | - | Reserved for future use. |
+1. **GW -> PLC Block**: The PLC reads this entire block every cycle (e.g., 1s).
+   - If `gw_tx_seq` (HR0) is different from the PLC's internal `last_seen_seq`, the PLC accepts **ALL** command values (Mode, Setpoint, MV, PID, etc.) and updates its internal state.
+   - The Gateway increments `gw_tx_seq` whenever *any* command variable changes.
 
-**Total Size:** 26 Registers (0 to 25).
+2. **PLC -> GW Block**: The PLC writes this block every cycle.
+   - The PLC updates `plc_rx_seq` (HR100) to match `gw_tx_seq` after it has successfully processed the new commands.
+   - The Gateway confirms synchronization when `gw_tx_seq == plc_rx_seq`.
+   - **Heartbeat**: The PLC increments `plc_heartbeat` (HR101) every second. The Gateway monitors this to detect if the PLC is online.
+
+## Register Map
+
+### Block 1: Gateway to PLC (Read by PLC)
+| Address | Variable | Type | Description |
+| :--- | :--- | :--- | :--- |
+| **HR0** | `gw_tx_seq` | UINT16 | **Sequence Number**. Increments on any command change. |
+| **HR1-2** | `rtd_temp` | FLOAT | Process Temperature (°C). |
+| **HR3** | `web_status` | UINT16 | **Web Control**: 1=Start/On, 0=Stop/Off. |
+| **HR4** | `mode` | UINT16 | **Control Mode**: 0=Manual, 1=Auto, 2=Tune. |
+| **HR5** | `plc_status` | UINT16 | **Auto Control**: 1=Enabled/Start, 0=Disabled/Stop. |
+| **HR6-7** | `mv_manual` | FLOAT | **Manual MV**: 0.0 - 100.0%. |
+| **HR8-9** | `setpoint` | FLOAT | **Target Setpoint** (Used for Auto & Tune). |
+| **HR10** | `tune_cmd` | UINT16 | **Tune Command**: 1=Start Root, 0=Stop. |
+| **HR11-12** | `pid_pb` | FLOAT | **Proportional Band**. |
+| **HR13-14** | `pid_ti` | FLOAT | **Integral Time**. |
+| **HR15-16** | `pid_td` | FLOAT | **Derivative Time**. |
+| **HR17-19** | *Reserved* | - | Reserved for future expansion. |
+
+### Block 2: PLC to Gateway (Written by PLC)
+| Address | Variable | Type | Description |
+| :--- | :--- | :--- | :--- |
+| **HR100** | `plc_rx_seq` | UINT16 | **Ack Sequence**. PLC copies `gw_tx_seq` here after processing. |
+| **HR101** | `plc_heartbeat` | UINT16 | **Heartbeat**. Increments every second (0-65535). |
+| **HR102-103** | `mv_feedback` | FLOAT | **Active MV**. Actual output % form PLC. |
+| **HR104** | `tune_done` | UINT16 | **Tune Flag**. 1=Done (Gateway reads PID params then resets `tune_cmd`). |
+| **HR105-106** | `pid_pb_out` | FLOAT | **Tuned PB** (Valid when `tune_done`=1). |
+| **HR107-108** | `pid_ti_out` | FLOAT | **Tuned TI** (Valid when `tune_done`=1). |
+| **HR109-110** | `pid_td_out` | FLOAT | **Tuned TD** (Valid when `tune_done`=1). |
