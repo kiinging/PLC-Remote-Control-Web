@@ -488,6 +488,7 @@ export default function Dashboard() {
                                         <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>
                                             Camera: {cameraStatus.toUpperCase()}
                                         </Badge>
+                                        {/* PLC Status */}
                                         <Badge bg={controlStatus.plc_alive ? 'success' : 'danger'}>
                                             PLC: {controlStatus.plc_alive ? 'ALIVE' : 'OFFLINE'}
                                         </Badge>
