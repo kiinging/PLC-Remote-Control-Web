@@ -59,12 +59,25 @@ END_TYPE
 ```
 
 ### Global Variables
-| Name | Type | Comment |
-| :--- | :--- | :--- |
-| `G_Modbus_ReadBuf` | `ARRAY[0..29] OF WORD` | Raw Read Data |
-| `G_Modbus_WriteBuf` | `ARRAY[0..29] OF WORD` | Raw Write Data (Mirror of Gateway HRs) |
-| `G_Connection_Handle` | `Socket` (Conceptually) | Handled by Function Block |
-| `G_Manual_MV` | `REAL` | Extracted Manual MV |
+| Name | Type | Initial | Comment |
+| :--- | :--- | :--- | :--- |
+| `G_Modbus_ReadBuf` | `ARRAY[0..29] OF WORD` | - | Raw Read Data |
+| `G_Modbus_WriteBuf` | `ARRAY[0..29] OF WORD` | - | Raw Write Data |
+| `G_RTD_Temp` | `REAL` | 0.0 | Extracted Process Value |
+| `G_Web_Status` | `INT` | 0 | from Gateway |
+| `G_Mode` | `INT` | 0 | from Gateway |
+| `G_PLC_Status` | `INT` | 0 | from Gateway |
+| `G_Manual_MV` | `REAL` | 0.0 | from Gateway |
+| `G_Setpoint` | `REAL` | 0.0 | from Gateway |
+| `G_Tune_Cmd` | `INT` | 0 | from Gateway |
+| `G_PID_PB` | `REAL` | 0.0 | from Gateway |
+| `G_PID_Ti` | `REAL` | 0.0 | from Gateway |
+| `G_PID_Td` | `REAL` | 0.0 | from Gateway |
+| `G_Current_MV` | `REAL` | 0.0 | Feedback to Gateway |
+| `G_Tune_Done` | `INT` | 0 | Feedback to Gateway |
+| `G_PID_PB_Out` | `REAL` | 0.0 | Feedback to Gateway |
+| `G_PID_Ti_Out` | `REAL` | 0.0 | Feedback to Gateway |
+| `G_PID_Td_Out` | `REAL` | 0.0 | Feedback to Gateway |
 
 ---
 
@@ -135,27 +148,36 @@ This program runs every **60ms** (or as configured). It manages the TCP connecti
 > This implementation uses **Function 16 (Write Multiple Registers)** for Block 2 (HR100-110). This is significantly more efficient than writing registers one by one using Function 06.
 
 ### Variables
-| Name | Type | Comment |
-| :--- | :--- | :--- |
-| `State` | INT | State Machine Step |
-| `Trigger_Read` | BOOL | Flag to trigger Fn03 |
-| `Trigger_Write` | BOOL | Flag to trigger Fn16 |
-| `Connect_Req` | BOOL | Request to Connect (Default TRUE) |
-| `Is_Connected` | BOOL | Output from Connect FB |
-| **FB_Connect** | `MTCP_Client_Connect` | Instance for Connection |
-| **FB_Read_Fn03** | `MTCP_Client_Fn03` | Instance for Read Holding Regs |
-| **FB_Write_Fn16** | `MTCP_Client_Fn16` | Instance for Write Multiple Regs |
-| `TCP_Socket` | `_sSOCKET` | Socket Handle |
-| `Error_Flag` | BOOL | General Error Flag |
-| `Error_ID` | WORD | Error Code |
-| `T_1s` | `TON` | Timer for 1s Throttling |
-| `Last_Seq_Num` | WORD | Internal State: Last seen Sequence (Init 16#FFFF) |
-| `New_Seq` | WORD | Temp sequence holder |
-| `Heartbeat_Ctr` | WORD | Internal State: Heartbeat Counter |
-| **R2W_MV** | `FB_RealToWords` | Helper Instance |
-| **R2W_PB** | `FB_RealToWords` | Helper Instance |
-| **R2W_Ti** | `FB_RealToWords` | Helper Instance |
-| **R2W_Td** | `FB_RealToWords` | Helper Instance |
+| Name | Type | Initial | Comment |
+| :--- | :--- | :--- | :--- |
+| `State` | INT | 0 | State Machine Step |
+| `Trigger_Read` | BOOL | FALSE | Flag to trigger Fn03 |
+| `Trigger_Write` | BOOL | FALSE | Flag to trigger Fn06 |
+| `Connect_Req` | BOOL | FALSE | Request to Connect |
+| `Is_Connected` | BOOL | FALSE | Output from Connect FB |
+| `Error_Flag` | BOOL | FALSE | General Error Flag |
+| `Error_ID` | WORD | 0 | Error Code |
+| `TCP_Socket` | `_sSOCKET` | - | Socket Handle |
+| **FB_Connect** | `MTCP_Client_Connect` | - | Instance for Connection |
+| **FB_Read_Fn03** | `MTCP_Client_Fn03` | - | Instance for Read Holding Regs |
+| **FB_Write_Fn06** | `MTCP_Client_Fn06` | - | Instance for Write Single Reg |
+| `UnitID` | BYTE | 16#01 | Modbus Unit ID |
+| `Cmd_Read_Ok` | BOOL | FALSE | Read Success Flag |
+| `Cmd_Read_Err` | BOOL | FALSE | Read Error Flag |
+| `Cmd_Write_Ok` | BOOL | FALSE | Write Success Flag |
+| `Cmd_Write_Err` | BOOL | FALSE | Write Error Flag |
+| `T_1s` | `TON` | - | Timer for 1s Throttling |
+| `Last_Seq_Num` | WORD | 16#FFFF | Handshake: Last seen Sequence |
+| `New_Seq` | WORD | 0 | Temp sequence holder |
+| `Heartbeat_Ctr` | WORD | 0 | Handshake: Heartbeat Counter |
+| `WriteIndex` | INT | 0 | Write Loop Index (0..10) |
+| `WriteQty` | INT | 11 | Write Loop Qty (regs) |
+| `WriteRegAddr` | UINT | 0 | Current Write Address |
+| `WriteValue` | WORD | 0 | Current Write Value |
+| **R2W_MV** | `FB_RealToWords` | - | Helper Instance |
+| **R2W_PB** | `FB_RealToWords` | - | Helper Instance |
+| **R2W_Ti** | `FB_RealToWords` | - | Helper Instance |
+| **R2W_Td** | `FB_RealToWords` | - | Helper Instance |
 
 ### Structured Text Code
 ```pascal
