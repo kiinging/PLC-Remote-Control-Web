@@ -53,10 +53,10 @@ export const getCameraHealth = async () => (await api.get('/camera_health')).dat
 export const getControlStatus = async () => (await api.get('/control_status')).data;
 export const getTemp = async () => (await api.get('/temp')).data;
 
-export const setMode = async (mode) => (await api.post(`/${mode}_mode`)).data; // manual, auto, tune
+export const setMode = async (mode) => (await api.post(`/mode/${mode}`)).data; // manual, auto, tune
 
-export const startProcess = async (type) => (await api.post(`/start_${type}`)).data; // light, web, plc
-export const stopProcess = async (type) => (await api.post(`/stop_${type}`)).data;
+export const startProcess = async (type) => (await api.post(`/${type}/on`)).data; // light, web, plc
+export const stopProcess = async (type) => (await api.post(`/${type}/off`)).data;
 export const getWebAck = async () => (await api.get('/web_ack')).data;
 
 // PID & Setpoints
