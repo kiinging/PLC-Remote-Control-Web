@@ -3,14 +3,25 @@ Description=Gateway Sensor Loop
 After=network.target
 
 [Service]
-User=root
+User=orangepi
 Group=orangepi
+UMask=0002
 WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
 ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_sensor.py
+
+# Auto-restart
 Restart=always
 RestartSec=2
+
+# State Management (Systemd handles /var/lib/opi4pro_gateway)
+StateDirectory=opi4pro_gateway
+StateDirectoryMode=0775
 Environment=DB_PATH=/var/lib/opi4pro_gateway/gateway.db
 Environment="PYTHONUNBUFFERED=1"
+
+# Capabilities for Hardware Access (SPI/GPIO)
+AmbientCapabilities=CAP_SYS_RAWIO
+CapabilityBoundingSet=CAP_SYS_RAWIO
 
 [Install]
 WantedBy=multi-user.target

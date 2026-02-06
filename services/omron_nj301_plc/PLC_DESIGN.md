@@ -180,10 +180,84 @@ This program runs every **60ms** (or as configured). It manages the TCP connecti
 | **R2W_Td** | `FB_RealToWords` | - | Helper Instance |
 
 ### Structured Text Code
-(* ========================================================= *)
-(*                 CONNECTION MANAGER                         *)
-(* ========================================================= *)
+PROGRAM CommTask
+VAR
+    (* --- Connection --- *)
+    Is_Connected   : BOOL := FALSE;
+    Error_Flag     : BOOL := FALSE;
+    Error_ID       : WORD := 0;
+    TCP_Socket     : _sSOCKET;
 
+    FB_Connect     : MTCP_Client_Connect;
+    FB_Read_Fn03   : MTCP_Client_Fn03;
+    FB_Write_Fn10  : MTCP_Client_Fn10;
+
+    UnitID         : BYTE := BYTE#1;
+
+    (* --- State machine --- *)
+    State          : INT := 0;
+    Trigger_Read   : BOOL := FALSE;
+    Trigger_Write  : BOOL := FALSE;
+
+    Cmd_Read_Ok    : BOOL := FALSE;
+    Cmd_Read_Err   : BOOL := FALSE;
+    Cmd_Write_Ok   : BOOL := FALSE;
+    Cmd_Write_Err  : BOOL := FALSE;
+
+    (* --- Cycle timer --- *)
+    T_1s           : TON;
+    CYCLE_PT       : TIME := T#1s;        (* change to T#2s if you want *)
+
+    (* --- Watchdog --- *)
+    T_CycleWD      : TON;
+    CYCLE_WD_PT    : TIME := T#3s;        (* must be > your comm time *)
+    Cnt_ReadErr    : UDINT := 0;
+    Cnt_WriteErr   : UDINT := 0;
+    Cnt_CycleTO    : UDINT := 0;
+
+    (* --- Handshake --- *)
+    Last_Seq_Num   : WORD := 16#FFFF;     (* force first latch *)
+    New_Seq        : WORD := 0;
+
+    Heartbeat_Ctr  : UINT := 0;           (* use UINT so + works *)
+
+    (* --- Buffers --- *)
+    G_Modbus_ReadBuf  : ARRAY[0..29] OF WORD;
+    G_Modbus_WriteBuf : ARRAY[0..10] OF WORD;   (* exactly 11 regs HR100..110 *)
+
+    (* --- REAL<->WORD helpers --- *)
+    R2W_MV : FB_RealToWords;
+    R2W_PB : FB_RealToWords;
+    R2W_Ti : FB_RealToWords;
+    R2W_Td : FB_RealToWords;
+
+    (* --- Decoded values (replace with your globals) --- *)
+    G_RTD_Temp   : REAL := 0.0;
+
+    G_Web_Status : INT := 0;
+    G_Mode       : INT := 0;
+    G_PLC_Status : INT := 0;
+
+    G_Manual_MV  : REAL := 0.0;
+    G_Setpoint   : REAL := 0.0;
+    G_Tune_Cmd   : INT := 0;
+
+    G_PID_PB     : REAL := 0.0;
+    G_PID_Ti     : REAL := 0.0;
+    G_PID_Td     : REAL := 0.0;
+
+    (* PLC->GW *)
+    G_Current_MV : REAL := 0.0;
+    G_Tune_Done  : INT := 0;
+    G_PID_PB_Out : REAL := 0.0;
+    G_PID_Ti_Out : REAL := 0.0;
+    G_PID_Td_Out : REAL := 0.0;
+END_VAR
+
+
+(* ========================================================= *)
+(* CONNECTION: keep Connect := TRUE (matches your ladder)     *)
+(* ========================================================= *)
 FB_Connect(
     Enable     := TRUE,
     IPaddress  := '192.168.0.134',
@@ -195,172 +269,188 @@ FB_Connect(
     TCP_Socket => TCP_Socket
 );
 
-
-(* ========================================================= *)
-(*                    STATE MACHINE                           *)
-(* ========================================================= *)
-
-CASE State OF
-
-    0:  (* WAIT CONNECTED + 1s THROTTLE *)
-        IF Is_Connected THEN
-            T_1s(IN := TRUE, PT := T#1s);
-            IF T_1s.Q THEN
-                T_1s(IN := FALSE);   (* reset timer *)
-                State := 10;
-            END_IF;
-        ELSE
-            T_1s(IN := FALSE);
-        END_IF;
-
-    10: (* ARM READ *)
-        Trigger_Read := TRUE;
-        State := 11;
-
-    11: (* Fn03 READ HR0..HR16 (17 words) *)
-        FB_Read_Fn03(
-            Enable            := TRUE,
-            TCP_Socket        := TCP_Socket,
-            Unit_ID           := UnitID,
-            Register_Address  := 0,
-            Register_Qty      := UINT#17,
-            Send_Request      := Trigger_Read,
-            Register          => G_Modbus_ReadBuf,  (* adjust name if your FB uses "Registers" *)
-            Cmd_Ok            => Cmd_Read_Ok,
-            Error             => Cmd_Read_Err
-        );
-
-        IF Cmd_Read_Ok OR Cmd_Read_Err THEN
-            Trigger_Read := FALSE;  (* IMPORTANT: must drop low *)
-            IF Cmd_Read_Err THEN
-                State := 90;
-            ELSE
-                State := 20;
-            END_IF;
-        END_IF;
-
-    20: (* PROCESS READ DATA *)
-        (* Always update telemetry *)
-        G_RDT_Temp := FUN_WordsToReal(G_Modbus_ReadBuf[1], G_Modbus_ReadBuf[2]);
-
-        (* Sequence check for commands *)
-        New_Seq := G_Modbus_ReadBuf[0];
-
-        IF (New_Seq <> Last_Seq_Num) THEN
-            (* Copy commands/params *)
-            G_WebStatus := WORD_TO_INT(G_Modbus_ReadBuf[3]);
-            G_Mode       := WORD_TO_INT(G_Modbus_ReadBuf[4]);
-            G_PLC_Status := WORD_TO_INT(G_Modbus_ReadBuf[5]);
-
-            G_Manual_MV  := FUN_WordsToReal(G_Modbus_ReadBuf[6], G_Modbus_ReadBuf[7]);
-            G_Setpoint   := FUN_WordsToReal(G_Modbus_ReadBuf[8], G_Modbus_ReadBuf[9]);
-
-            G_Tune_Cmd   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
-
-            G_PID_PB     := FUN_WordsToReal(G_Modbus_ReadBuf[11], G_Modbus_ReadBuf[12]);
-            G_PID_Ti     := FUN_WordsToReal(G_Modbus_ReadBuf[13], G_Modbus_ReadBuf[14]);
-            G_PID_Td     := FUN_WordsToReal(G_Modbus_ReadBuf[15], G_Modbus_ReadBuf[16]);
-
-            Last_Seq_Num := New_Seq;
-        END_IF;
-
-        State := 30;
-
-    30: (* PREPARE WRITE BUFFER HR100..HR110 *)
-        (* HR100: Ack seq *)
-        G_Modbus_WriteBuf[0] := Last_Seq_Num;
-
-        (* HR101: Heartbeat *)
-        Heartbeat_Ctr := Heartbeat_Ctr + 1;
-        G_Modbus_WriteBuf[1] := UINT_TO_WORD(Heartbeat_Ctr);
-
-        (* HR102-103: MV feedback *)
-        R2W_MV(InReal := G_Current_MV);
-        G_Modbus_WriteBuf[2] := R2W_MV.W_High;
-        G_Modbus_WriteBuf[3] := R2W_MV.W_Low;
-
-        (* HR104: Tune done flag *)
-        G_Modbus_WriteBuf[4] := INT_TO_WORD(G_Tune_Done);
-
-        (* HR105-110: Tuned PID outputs (write 0s if not used) *)
-        R2W_PB(InReal := G_PID_PB_Out);
-        G_Modbus_WriteBuf[5] := R2W_PB.W_High;
-        G_Modbus_WriteBuf[6] := R2W_PB.W_Low;
-
-        R2W_Ti(InReal := G_PID_Ti_Out);
-        G_Modbus_WriteBuf[7] := R2W_Ti.W_High;
-        G_Modbus_WriteBuf[8] := R2W_Ti.W_Low;
-
-        R2W_Td(InReal := G_PID_Td_Out);
-        G_Modbus_WriteBuf[9]  := R2W_Td.W_High;
-        G_Modbus_WriteBuf[10] := R2W_Td.W_Low;
-
-        (* Start write loop *)
-        WriteIndex := 0;
-        State := 40;
-
-    40: (* ARM WRITE OF ONE REGISTER *)
-        WriteRegAddr := UINT#100 + INT_TO_UINT(WriteIndex);
-        WriteValue   := G_Modbus_WriteBuf[WriteIndex];
-        Trigger_Write := TRUE;
-        State := 41;
-
-    41: (* Fn06 WRITE SINGLE REGISTER *)
-        FB_Write_Fn06(
-            Enable            := TRUE,
-            TCP_Socket        := TCP_Socket,
-            Unit_ID           := UnitID,
-            Register_Address  := 0,
-            Set_Value         := WriteValue,
-            Send_Request      := Trigger_Write,
-            Cmd_Ok            => Cmd_Write_Ok,
-            Error             => Cmd_Write_Err
-        );
-
-        IF Cmd_Write_Ok OR Cmd_Write_Err THEN
-            Trigger_Write := FALSE;   (* IMPORTANT: must drop low *)
-
-            IF Cmd_Write_Err THEN
-                State := 90;
-            ELSE
-                WriteIndex := WriteIndex + 1;
-                IF WriteIndex >= WriteQty THEN
-                    State := 0;       (* done; next cycle after 1s throttle *)
-                ELSE
-                    State := 40;      (* write next register *)
-                END_IF;
-            END_IF;
-        END_IF;
-
-    90: (* ERROR RECOVERY *)
-        Trigger_Read := FALSE;
-        Trigger_Write := FALSE;
-        State := 0;
-
-END_CASE;
-
-
-
-
-
----
-## 6. ControlTask Integration
-Simply use the global variable `G_Manual_MV`.
-```pascal
-(* ControlTask ST *)
-
-(* Scale Inputs ... *)
-
-(* PID Call ... *)
-
-(* Mode Selection *)
-IF G_Mode = MODE_MANUAL THEN
-    (* User Manual MV from Modbus *)
-    Final_Output := G_Manual_MV; 
-ELSE
-    (* PID Output *)
-    Final_Output := PID_Out;
+IF NOT Is_Connected THEN
+    State := 0;
+    Trigger_Read := FALSE;
+    Trigger_Write := FALSE;
+    Last_Seq_Num := 16#FFFF;
 END_IF;
 
-(* Write to Analog Output ... *)
-```
+
+(* ========================================================= *)
+(* WATCHDOG: if a cycle gets stuck too long, reset it         *)
+(* ========================================================= *)
+T_CycleWD(IN := (State <> 0), PT := CYCLE_WD_PT);
+IF T_CycleWD.Q THEN
+    Cnt_CycleTO := Cnt_CycleTO + 1;
+
+    Trigger_Read := FALSE;
+    Trigger_Write := FALSE;
+
+    Cmd_Read_Ok := FALSE;
+    Cmd_Write_Ok := FALSE;
+
+    State := 0;
+END_IF;
+
+
+(* ========================================================= *)
+(* STATE MACHINE                                              *)
+(* ========================================================= *)
+CASE State OF
+
+0:  (* WAIT CONNECTED + CYCLE TIMER *)
+    IF Is_Connected THEN
+        T_1s(IN := TRUE, PT := CYCLE_PT);
+        IF T_1s.Q THEN
+            T_1s(IN := FALSE);         (* reset timer *)
+            State := 10;
+        END_IF;
+    ELSE
+        T_1s(IN := FALSE);
+    END_IF;
+
+10: (* Fn03 READ HR0..HR16 *)
+    Trigger_Read := TRUE;
+
+    FB_Read_Fn03(
+        Enable           := TRUE,
+        TCP_Socket       := TCP_Socket,
+        Unit_ID          := UnitID,
+        Register_Address := UINT#0,
+        Register_Qty     := UINT#17,
+        Send_Request     := Trigger_Read,
+        Register         := G_Modbus_ReadBuf,     (* use := not => *)
+        Cmd_Ok           => Cmd_Read_Ok,
+        Error            => Cmd_Read_Err
+    );
+
+    IF Cmd_Read_Ok OR Cmd_Read_Err THEN
+        Trigger_Read := FALSE;
+        State := 11;                    (* DROP scan so Fn03 resets *)
+    END_IF;
+
+11: (* READ DROP: call Fn03 once with Send_Request := FALSE *)
+    FB_Read_Fn03(
+        Enable           := TRUE,
+        TCP_Socket       := TCP_Socket,
+        Unit_ID          := UnitID,
+        Register_Address := UINT#0,
+        Register_Qty     := UINT#17,
+        Send_Request     := FALSE,
+        Register         := G_Modbus_ReadBuf,
+        Cmd_Ok           => Cmd_Read_Ok,
+        Error            => Cmd_Read_Err
+    );
+
+    IF Cmd_Read_Err THEN
+        Cnt_ReadErr := Cnt_ReadErr + 1;
+        State := 90;
+    ELSE
+        State := 20;
+    END_IF;
+
+20: (* PROCESS *)
+    (* Always update telemetry *)
+    G_RTD_Temp := FUN_WordsToReal(G_Modbus_ReadBuf[1], G_Modbus_ReadBuf[2]);
+
+    (* Sequence check for commands *)
+    New_Seq := G_Modbus_ReadBuf[0];
+
+    IF New_Seq <> Last_Seq_Num THEN
+        G_Web_Status := WORD_TO_INT(G_Modbus_ReadBuf[3]);
+        G_Mode       := WORD_TO_INT(G_Modbus_ReadBuf[4]);
+        G_PLC_Status := WORD_TO_INT(G_Modbus_ReadBuf[5]);
+
+        G_Manual_MV  := FUN_WordsToReal(G_Modbus_ReadBuf[6], G_Modbus_ReadBuf[7]);
+        G_Setpoint   := FUN_WordsToReal(G_Modbus_ReadBuf[8], G_Modbus_ReadBuf[9]);
+
+        G_Tune_Cmd   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
+
+        G_PID_PB     := FUN_WordsToReal(G_Modbus_ReadBuf[11], G_Modbus_ReadBuf[12]);
+        G_PID_Ti     := FUN_WordsToReal(G_Modbus_ReadBuf[13], G_Modbus_ReadBuf[14]);
+        G_PID_Td     := FUN_WordsToReal(G_Modbus_ReadBuf[15], G_Modbus_ReadBuf[16]);
+
+        Last_Seq_Num := New_Seq;
+    END_IF;
+
+    State := 30;
+
+30: (* BUILD WRITE BUFFER HR100..HR110 (11 regs) *)
+    (* HR100 ack seq *)
+    G_Modbus_WriteBuf[0] := Last_Seq_Num;
+
+    (* HR101 heartbeat *)
+    Heartbeat_Ctr := Heartbeat_Ctr + 1;
+    G_Modbus_WriteBuf[1] := UINT_TO_WORD(Heartbeat_Ctr);
+
+    (* HR102-103 MV feedback *)
+    R2W_MV(InReal := G_Current_MV);
+    G_Modbus_WriteBuf[2] := R2W_MV.W_High;
+    G_Modbus_WriteBuf[3] := R2W_MV.W_Low;
+
+    (* HR104 tune done *)
+    G_Modbus_WriteBuf[4] := INT_TO_WORD(G_Tune_Done);
+
+    (* HR105-110 tuned PID outputs *)
+    R2W_PB(InReal := G_PID_PB_Out);
+    G_Modbus_WriteBuf[5] := R2W_PB.W_High;
+    G_Modbus_WriteBuf[6] := R2W_PB.W_Low;
+
+    R2W_Ti(InReal := G_PID_Ti_Out);
+    G_Modbus_WriteBuf[7] := R2W_Ti.W_High;
+    G_Modbus_WriteBuf[8] := R2W_Ti.W_Low;
+
+    R2W_Td(InReal := G_PID_Td_Out);
+    G_Modbus_WriteBuf[9]  := R2W_Td.W_High;
+    G_Modbus_WriteBuf[10] := R2W_Td.W_Low;
+
+    State := 40;
+
+40: (* Fn10 WRITE HR100..HR110 *)
+    Trigger_Write := TRUE;
+
+    FB_Write_Fn10(
+        Enable           := TRUE,
+        TCP_Socket       := TCP_Socket,
+        Unit_ID          := UnitID,
+        Register_Address := UINT#100,
+        Register_Qty     := UINT#11,
+        Registers        := G_Modbus_WriteBuf,
+        Send_Request     := Trigger_Write,
+        Cmd_Ok           => Cmd_Write_Ok,
+        Error            => Cmd_Write_Err
+    );
+
+    IF Cmd_Write_Ok OR Cmd_Write_Err THEN
+        Trigger_Write := FALSE;
+        State := 41;                   (* DROP scan so Fn10 resets *)
+    END_IF;
+
+41: (* WRITE DROP: call Fn10 once with Send_Request := FALSE *)
+    FB_Write_Fn10(
+        Enable           := TRUE,
+        TCP_Socket       := TCP_Socket,
+        Unit_ID          := UnitID,
+        Register_Address := UINT#100,
+        Register_Qty     := UINT#11,
+        Registers        := G_Modbus_WriteBuf,
+        Send_Request     := FALSE,
+        Cmd_Ok           => Cmd_Write_Ok,
+        Error            => Cmd_Write_Err
+    );
+
+    IF Cmd_Write_Err THEN
+        Cnt_WriteErr := Cnt_WriteErr + 1;
+        State := 90;
+    ELSE
+        State := 0;                    (* cycle complete *)
+    END_IF;
+
+90: (* RECOVERY *)
+    Trigger_Read := FALSE;
+    Trigger_Write := FALSE;
+    State := 0;
+
+END_CASE;
+END_PROGRAM

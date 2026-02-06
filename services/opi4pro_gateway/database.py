@@ -13,7 +13,9 @@ class GatewayDB:
         self._init_db()
 
     def _get_conn(self):
-        return sqlite3.connect(self.db_path, timeout=5.0)
+        conn = sqlite3.connect(self.db_path, timeout=5.0)
+        conn.execute("PRAGMA busy_timeout = 5000;")
+        return conn
 
     def _init_db(self):
         """Initialize schema and WAL mode."""
@@ -22,7 +24,6 @@ class GatewayDB:
                 # Enable WAL for concurrency
                 conn.execute("PRAGMA journal_mode = WAL;")
                 conn.execute("PRAGMA synchronous = NORMAL;")
-                conn.execute("PRAGMA busy_timeout = 5000;")
                 
                 # State Table
                 conn.execute("""
