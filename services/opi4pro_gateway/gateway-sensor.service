@@ -5,6 +5,7 @@ After=network.target
 [Service]
 User=orangepi
 Group=orangepi
+SupplementaryGroups=gpio dialout
 UMask=0002
 WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
 ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_sensor.py

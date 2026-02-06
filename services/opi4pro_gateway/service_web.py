@@ -60,7 +60,7 @@ def heartbeat():
     
     if last_update_ts is not None:
         sensor_age_sec = current_time - last_update_ts
-        sensor_ok = sensor_age_sec <= 50  # 2s sampling, 5s is reasonable threshold
+        sensor_ok = sensor_age_sec <= 5.0  # 2s sampling, 5s is reasonable threshold
     
     # Modbus health check
     modbus_last_tick_ts = db.get_state("modbus_last_tick_ts")
@@ -69,7 +69,7 @@ def heartbeat():
     
     if modbus_last_tick_ts is not None:
         modbus_age_sec = current_time - modbus_last_tick_ts
-        modbus_ok = modbus_age_sec <= 50  # 1s loop, 5s is reasonable threshold
+        modbus_ok = modbus_age_sec <= 5.0  # 1s loop, 5s is reasonable threshold
     
     return jsonify({
         "status": "alive",

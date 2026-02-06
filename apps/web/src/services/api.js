@@ -43,7 +43,7 @@ export const getUsers = async () => (await api.get('/api/users')).data;
 export const deleteUser = async (username) => (await api.post('/api/user/delete', { username })).data;
 
 // --- Control API wrappers ---
-export const getRelayStatus = async () => (await api.get('/relay')).data;
+export const getRelayStatus = async () => (await api.get('/relay_status')).data;
 export const setRelay = async (state) => (await api.post('/relay', { relay: state })).data;
 
 // Gateway Heartbeat
