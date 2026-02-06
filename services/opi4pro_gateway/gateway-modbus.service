@@ -20,12 +20,13 @@ StateDirectory=opi4pro_gateway
 StateDirectoryMode=0775
 Environment=DB_PATH=/var/lib/opi4pro_gateway/gateway.db
 Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONDONTWRITEBYTECODE=1"
 
 # Hardening
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 ReadWritePaths=/var/lib/opi4pro_gateway
 
 [Install]

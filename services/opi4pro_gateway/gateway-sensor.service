@@ -19,6 +19,10 @@ StateDirectory=opi4pro_gateway
 StateDirectoryMode=0775
 Environment=DB_PATH=/var/lib/opi4pro_gateway/gateway.db
 Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONDONTWRITEBYTECODE=1"
+
+# Hardening
+ProtectHome=read-only
 
 # Capabilities for Hardware Access (SPI/GPIO)
 AmbientCapabilities=CAP_SYS_RAWIO
