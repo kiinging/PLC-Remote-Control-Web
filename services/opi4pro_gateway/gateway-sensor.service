@@ -3,9 +3,8 @@ Description=Gateway Sensor Loop
 After=network.target
 
 [Service]
-User=orangepi
+User=root
 Group=orangepi
-SupplementaryGroups=gpio dialout
 UMask=0002
 WorkingDirectory=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway
 ExecStart=/home/orangepi/PLC-Remote-Control-Web/services/opi4pro_gateway/venv/bin/python3 -u run_sensor.py
@@ -25,8 +24,9 @@ Environment="PYTHONDONTWRITEBYTECODE=1"
 ProtectHome=read-only
 
 # Capabilities for Hardware Access (SPI/GPIO)
-AmbientCapabilities=CAP_SYS_RAWIO
-CapabilityBoundingSet=CAP_SYS_RAWIO
+# Capabilities not needed for root
+# AmbientCapabilities=CAP_SYS_RAWIO
+# CapabilityBoundingSet=CAP_SYS_RAWIO
 
 [Install]
 WantedBy=multi-user.target
