@@ -13,6 +13,28 @@ from pymodbus.device import ModbusDeviceIdentification
 from database import db  # SQLite wrapper
 import config
 
+def apply_boot_defaults(db):
+    """
+    Apply safe defaults once per OS boot (not every service restart).
+    """
+    try:
+        boot_id = open("/proc/sys/kernel/random/boot_id").read().strip()
+    except Exception:
+        boot_id = None
+
+    last_boot = db.get_state("boot_id", None)
+    if boot_id and last_boot == boot_id:
+        return
+
+    db.set_state("boot_id", boot_id or str(time.time()))
+
+    db.set_state("light", 0)
+    db.set_state("web", 0)
+    db.set_state("mode", 0)
+    db.set_state("tune_status", 0)
+    db.set_state("tune_done", False)
+    db.set_state("mv_manual", 0.0)
+
 
 # Setup logger (journalctl by default)
 logger = logging.getLogger("modbus_server")
@@ -52,6 +74,9 @@ context = ModbusServerContext(slaves=store, single=True)
 
 def update_modbus_registers():
     """Reads SQLite and updates Modbus Registers with Sequence Handshake."""
+    
+    # ✅ Ensure DB starts in known safe state after reboot (only once per boot)
+    apply_boot_defaults(db)
     
     # Internal state to track changes
     last_cmd_state = {} 

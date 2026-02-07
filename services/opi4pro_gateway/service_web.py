@@ -1,8 +1,4 @@
-# This allows the Cloudflare Worker to:
-# Control the light
-# Read temperatures from shared memory
-
-# web_api.py
+# service_web.py
 from flask import Flask, jsonify, request, send_from_directory
 from database import db
 import time
@@ -11,26 +7,55 @@ import esp32_client
 import config
 import wiringpi
 
+# ---------------- Boot-safe defaults (once per OS boot) ----------------
+def apply_boot_defaults(db):
+    """
+    Apply safe defaults once per OS boot (not every service restart).
+    """
+    try:
+        boot_id = open("/proc/sys/kernel/random/boot_id").read().strip()
+    except Exception:
+        boot_id = None
+
+    last_boot = db.get_state("boot_id", None)
+    if boot_id and last_boot == boot_id:
+        return  # already applied this boot
+
+    db.set_state("boot_id", boot_id or str(time.time()))
+
+    # --- SAFE DEFAULTS ---
+    db.set_state("light", 0)
+    db.set_state("web", 0)
+    db.set_state("mode", 0)          # 0 = manual
+    db.set_state("tune_status", 0)
+    db.set_state("tune_done", False)
+    db.set_state("mv_manual", 0.0)   # optional safety
+
 app = Flask(__name__)
+
+# Apply defaults once per boot (prevents “last saved Tune/Web/Light” problem)
+apply_boot_defaults(db)
+
+# Initialize defaults in DB if missing (only for keys you don't force on boot)
+if db.get_state("plc_status") is None:
+    db.set_state("plc_status", 0)
 
 # ---------------- GPIO Setup ----------------
 # Using wiringpi for Orange Pi 4 Pro GPIO control
 # wPi pin mapping: Physical pin 18 (PL2) maps to wPi pin 10
-# Initialize wiringpi with BCM pin mode
-# --- Initial state: ensure OFF --------------
+# wPi pin mapping: Physical pin 18 (PL2) maps to wPi pin 10
 try:
     wiringpi.wiringPiSetup()
     wiringpi.pinMode(config.LIGHT_PIN, wiringpi.OUTPUT)
-    wiringpi.digitalWrite(config.LIGHT_PIN, 0)
+
+    # ✅ Sync hardware to DB state (instead of forcing OFF blindly)
+    wiringpi.digitalWrite(config.LIGHT_PIN, 1 if db.get_state("light", 0) else 0)
+
     GPIO_AVAILABLE = True
 except Exception as e:
     print(f"Wait, no root? GPIO failed: {e}")
     GPIO_AVAILABLE = False
 
-# Initialize defaults in DB if missing
-if db.get_state("light") is None: db.set_state("light", 0)
-if db.get_state("plc_status") is None: db.set_state("plc_status", 0)
-if db.get_state("mv_manual") is None: db.set_state("mv_manual", 0)
 
 
 # =========================================================
