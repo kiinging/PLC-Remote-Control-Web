@@ -217,6 +217,61 @@ export default {
       }
 
       // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
+
+      // ✅ NEW: Relay Status (Pass-through)
+      if (url.pathname === "/relay_status" && request.method === "GET") {
+        try {
+          const r = await fetch("https://orangepi.plc-web.online/relay_status");
+          return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+        } catch (e) {
+          return withCors(request, JSON.stringify({
+            alive: false, relay: null, last_seen_s: 9999, desired: false, error: e.message
+          }), 200, { "Content-Type": "application/json" });
+        }
+      }
+
+      // ✅ NEW: Light Control
+      if (url.pathname === "/light/on" && request.method === "POST") {
+        const r = await fetch("https://orangepi.plc-web.online/light/on", { method: "POST" });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+      if (url.pathname === "/light/off" && request.method === "POST") {
+        const r = await fetch("https://orangepi.plc-web.online/light/off", { method: "POST" });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+
+      // ✅ NEW: Web Control
+      if (url.pathname === "/web/on" && request.method === "POST") {
+        const r = await fetch("https://orangepi.plc-web.online/web/on", { method: "POST" });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+      if (url.pathname === "/web/off" && request.method === "POST") {
+        const r = await fetch("https://orangepi.plc-web.online/web/off", { method: "POST" });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+
+      // ✅ NEW: PLC Control
+      if (url.pathname === "/plc/on" && request.method === "POST") {
+        const r = await fetch("https://orangepi.plc-web.online/plc/on", { method: "POST" });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+      if (url.pathname === "/plc/off" && request.method === "POST") {
+        const r = await fetch("https://orangepi.plc-web.online/plc/off", { method: "POST" });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+
+      // ✅ NEW: Mode Control
+      if (url.pathname.startsWith("/mode/") && request.method === "POST") {
+        const r = await fetch(`https://orangepi.plc-web.online${url.pathname}`, { method: "POST" });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+
+      // ✅ NEW: Backward Compatibility for GET /relay
+      if (url.pathname === "/relay" && request.method === "GET") {
+        const r = await fetch("https://orangepi.plc-web.online/relay_status");
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+
       if (url.pathname === "/setpoint_status") {
         const r = await fetch("https://orangepi.plc-web.online/setpoint_status");
         return withCors(request, await r.text(), r.status);
@@ -460,28 +515,7 @@ export default {
         }
       }
 
-      // Proxy Status Check
-      if (url.pathname === "/relay" && request.method === "GET") {
-        try {
-          // Return consistent structure: { relay: true/false, alive: true/false }
-          // Gateway /relay_status returns { relay, uptime_ms, failsafe_active }
-          const gatewayUrl = "https://orangepi.plc-web.online/relay_status";
-          const r = await fetch(gatewayUrl);
 
-          if (r.ok) {
-            const data = await r.json();
-            return withCors(request, JSON.stringify({
-              relay: data.relay,
-              alive: true,
-              failsafe: data.failsafe_active
-            }), 200, { "Content-Type": "application/json" });
-          } else {
-            return withCors(request, JSON.stringify({ relay: false, alive: false }), 200, { "Content-Type": "application/json" });
-          }
-        } catch (e) {
-          return withCors(request, JSON.stringify({ relay: false, alive: false, error: e.message }), 200, { "Content-Type": "application/json" });
-        }
-      }
       // ---- WebSocket relay to Orange Pi ----
       if (url.pathname === "/ws") {
         // 👇 Backend WS target (your Orange Pi’s internal websocket)
