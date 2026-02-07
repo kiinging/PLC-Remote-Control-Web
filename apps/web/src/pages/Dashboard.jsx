@@ -496,7 +496,7 @@ export default function Dashboard() {
                                     <div className="d-flex gap-3 align-items-center mt-1">
                                         {/* Timestamps in a small row below if needed, or keeping it clean */}
                                         {gatewayTimestamp && gatewayTimestamp !== '--' && (
-                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>GW Last: {gatewayTimestamp}</small>
+                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>GW Last: {new Date(gatewayTimestamp * 1000).toLocaleTimeString()}</small>
                                         )}
                                         {cameraTimestamp && cameraTimestamp !== '--' && (
                                             <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {cameraTimestamp}</small>
