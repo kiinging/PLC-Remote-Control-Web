@@ -37,3 +37,6 @@ MODBUS_UPDATE_INTERVAL = 0.5    # Seconds
 # Trend Settings
 # 30 minutes @ 2-second sampling
 TREND_BUFFER_LENGTH = int(30 * 60 / SENSOR_SAMPLE_INTERVAL)
+
+
+LOG_TO_FILE = False

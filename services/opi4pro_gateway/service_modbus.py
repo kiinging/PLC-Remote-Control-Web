@@ -1,4 +1,4 @@
-# modbus_server.py
+# service_modbus.py
 
 import struct
 import time
@@ -13,22 +13,33 @@ from pymodbus.device import ModbusDeviceIdentification
 from database import db  # SQLite wrapper
 import config
 
-# Setup logger
+
+# Setup logger (journalctl by default)
 logger = logging.getLogger("modbus_server")
 logger.setLevel(config.LOG_LEVEL)
+logger.propagate = False  # don't duplicate to root logger
 
-# Use RotatingFileHandler
-file_handler = logging.handlers.RotatingFileHandler(
-    config.MODBUS_LOG_FILE, maxBytes=5*1024*1024, backupCount=3
-)
-file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(file_formatter)
+if not logger.handlers:
+    fmt = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(file_formatter)
+    # Always log to stdout/stderr -> captured by systemd journal
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(fmt)
+    logger.addHandler(console_handler)
 
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+    # Optional file logging (OFF by default)
+    LOG_TO_FILE = getattr(config, "MODBUS_LOG_TO_FILE", False)
+    if LOG_TO_FILE:
+        try:
+            file_handler = logging.handlers.RotatingFileHandler(
+                config.MODBUS_LOG_FILE, maxBytes=5*1024*1024, backupCount=3
+            )
+            file_handler.setFormatter(fmt)
+            logger.addHandler(file_handler)
+        except Exception as e:
+            logger.warning(f"File logging disabled: {e}")
+
+
 
 # Modbus data store
 store = ModbusSlaveContext(
