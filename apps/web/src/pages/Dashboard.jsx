@@ -123,7 +123,9 @@ export default function Dashboard() {
         try {
             const heartbeat = await api.getGatewayHeartbeat();
             lastGatewaySeenRef.current = Date.now();
-            setGatewayStatus('alive');
+            if (gatewayStatus !== 'offline') {
+                setGatewayStatus('alive');
+            }
             if (heartbeat.timestamp) {
                 setGatewayTimestamp(heartbeat.timestamp);
             }
@@ -131,33 +133,38 @@ export default function Dashboard() {
             // Keep last seen timestamp, will check timeout below
         }
 
-        // Check if gateway is offline (no successful heartbeat for 10 seconds)
-        if (lastGatewaySeenRef.current !== 0 && Date.now() - lastGatewaySeenRef.current > 10000) {
+        // Check if gateway is offline (no successful heartbeat for 5 seconds)
+        if (lastGatewaySeenRef.current !== 0 && Date.now() - lastGatewaySeenRef.current > 5000) {
             setGatewayStatus('offline');
         }
     };
 
     const pollCameraHealth = async () => {
         try {
-            const health = await api.getCameraHealth();
+            // If status is not alive, mark offline immediately
+            if (health.status !== 'alive') {
+                setCameraStatus('offline');
+                return; // Don't update last seen
+            }
+
             lastCameraSeenRef.current = Date.now();
 
             // Check frame age to determine if camera is degraded
-            if (health.frame_age_sec != null && health.frame_age_sec > 5) {
+            if (!health.has_frame || (health.frame_age_sec != null && health.frame_age_sec > 5)) {
                 setCameraStatus('degraded');
             } else {
                 setCameraStatus('alive');
             }
 
-            if (health.timestamp) {
-                setCameraTimestamp(health.timestamp);
+            if (health.ts) {
+                setCameraTimestamp(health.ts); // Use 'ts' from camera health
             }
         } catch (e) {
             // Keep last seen timestamp, will check timeout below
         }
 
-        // Check if camera is offline (no successful health check for 10 seconds)
-        if (lastCameraSeenRef.current !== 0 && Date.now() - lastCameraSeenRef.current > 10000) {
+        // Check if camera is offline (no successful health check for 5 seconds)
+        if (lastCameraSeenRef.current !== 0 && Date.now() - lastCameraSeenRef.current > 5000) {
             setCameraStatus('offline');
         }
     };

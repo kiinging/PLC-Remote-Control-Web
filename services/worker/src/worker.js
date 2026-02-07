@@ -378,7 +378,7 @@ export default {
 
           return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
         } catch (e) {
-          return withCors(request, JSON.stringify({ status: "offline", error: e.message }), 200, { "Content-Type": "application/json" });
+          return withCors(request, JSON.stringify({ status: "offline", error: e.message }), 503, { "Content-Type": "application/json" });
         }
       }
 
