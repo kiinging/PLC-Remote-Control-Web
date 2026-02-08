@@ -123,7 +123,7 @@ export default function Dashboard() {
         try {
             const heartbeat = await api.getGatewayHeartbeat();
             lastGatewaySeenRef.current = Date.now();
-            if (gatewayStatus !== 'offline') {
+            if (gatewayStatus !== 'alive') {
                 setGatewayStatus('alive');
             }
             if (heartbeat.timestamp) {
