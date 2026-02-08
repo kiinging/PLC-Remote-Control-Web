@@ -16,9 +16,10 @@ MAIN_LOG_FILE = os.path.join(LOG_DIR, "gateway.log")
 
 LOG_LEVEL = logging.INFO
 
-# Modbus Settings
-MODBUS_HOST = "0.0.0.0"
-MODBUS_PORT = 1502
+# Modbus Settings (Gateway as Client)
+PLC_IP = "192.168.0.10" # <--- UPDATE THIS TO MATCH YOUR PLC IP
+PLC_PORT = 502
+MODBUS_TIMEOUT = 1.0
 
 # Flask Settings
 FLASK_HOST = "0.0.0.0"
@@ -32,8 +33,8 @@ RTD_CS_PIN = 13  # WiringPi Pin 13 / PD23
 # Intervals
 SENSOR_SAMPLE_INTERVAL = 1.0  # Seconds
 RELAY_POLL_INTERVAL = 1.0     # Seconds
-MODBUS_UPDATE_INTERVAL = 0.5    # Seconds
-PLC_HEARTBEAT_TIMEOUT = 7.0     # Seconds (Increased from 5s to reduce flickering)
+MODBUS_UPDATE_INTERVAL = 0.1  # Seconds (Fast Polling)
+PLC_HEARTBEAT_TIMEOUT = 5.0   # Seconds
 
 # Trend Settings
 # 30 minutes @ 2-second sampling

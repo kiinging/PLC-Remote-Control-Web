@@ -1,83 +1,48 @@
 # Omron NJ310 PLC Design Document
 
 ## 1. System Architecture
--   **Gateway**: Modbus TCP Server (Slave)
--   **PLC**: Modbus TCP Client (Master)
--   **IP/Port**: configured in `config.py` (Default 502)
+-   **Gateway**: Modbus TCP Client (Master)
+-   **PLC**: Modbus TCP Server (Slave)
+-   **IP/Port**: PLC IP (e.g., 192.168.0.10) Port 502 (Standard)
 
 ## 2. Task Allocation
 | Task Name | Priority | Interval | Purpose |
 | :--- | :--- | :--- | :--- |
 | **PrimaryTask** | 4 | 4ms | Critical I/O, Safety, Fast Logic |
 | **ControlTask** | 16 | 20ms | PID Loops, Scaling, Analog IO |
-| **CommTask** | 17 | 60ms | Modbus TCP Client (Handshake & Data Exchange) |
+| **CommTask** | 17 | 20ms | Modbus TCP Server Logic & Mapping |
 
 ---
 
 ## 3. Data Types & Globals
 
-### Structure: `DUT_Modbus_Map`
-Create this Data Type in Sysmac Studio. This helps valid variable mapping if you overlay it, but the ST below uses raw arrays.
+### Modbus Server Memory Map
+Instead of complex structures, we simply map variables to two global arrays which the Server Function Block accesses.
 
-```pascal
-TYPE DUT_Modbus_Map :
-STRUCT
-    (* --- Block 1: Read (GW -> PLC) [HR0 - HR16] --- *)
-    R_Seq_Num : WORD;    (* HR0: Sequence Number *)
-    R_RTD_H : WORD;      (* HR1 *)
-    R_RTD_L : WORD;      (* HR2 *)
-    R_Web_Status : WORD; (* HR3 *)
-    R_Mode : WORD;       (* HR4 *)
-    R_PLC_Status : WORD; (* HR5 *)
-    R_ManMV_H : WORD;    (* HR6 *)
-    R_ManMV_L : WORD;    (* HR7 *)
-    R_SP_H : WORD;       (* HR8 *)
-    R_SP_L : WORD;       (* HR9 *)
-    R_Tune_Cmd : WORD;   (* HR10 *)
-    R_PID_PB_H : WORD;   (* HR11 *)
-    R_PID_PB_L : WORD;   (* HR12 *)
-    R_PID_Ti_H : WORD;   (* HR13 *)
-    R_PID_Ti_L : WORD;   (* HR14 *)
-    R_PID_Td_H : WORD;   (* HR15 *)
-    R_PID_Td_L : WORD;   (* HR16 *)
-
-    (* --- Block 2: Write (PLC -> GW) [HR100 - HR110] --- *)
-    W_Ack_Seq : WORD;    (* HR100 *)
-    W_Heartbeat : WORD;  (* HR101 *)
-    W_MV_Ret_H : WORD;   (* HR102 *)
-    W_MV_Ret_L : WORD;   (* HR103 *)
-    W_Tune_Done : WORD;  (* HR104 *)
-    W_PID_Out_PB_H : WORD; (* HR105 *)
-    W_PID_Out_PB_L : WORD; (* HR106 *)
-    W_PID_Out_Ti_H : WORD; (* HR107 *)
-    W_PID_Out_Ti_L : WORD; (* HR108 *)
-    W_PID_Out_Td_H : WORD; (* HR109 *)
-    W_PID_Out_Td_L : WORD; (* HR110 *)
-    
-END_STRUCT
-END_TYPE
-```
+| Modbus Address | Variable Name | Type | Access | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **HR0** | `G_Seq_Num` |`WORD` | R/W | Heartbeat / Sequence Counter |
+| **HR1-2** | `G_RTD_Temp` | `REAL` | Read Only | Process Value (Temp) |
+| **HR3** | `G_Web_Status` | `INT` | Read Only | System Status |
+| **HR4** | `G_Mode` | `INT` | Read Only | Auto/Manual Mode |
+| **HR5** | `G_PLC_Status` | `INT` | Read Only | General Status |
+| **HR6-7** | `G_Manual_MV` | `REAL` | Read Only | Manual MV Feedback |
+| **HR8-9** | `G_Setpoint` | `REAL` | R/W | Setpoint |
+| **HR10** | `G_Tune_Cmd` | `INT` | R/W | PID Tuning Command |
+| **HR11-12** | `G_PID_PB` | `REAL` | R/W | Proportional Band |
+| **HR13-14** | `G_PID_Ti` | `REAL` | R/W | Integral Time |
+| **HR15-16** | `G_PID_Td` | `REAL` | R/W | Derivative Time |
+| ... | ... | ... | ... | ... |
+| **HR100-101** | `G_Current_MV` | `REAL` | Read Only | Current Output MV |
 
 ### Global Variables
 | Name | Type | Initial | Comment |
 | :--- | :--- | :--- | :--- |
-| `G_Modbus_ReadBuf` | `ARRAY[0..29] OF WORD` | - | Raw Read Data |
-| `G_Modbus_WriteBuf` | `ARRAY[0..29] OF WORD` | - | Raw Write Data |
+| `G_Modbus_Registers` | `ARRAY[0..199] OF WORD` | - | **Main Modbus Storage** |
+| `G_Modbus_Coils` | `ARRAY[0..199] OF BOOL` | - | **Main Modbus Coils** |
 | `G_RTD_Temp` | `REAL` | 0.0 | Extracted Process Value |
-| `G_Web_Status` | `INT` | 0 | from Gateway |
-| `G_Mode` | `INT` | 0 | from Gateway |
-| `G_PLC_Status` | `INT` | 0 | from Gateway |
-| `G_Manual_MV` | `REAL` | 0.0 | from Gateway |
-| `G_Setpoint` | `REAL` | 0.0 | from Gateway |
-| `G_Tune_Cmd` | `INT` | 0 | from Gateway |
-| `G_PID_PB` | `REAL` | 0.0 | from Gateway |
-| `G_PID_Ti` | `REAL` | 0.0 | from Gateway |
-| `G_PID_Td` | `REAL` | 0.0 | from Gateway |
-| `G_Current_MV` | `REAL` | 0.0 | Feedback to Gateway |
-| `G_Tune_Done` | `INT` | 0 | Feedback to Gateway |
-| `G_PID_PB_Out` | `REAL` | 0.0 | Feedback to Gateway |
-| `G_PID_Ti_Out` | `REAL` | 0.0 | Feedback to Gateway |
-| `G_PID_Td_Out` | `REAL` | 0.0 | Feedback to Gateway |
+| `G_Setpoint` | `REAL` | 0.0 | Target Temp |
+| `G_Current_MV` | `REAL` | 0.0 | Output % |
 
 ---
 
@@ -140,317 +105,506 @@ END_FUNCTION_BLOCK
 
 ---
 
-## 5. CommTask Program (Single Program)
+## 5. CommTask Program (Modbus Server Wrapper)
 
-This program runs every **60ms** (or as configured). It manages the TCP connection and the Read-Process-Write cycle using `MTCP` Function Blocks.
-
-> [!NOTE]
-> This implementation uses **Function 16 (Write Multiple Registers)** for Block 2 (HR100-110). This is significantly more efficient than writing registers one by one using Function 06.
+This program wraps the `FB_ModbusServer` and handles data mapping between the PLC variables and the Modbus registers.
 
 ### Variables
 | Name | Type | Initial | Comment |
 | :--- | :--- | :--- | :--- |
-| `State` | INT | 0 | State Machine Step |
-| `Trigger_Read` | BOOL | FALSE | Flag to trigger Fn03 |
-| `Trigger_Write` | BOOL | FALSE | Flag to trigger Fn06 |
-| `Connect_Req` | BOOL | FALSE | Request to Connect |
-| `Is_Connected` | BOOL | FALSE | Output from Connect FB |
-| `Error_Flag` | BOOL | FALSE | General Error Flag |
-| `Error_ID` | WORD | 0 | Error Code |
+| `FB_ModbusSrv` | `FB_ModbusServer` | - | Server Instance |
 | `TCP_Socket` | `_sSOCKET` | - | Socket Handle |
-| **FB_Connect** | `MTCP_Client_Connect` | - | Instance for Connection |
-| **FB_Read_Fn03** | `MTCP_Client_Fn03` | - | Instance for Read Holding Regs |
-| **FB_Write_Fn06** | `MTCP_Client_Fn06` | - | Instance for Write Single Reg |
-| `UnitID` | BYTE | 16#01 | Modbus Unit ID |
-| `Cmd_Read_Ok` | BOOL | FALSE | Read Success Flag |
-| `Cmd_Read_Err` | BOOL | FALSE | Read Error Flag |
-| `Cmd_Write_Ok` | BOOL | FALSE | Write Success Flag |
-| `Cmd_Write_Err` | BOOL | FALSE | Write Error Flag |
-| `T_1s` | `TON` | - | Timer for 1s Throttling |
-| `Last_Seq_Num` | WORD | 16#FFFF | Handshake: Last seen Sequence |
-| `New_Seq` | WORD | 0 | Temp sequence holder |
-| `Heartbeat_Ctr` | WORD | 0 | Handshake: Heartbeat Counter |
-| `WriteIndex` | INT | 0 | Write Loop Index (0..10) |
-| `WriteQty` | INT | 11 | Write Loop Qty (regs) |
-| `WriteRegAddr` | UINT | 0 | Current Write Address |
-| `WriteValue` | WORD | 0 | Current Write Value |
-| **R2W_MV** | `FB_RealToWords` | - | Helper Instance |
-| **R2W_PB** | `FB_RealToWords` | - | Helper Instance |
-| **R2W_Ti** | `FB_RealToWords` | - | Helper Instance |
-| **R2W_Td** | `FB_RealToWords` | - | Helper Instance |
+| `R2W` | `FB_RealToWords` | - | Helper |
+| `W2R` | `FB_WordsToReal` | - | Helper |
 
 ### Structured Text Code
+```pascal
 PROGRAM CommTask
 VAR
-    (* --- Connection --- *)
-    Is_Connected   : BOOL := FALSE;
-    Error_Flag     : BOOL := FALSE;
-    Error_ID       : WORD := 0;
-    TCP_Socket     : _sSOCKET;
-
-    FB_Connect     : MTCP_Client_Connect;
-    FB_Read_Fn03   : MTCP_Client_Fn03;
-    FB_Write_Fn10  : MTCP_Client_Fn10;
-
-    UnitID         : BYTE := BYTE#1;
-
-    (* --- State machine --- *)
-    State          : INT := 0;
-    Trigger_Read   : BOOL := FALSE;
-    Trigger_Write  : BOOL := FALSE;
-
-    Cmd_Read_Ok    : BOOL := FALSE;
-    Cmd_Read_Err   : BOOL := FALSE;
-    Cmd_Write_Ok   : BOOL := FALSE;
-    Cmd_Write_Err  : BOOL := FALSE;
-
-    (* --- Cycle timer --- *)
-    T_1s           : TON;
-    CYCLE_PT       : TIME := T#1s;        (* change to T#2s if you want *)
-
-    (* --- Watchdog --- *)
-    T_CycleWD      : TON;
-    CYCLE_WD_PT    : TIME := T#3s;        (* must be > your comm time *)
-    Cnt_ReadErr    : UDINT := 0;
-    Cnt_WriteErr   : UDINT := 0;
-    Cnt_CycleTO    : UDINT := 0;
-
-    (* --- Handshake --- *)
-    Last_Seq_Num   : WORD := 16#FFFF;     (* force first latch *)
-    New_Seq        : WORD := 0;
-
-    Heartbeat_Ctr  : UINT := 0;           (* use UINT so + works *)
-
-    (* --- Buffers --- *)
-    G_Modbus_ReadBuf  : ARRAY[0..29] OF WORD;
-    G_Modbus_WriteBuf : ARRAY[0..10] OF WORD;   (* exactly 11 regs HR100..110 *)
-
-    (* --- REAL<->WORD helpers --- *)
-    R2W_MV : FB_RealToWords;
-    R2W_PB : FB_RealToWords;
-    R2W_Ti : FB_RealToWords;
-    R2W_Td : FB_RealToWords;
-
-    (* --- Decoded values (replace with your globals) --- *)
-    G_RTD_Temp   : REAL := 0.0;
-
-    G_Web_Status : INT := 0;
-    G_Mode       : INT := 0;
-    G_PLC_Status : INT := 0;
-
-    G_Manual_MV  : REAL := 0.0;
-    G_Setpoint   : REAL := 0.0;
-    G_Tune_Cmd   : INT := 0;
-
-    G_PID_PB     : REAL := 0.0;
-    G_PID_Ti     : REAL := 0.0;
-    G_PID_Td     : REAL := 0.0;
-
-    (* PLC->GW *)
-    G_Current_MV : REAL := 0.0;
-    G_Tune_Done  : INT := 0;
-    G_PID_PB_Out : REAL := 0.0;
-    G_PID_Ti_Out : REAL := 0.0;
-    G_PID_Td_Out : REAL := 0.0;
+    (* Function Block Instance *)
+    FB_ModbusSrv : FB_ModbusServer;
+    
+    (* Socket for FB to use *)
+    Local_Socket : _sSOCKET;
+    
+    (* Helpers *)
+    R2W : FB_RealToWords;
+    W2R : FB_WordsToReal;
+    
+    (* Local Temps *)
+    TempReal : REAL;
 END_VAR
 
+(* ============================================= *)
+(* 1. MAP PLC DATA -> MODBUS REGISTERS (Outputs) *)
+(* ============================================= *)
+(* Prepare data for the Gateway to READ *)
 
-(* ========================================================= *)
-(* CONNECTION: keep Connect := TRUE (matches your ladder)     *)
-(* ========================================================= *)
-FB_Connect(
-    Enable     := TRUE,
-    IPaddress  := '192.168.0.134',
-    Port       := 1502,
-    Connect    := TRUE,
-    Connected  => Is_Connected,
-    Error      => Error_Flag,
-    ErrorID    => Error_ID,
-    TCP_Socket => TCP_Socket
+(* HR0: Sequence Number (Echo back if needed, or just let GW read) *)
+G_Modbus_Registers[0] := G_Seq_Num;
+
+(* HR1-2: RTD Temp (REAL) *)
+R2W(InReal := G_RTD_Temp);
+G_Modbus_Registers[1] := R2W.W_High;
+G_Modbus_Registers[2] := R2W.W_Low;
+
+(* HR3-5: Status (INT) *)
+G_Modbus_Registers[3] := INT_TO_WORD(G_Web_Status);
+G_Modbus_Registers[4] := INT_TO_WORD(G_Mode);
+G_Modbus_Registers[5] := INT_TO_WORD(G_PLC_Status);
+
+(* HR6-7: Manual MV Feedback (REAL) *)
+R2W(InReal := G_Manual_MV);
+G_Modbus_Registers[6] := R2W.W_High;
+G_Modbus_Registers[7] := R2W.W_Low;
+
+(* HR100-101: Current MV (REAL) *)
+R2W(InReal := G_Current_MV);
+G_Modbus_Registers[100] := R2W.W_High;
+G_Modbus_Registers[101] := R2W.W_Low;
+
+(* HR104: Tune Done *)
+G_Modbus_Registers[104] := INT_TO_WORD(G_Tune_Done);
+
+(* HR105-110: PID Output Params *)
+R2W(InReal := G_PID_PB_Out);
+G_Modbus_Registers[105] := R2W.W_High;
+G_Modbus_Registers[106] := R2W.W_Low;
+
+R2W(InReal := G_PID_Ti_Out);
+G_Modbus_Registers[107] := R2W.W_High;
+G_Modbus_Registers[108] := R2W.W_Low;
+
+R2W(InReal := G_PID_Td_Out);
+G_Modbus_Registers[109] := R2W.W_High;
+G_Modbus_Registers[110] := R2W.W_Low;
+
+
+(* ============================================= *)
+(* 2. EXECUTE MODBUS SERVER FB                   *)
+(* ============================================= *)
+
+FB_ModbusSrv(
+    Start := TRUE,
+    Local_TcpPort := 502,
+    ConnectionTimeout := T#5s,
+    Reset_SdRcvCounter := FALSE,
+    Registers := G_Modbus_Registers, (* Pass Global Array as IN_OUT *)
+    Coils := G_Modbus_Coils          (* Pass Global Array as IN_OUT *)
 );
 
-IF NOT Is_Connected THEN
-    State := 0;
-    Trigger_Read := FALSE;
-    Trigger_Write := FALSE;
-    Last_Seq_Num := 16#FFFF;
+
+(* ============================================= *)
+(* 3. MAP MODBUS REGISTERS -> PLC DATA (Inputs)  *)
+(* ============================================= *)
+(* Process data written by the Gateway *)
+
+(* HR8-9: Setpoint (REAL) *)
+G_Setpoint := FUN_WordsToReal(G_Modbus_Registers[8], G_Modbus_Registers[9]);
+
+(* HR10: Tune Cmd *)
+G_Tune_Cmd := WORD_TO_INT(G_Modbus_Registers[10]);
+
+(* HR11-16: PID Params *)
+G_PID_PB := FUN_WordsToReal(G_Modbus_Registers[11], G_Modbus_Registers[12]);
+G_PID_Ti := FUN_WordsToReal(G_Modbus_Registers[13], G_Modbus_Registers[14]);
+G_PID_Td := FUN_WordsToReal(G_Modbus_Registers[15], G_Modbus_Registers[16]);
+
+END_PROGRAM
+```
+
+## 6. FB_ModbusServer (Source Code)
+
+Create a Function Block named `FB_ModbusServer`.
+- **Inputs**: `Start` (BOOL), `Local_TcpPort` (UINT), `ConnectionTimeout` (TIME), `Reset_SdRcvCounter` (BOOL).
+- **In-Outs**: `Registers` (ARRAY[*] OF WORD), `Coils` (ARRAY[*] OF BOOL).
+- **Internal Variables**:
+    - `TCP_Status_Inst` : `SktGetTCPStatus`
+    - `TCP_Accept_Inst` : `SktTCPAccept`
+    - `TCP_Recv_Inst` : `SktTCPRcv`
+    - `TCP_Send_Inst` : `SktTCPSend`
+    - `TCP_Close_Inst` : `SktClose`
+    - `TCP_Socket` : `_sSOCKET`
+    - `Recv_Data` : `ARRAY[0..1999] OF BYTE`
+    - `Send_Data` : `ARRAY[0..1999] OF BYTE`
+    - `TCP_Step` : `INT`
+    - `TCP_Status` : `_eTCP_STATUS`
+    - `Connected` : `BOOL`
+    - `IP_Client` : `STRING[256]`
+    - `Port_Client` : `UINT`
+    - `Recv_Data` : `ARRAY[0..1999] OF BYTE`
+    - `Send_Data` : `ARRAY[0..1999] OF BYTE`
+    - `Send_Size` : `UINT`
+    - `Address`, `Qty` : `UINT`
+    - `Funct_Code` : `INT`
+    - `Reg_Max`, `Coil_Max` : `UINT`
+    
+```pascal
+(* Sysmac Studio ST - FB_ModbusServer Body *)
+
+//-----------------------------------------------------------------------------------
+//                                 Modbus TCP Server for NJ/NX Controller
+//-----------------------------------------------------------------------------------
+
+IF TCP_Socket.Handle >0 THEN																// TCP Status only available when Socket exists
+	
+	TCP_Status_Inst(Execute:=TRUE,Socket:=TCP_Socket);		
+	IF (TCP_Status_Inst.Done)  or TCP_Status_Inst.Error THEN
+			TCP_Status :=			TCP_Status_Inst.TcpStatus;
+			Connected:=			(TCP_Status = _ESTABLISHED);
+			IF TCP_Status_Inst.DatRcvFlag THEN 	TCP_Step:=	5;	END_IF;	// --> Reception
+			IF TCP_Status= _CLOSE_WAIT OR Start = FALSE 	THEN  	TCP_Step:=	9;	END_IF;	// --> Close
+			TCP_Status_Inst(Execute:=FALSE,Socket:=TCP_Socket);
+	END_IF;
+
+ELSE
+	Connected:=FALSE;
 END_IF;
 
-
-(* ========================================================= *)
-(* WATCHDOG: if a cycle gets stuck too long, reset it         *)
-(* ========================================================= *)
-T_CycleWD(IN := (State <> 0), PT := CYCLE_WD_PT);
-IF T_CycleWD.Q THEN
-    Cnt_CycleTO := Cnt_CycleTO + 1;
-
-    Trigger_Read := FALSE;
-    Trigger_Write := FALSE;
-
-    Cmd_Read_Ok := FALSE;
-    Cmd_Write_Ok := FALSE;
-
-    State := 0;
+IF Reset_SdRcvCounter THEN SdRcv_Counter:=0; END_IF;
+	
+// Check if a delay was setup. 
+IF ConnectionTimeout > T#0.000ms THEN
+	TCP_Wait(In:=TCP_Step=4, PT:=ConnectionTimeout);					//Check if client has gone
+	IF TCP_Wait.Q THEN TCP_Step:=9; TCP_Wait.In:= FALSE; END_IF;
 END_IF;
 
+CASE TCP_Step OF
 
-(* ========================================================= *)
-(* STATE MACHINE                                              *)
-(* ========================================================= *)
-CASE State OF
+0: 	//Init
 
-0:  (* WAIT CONNECTED + CYCLE TIMER *)
-    IF Is_Connected THEN
-        T_1s(IN := TRUE, PT := CYCLE_PT);
-        IF T_1s.Q THEN
-            T_1s(IN := FALSE);         (* reset timer *)
-            State := 10;
-        END_IF;
-    ELSE
-        T_1s(IN := FALSE);
-    END_IF;
+		TCP_Status_Inst(Execute:=	FALSE);
+		TCP_Accept_Inst(Execute:=	FALSE);
+		TCP_Recv_Inst(Execute:=		FALSE,RcvDat :=Recv_Data[0]);
+		TCP_Send_Inst(Execute:=		FALSE, SendDat:=Send_Data[0]);
+		TCP_Close_Inst(Execute:=	FALSE);
+		Error:=					FALSE;
+		ErrorID:=				0;
+		IP_Client:=			'';
+		Port_Client:=		0;
+		Connected:=		FALSE;
+		TCP_Step:=			1;
+		
+1: // waiting for Start Input
 
-10: (* Fn03 READ HR0..HR16 *)
-    Trigger_Read := TRUE;
+		IF Start THEN TCP_Step:=INT#2;END_IF;							// --> Open socket
 
-    FB_Read_Fn03(
-        Enable           := TRUE,
-        TCP_Socket       := TCP_Socket,
-        Unit_ID          := UnitID,
-        Register_Address := 0,
-        Register_Qty     := 17,
-        Send_Request     := Trigger_Read,
-        Register         => G_Modbus_ReadBuf,     (* use := not => *)
-        Cmd_Ok           => Cmd_Read_Ok,
-        Error            => Cmd_Read_Err
-    );
+2:	//  Connect --------------------------------------------------------------------
 
-    IF Cmd_Read_Ok OR Cmd_Read_Err THEN
-        Trigger_Read := FALSE;
-        State := 11;                    (* DROP scan so Fn03 resets *)
-    END_IF;
+		IP_Client:='';
+		Port_Client:=0;
+		TCP_Accept_Inst(Execute:=TRUE,
+						SrcTcpPort:=	Local_TcpPort,
+						TimeOut:=		0,
+						Socket => 		TCP_Socket);
 
-11: (* READ DROP: call Fn03 once with Send_Request := FALSE *)
-    FB_Read_Fn03(
-        Enable           := TRUE,
-        TCP_Socket       := TCP_Socket,
-        Unit_ID          := UnitID,
-        Register_Address := 0,
-        Register_Qty     := 17,
-        Send_Request     := FALSE,
-        Register         => G_Modbus_ReadBuf,
-        Cmd_Ok           => Cmd_Read_Ok,
-        Error            => Cmd_Read_Err
-    );
+			IF (TCP_Accept_Inst.Done)  THEN 
+				TCP_Accept_Inst(Execute:=FALSE);
+				IP_Client:= TCP_Socket.DstAdr.IpAdr;
+				Port_Client:=TCP_Socket.DstAdr.PortNo;
+				TCP_Step:=	3;
 
-    IF Cmd_Read_Err THEN
-        Cnt_ReadErr := Cnt_ReadErr + 1;
-        State := 90;
-    ELSE
-        State := 20;
-    END_IF;
+			ELSIF (TCP_Accept_Inst.Error) THEN 
+				Error:=			TRUE;
+				ErrorID:=		TCP_Accept_Inst.ErrorID;
+				TCP_Step:=	8;
+			END_IF;	
+			
+			
+3:	    //Wait for status Established 
+		IF Connected THEN TCP_Step	:=4; END_IF;				
+			
+4:  // waiting here for a request or disconnection---------------------------------------
+	
+		IF NOT Start THEN TCP_Step:=	9;END_IF;								// --> close socket	
+		IF TCP_Status= _CLOSED THEN TCP_Step:=0;	END_IF;		// --> init	
+						
+5:	// Receive request --------------------------------------------------------------
 
-20: (* PROCESS *)
-    (* Always update telemetry *)
-    G_RTD_Temp := FUN_WordsToReal(G_Modbus_ReadBuf[1], G_Modbus_ReadBuf[2]);
+		Error:=		FALSE;
+		ErrorID:=	16#0;
+		
+		TCP_Recv_Inst(	Execute:=TRUE,
+						Socket:=		TCP_Socket,
+						Timeout:=	0,
+						Size:=			UINT#255,
+						RcvDat := 	Recv_Data[0]);
+						
+		IF (TCP_Recv_Inst.Done)  THEN
+			IF TCP_Recv_Inst.RcvSize >8 THEN
+				TCP_Step:= 		6;																	// --> process request
+				TCP_Recv_Inst(Execute:=FALSE,RcvDat :=Recv_Data[0]);
+			ELSE																							// incorrect size
+				AryMove(Recv_Data[0],Send_Data[0],USINT#8);	
+				Send_Data[5]:=3;
+				Send_Data[7]:=BYTE#16#80 OR Recv_Data[7];
+				Send_Data[8]:=3;
+				Send_Size:=		9;
+				TCP_Step:= 		8;																	// --> send response error
+			END_IF;
+		ELSIF (TCP_Recv_Inst.Error) THEN
+			Error:=				TRUE;
+			ErrorID:=			TCP_Recv_Inst.ErrorID;
+			TCP_Step:=		8;
+		END_IF;	
 
-    (* Sequence check for commands *)
-    New_Seq := G_Modbus_ReadBuf[0];
 
-    IF New_Seq <> Last_Seq_Num THEN
-        G_Web_Status := WORD_TO_INT(G_Modbus_ReadBuf[3]);
-        G_Mode       := WORD_TO_INT(G_Modbus_ReadBuf[4]);
-        G_PLC_Status := WORD_TO_INT(G_Modbus_ReadBuf[5]);
 
-        G_Manual_MV  := FUN_WordsToReal(G_Modbus_ReadBuf[6], G_Modbus_ReadBuf[7]);
-        G_Setpoint   := FUN_WordsToReal(G_Modbus_ReadBuf[8], G_Modbus_ReadBuf[9]);
+6:	// Process Modbus request --------------------------------------------------------
+		Funct_Code:= BYTE_TO_INT(Recv_Data[7]);
+		
+		AryMove(Recv_Data[0],Send_Data[0],USINT#12);								// copy MBAP header and the two following word into the response
+		//Send_Data[5]:=																					// length (to be calculate)
+		AryByteTo(Recv_Data[8],UINT#2,_HIGH_LOW,Address);						// address	
+		AryByteTo(Recv_Data[10],UINT#2,_HIGH_LOW,Qty);							// quantity
+		
+		// limits
+		Reg_Max := DINT_TO_UINT(UPPER_BOUND(ARR:=Registers, DIM:=1)) + 1;
+		Coil_Max:=DINT_TO_UINT(UPPER_BOUND(ARR:=Coils, DIM:=1)) + 1;
+		
+					
+		CASE Funct_Code OF
+			
+			1,2: // Read Coils/discret inputs
+			IF Qty = 0 or Qty > 1024  or Address+Qty > Coil_Max THEN 													// wrong address or quantity
+				Send_Data[4]:=0;
+				Send_Data[5]:=3;																		//Total frame length (MBAP header)
+				Send_Data[7]:=INT_TO_BYTE(INT#16#80 + Funct_Code);
+				Send_Data[8]:=03;
+				Send_Size:=	9;
+			ELSE
+				QtyMod8:= Qty MOD 8;
+				QtyByte := (Qty - QtyMod8)/8;
 
-        G_Tune_Cmd   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
+				IF QtyMod8 > 0 THEN 
+					QtyUnfriendly:=	TRUE;
+					QtyLess := 			Qty -QtyMod8; 					
+				ELSE
+					QtyLess := 			Qty;	
+					QtyUnfriendly:=	FALSE;
+				END_IF;
+					
+				idxByte	 :=		8;																	// initialize index
+				RegCoil.Reg:=	0;																	// initialize Union temp variable
+				idxCoil:=			0;
+				FOR i:= 1 TO QtyByte DO	
+					idxByte	 :=idxByte + 1;	
+					AryMove(Coils[Address + idxCoil],RegCoil.Coil[0],8);
+					Send_Data[idxByte] :=WORD_TO_BYTE(RegCoil.Reg);						
+					idxCoil:=idxCoil+8;
+				END_FOR;
 
-        G_PID_PB     := FUN_WordsToReal(G_Modbus_ReadBuf[11], G_Modbus_ReadBuf[12]);
-        G_PID_Ti     := FUN_WordsToReal(G_Modbus_ReadBuf[13], G_Modbus_ReadBuf[14]);
-        G_PID_Td     := FUN_WordsToReal(G_Modbus_ReadBuf[15], G_Modbus_ReadBuf[16]);
+				//adding coil remaining and fill with 0 last bits
+				IF QtyUnfriendly = TRUE THEN
+					RegCoil.Reg:=		0;
+					idxByte	 :=			idxByte + 1;	
+					AryMove(Coils[Address + idxCoil],RegCoil.Coil[0],QtyMod8);
+					Send_Data[idxByte] :=WORD_TO_BYTE(RegCoil.Reg);
+				END_IF;
+				Send_Data[8]:= 	UINT_TO_BYTE(idxByte - 8);						// Byte number containing the coils			
+				Send_Data[5]:= 	UINT_TO_BYTE(idxByte - 5);						// MBAP Header qty
+				Send_Size:=			idxByte+1 ;												// total size for TCP_Send function	
+			END_IF;		
+			TCP_Step:=			7;																	// --> send
 
-        Last_Seq_Num := New_Seq;
-    END_IF;
+		
+			3,4:  // Read Holding Registers	Fn03
+				
+				IF Qty = 0 or Qty > 1024 OR Address + Qty > Reg_Max THEN 			// wrong address or quantity
+					Send_Data[4]:=	0;
+					Send_Data[5]:=	3;																			//Total frame length (MBAP header)
+					Send_Data[7]:=	INT_TO_BYTE(INT#16#80 + Funct_Code);
+					Send_Data[8]:=	03;
+					Send_Size:=			9;
 
-    State := 30;
+				ELSE	
+					idxByte	 :=9;																		// initialize index
+					FOR i:= 1 TO Qty DO														// add register in the send request
+						ToAryByte(Registers[Address-1 + i],_HIGH_LOW,Send_Data[idxByte]);
+						idxByte									:=idxByte + 2;
+					END_FOR;
+					
+					Send_Data[5]:= 	UINT_TO_BYTE(Qty*2 + 3);
+					Send_Data[8]:= 	UINT_TO_BYTE(Qty*2);
+					Send_Size:=			Qty*2 + 9;
+				END_IF;			
+				TCP_Step:=			7;																	// --> send			
+					
+			5:	// Write coil		Fn05
+					IF Address  > Coil_Max THEN 												// wrong address 
+						Send_Data[4]:=	0;
+						Send_Data[5]:=	3;															//Total frame length (MBAP header)
+						Send_Data[7]:=	INT_TO_BYTE(INT#16#80 + Funct_Code);
+						Send_Data[8]:=	03;
+						Send_Size:=			9;
+					else
+						IF Recv_Data[10]=BYTE#16#FF THEN 
+							Coils[Address]:=	TRUE;
+						ELSIF Recv_Data[10]=BYTE#00 THEN
+							Coils[Address]:=	FALSE;
+						END_IF;
+						Send_Data[5]:=	6;
+						Send_Size:=			UINT#12;
+					END_IF;
+						TCP_Step:=			7;															// --> send
+					
+					
+			6:  //  Write single register Fn06
+					IF Address > Reg_Max THEN 												// wrong address 
+						Send_Data[4]:=	0;
+						Send_Data[5]:=	3;															//Total frame length (MBAP header)
+						Send_Data[7]:=	INT_TO_BYTE(INT#16#80 + Funct_Code);
+						Send_Data[8]:=	03;
+						Send_Size:=			9;
+					ELSE
+						AryByteTo(Recv_Data[10],UINT#2,_HIGH_LOW,Registers[Address]);
+						Send_Data[5]:=	6;
+						Send_Size:=			UINT#12;
+					END_IF;
+					TCP_Step:=			7;														// --> send
+					
+			8: // Echo back
+					AryMove(Recv_Data[0],Send_Data[0],TCP_Recv_Inst.RcvSize);
+					Send_Size:=			TCP_Recv_Inst.RcvSize;
+					TCP_Step:=			7;														// --> send	
+					
+			15: // Write multiple Coils Fn0F
 
-30: (* BUILD WRITE BUFFER HR100..HR110 (11 regs) *)
-    (* HR100 ack seq *)
-    G_Modbus_WriteBuf[0] := Last_Seq_Num;
+					 IF Qty = 0 or Qty > 1024 or Address+Qty > Coil_Max THEN                     // wrong address or quantity
+						Send_Data[4]:=			0;
+						Send_Data[5]:=			3;                                              							//Total frame length (MBAP header)
+						Send_Data[7]:=			INT_TO_BYTE(INT#16#8F);
+						Send_Data[8]:=			03;
+						Send_Size:=         		 9;
+					 ELSE
+						QtyMod8:= 					Qty MOD 8;
+						QtyByte := 					(Qty - QtyMod8)/8;
 
-    (* HR101 heartbeat *)
-    Heartbeat_Ctr := Heartbeat_Ctr + 1;
-    G_Modbus_WriteBuf[1] := UINT_TO_WORD(Heartbeat_Ctr);
+  						IF QtyMod8 > 0 THEN 
+							QtyUnfriendly:=  		TRUE;
+							QtyLess :=				Qty -QtyMod8;                                                                    
+						ELSE
+							QtyLess := 				Qty;        
+							QtyUnfriendly:=  		FALSE;
+						END_IF;
+						IF QtyByte>0 THEN
+							FOR i:= 0 TO (QtyByte-1) DO
+								AryByteTo(Recv_Data[13+i],1,_LOW_HIGH,TempCoils);                                                                            
+								AryMove(TempCoils[0], Coils[Address+i*8], UINT#8);
+							END_FOR;
+						END_IF;
 
-    (* HR102-103 MV feedback *)
-    R2W_MV(InReal := G_Current_MV);
-    G_Modbus_WriteBuf[2] := R2W_MV.W_High;
-    G_Modbus_WriteBuf[3] := R2W_MV.W_Low;
+						//adding coil remaining
+						IF QtyUnfriendly = 	TRUE THEN
+							AryByteTo(Recv_Data[13+QtyByte],UINT#1,_LOW_HIGH,TempCoils);                           
+							FOR i:= 0 TO (QtyMod8-1) DO
+								Coils[Address+QtyLess+i]:=TempCoils[i];     
+							END_FOR;
+						END_IF;
+					Send_Data[5]:= 			6;
+					Send_Size:=         		UINT#12;            // total size for TCP_Send function              
+				END_IF;                                
+                TCP_Step:=						 7;                      // --> send
 
-    (* HR104 tune done *)
-    G_Modbus_WriteBuf[4] := INT_TO_WORD(G_Tune_Done);
+			
+			16: // Write multiple registers Fn10
+					IF Qty = 0 or Qty > 1024 OR Address + Qty > Reg_Max THEN 					// wrong address or quantity
+						Send_Data[4]:=	0;
+						Send_Data[5]:=	3;																					//Total frame length (MBAP header)
+						Send_Data[7]:=	INT_TO_BYTE(INT#16#80 + Funct_Code);
+						Send_Data[8]:=	03;
+						Send_Size:=			9;
+					ELSE
+						ByteRequested:=		UINT#13 + BYTE_TO_UINT(Recv_Data[12]);
+					
+						IF (ByteRequested = TCP_Recv_Inst.RcvSize)  AND Qty = BYTE_TO_UINT(Recv_Data[12]) / 2 THEN
+							FOR i:= 1 TO (Qty) DO
+								AryByteTo(Recv_Data[11 + i *2], UINT#2,_HIGH_LOW,Registers[Address -1 + i]);
+							END_FOR;
+							Send_Data[5]:=	6;
+							Send_Size	:=			UINT#12;
+						ELSE
+							Send_Data[4]:=	0;
+							Send_Data[5]:=	3;	
+							Send_Data[7]:=	BYTE#16#90;
+							Send_Data[8]:=	03;
+							Send_Size:=			9;
+						END_IF;
+					END_IF;
+					TCP_Step:=			7;														// --> send
+					
+			23: // Read Write registers Fn17	
+					AryByteTo(Recv_Data[12],UINT#2,_HIGH_LOW,Address2);		// Write address2	
+					AryByteTo(Recv_Data[14],UINT#2,_HIGH_LOW,Qty2);				// Write quantity2
+					IF Qty = 0 or Qty > 125  OR Qty2= 0 OR Qty2 > 125 OR Address + Qty > Reg_Max OR Address2 + Qty2 > Reg_Max THEN 									// wrong quantity
+						Send_Data[4]:=	0;
+						Send_Data[5]:=	3;													//Total frame length (MBAP header)
+						Send_Data[7]:=	INT_TO_BYTE(INT#16#80 + Funct_Code);
+						Send_Data[8]:=	03;
+						Send_Size:=			9;
+					ELSE	
+						idxByte	 :=9;																// initialize index
+						FOR i:= 1 TO Qty DO												// add register in the send request
+							ToAryByte(Registers[Address-1 + i],_HIGH_LOW,Send_Data[idxByte]);
+							idxByte									:=idxByte + 2;
+						END_FOR;
+											
+						Send_Data[5]:= 	UINT_TO_BYTE(Qty*2 + 3);
+						Send_Data[8]:= 	UINT_TO_BYTE(Qty*2);
+						Send_Size:=			Qty*2 + 9;
+						
+						// Write data
 
-    (* HR105-110 tuned PID outputs *)
-    R2W_PB(InReal := G_PID_PB_Out);
-    G_Modbus_WriteBuf[5] := R2W_PB.W_High;
-    G_Modbus_WriteBuf[6] := R2W_PB.W_Low;
+						FOR i:= 1 TO (Qty2) DO
+							AryByteTo(Recv_Data[15 + i *2], UINT#2,_HIGH_LOW,Registers[Address2 -1 + i]);
+						END_FOR;		
+					END_IF;
+					TCP_Step:=			7;																		// --> send
+		
+		
+		
+		ELSE				// illegal function	
+				Send_Data[4]:=	0;
+				Send_Data[5]:=	3;																			//Total frame length (MBAP header)
+				Send_Data[7]:=	INT_TO_BYTE(INT#16#80 + Funct_Code);
+				Send_Data[8]:=	1;
+				Send_Size:=			9;
+				TCP_Step:=			7;																			// --> send
+		END_CASE;		
 
-    R2W_Ti(InReal := G_PID_Ti_Out);
-    G_Modbus_WriteBuf[7] := R2W_Ti.W_High;
-    G_Modbus_WriteBuf[8] := R2W_Ti.W_Low;
+7:	//  Send response ----------------------------------------------------------------				
+		
+		TCP_Send_Inst(	Execute:=TRUE,
+						Socket:=TCP_Socket,
+						SendDat:=Send_Data[0],
+						Size:=Send_Size);
+						
+		IF (TCP_Send_Inst.Done) OR (TCP_Send_Inst.Error) THEN
+			TCP_Send_Inst(Execute:=FALSE, SendDat:=Send_Data[0]);
+			IF (TCP_Send_Inst.Error) THEN
+				Error:=		TRUE;
+				ErrorID:=	TCP_Send_Inst.ErrorID;
+			ELSE
+				SdRcv_Counter:=SdRcv_Counter + 1;
+			END_IF;
+			TCP_Step:=	8;
+		END_IF;		
+		
+8:	// reset  -----------------------------------------------------------------------	
+		TCP_Recv_Inst(Execute:=FALSE,RcvDat :=Recv_Data[0]);
+		TCP_Send_Inst(Execute:=FALSE,SendDat:=Send_Data[0]);
+		TCP_Step:=	4;
 
-    R2W_Td(InReal := G_PID_Td_Out);
-    G_Modbus_WriteBuf[9]  := R2W_Td.W_High;
-    G_Modbus_WriteBuf[10] := R2W_Td.W_Low;
+9:	// Close socket -----------------------------------------------------------------
 
-    State := 40;
-
-40: (* Fn10 WRITE HR100..HR110 *)
-    Trigger_Write := TRUE;
-
-    FB_Write_Fn10(
-        Enable           := TRUE,
-        TCP_Socket       := TCP_Socket,
-        Unit_ID          := UnitID,
-        Register_Address := 100,
-        Register_Qty     := 11,
-        Registers        := G_Modbus_WriteBuf,
-        Send_Request     := Trigger_Write,
-        Cmd_Ok           => Cmd_Write_Ok,
-        Error            => Cmd_Write_Err
-    );
-
-    IF Cmd_Write_Ok OR Cmd_Write_Err THEN
-        Trigger_Write := FALSE;
-        State := 41;                   (* DROP scan so Fn10 resets *)
-    END_IF;
-
-41: (* WRITE DROP: call Fn10 once with Send_Request := FALSE *)
-    FB_Write_Fn10(
-        Enable           := TRUE,
-        TCP_Socket       := TCP_Socket,
-        Unit_ID          := UnitID,
-        Register_Address := 100,
-        Register_Qty     := 11,
-        Registers        := G_Modbus_WriteBuf,
-        Send_Request     := FALSE,
-        Cmd_Ok           => Cmd_Write_Ok,
-        Error            => Cmd_Write_Err
-    );
-
-    IF Cmd_Write_Err THEN
-        Cnt_WriteErr := Cnt_WriteErr + 1;
-        State := 90;
-    ELSE
-        State := 0;                    (* cycle complete *)
-    END_IF;
-
-90: (* RECOVERY *)
-    Trigger_Read := FALSE;
-    Trigger_Write := FALSE;
-    State := 0;
+		TCP_Close_Inst(	Execute:=TRUE,Socket:=Tcp_Socket);
+		IF(TCP_Close_Inst.Done) OR (TCP_Close_Inst.Error) THEN TCP_Step:=0;END_IF;	
 
 END_CASE;
-END_PROGRAM
+```
+
+
+
+## resources:
+https://www.myomron.com/index.php?action=kb&article=1245%2F1000&utm_source=chatgpt.com
+

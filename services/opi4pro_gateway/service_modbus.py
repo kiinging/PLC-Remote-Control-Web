@@ -1,232 +1,157 @@
 # service_modbus.py
+# NOW ACTING AS CLIENT (MASTER)
 
 import struct
 import time
-import threading
 import logging
 import logging.handlers
 
-from pymodbus.server.sync import StartTcpServer
-from pymodbus.datastore import ModbusSequentialDataBlock, ModbusSlaveContext, ModbusServerContext
-from pymodbus.device import ModbusDeviceIdentification
+from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.payload import BinaryPayloadBuilder, BinaryPayloadDecoder
+from pymodbus.constants import Endian
 
 from database import db  # SQLite wrapper
 import config
 
-def apply_boot_defaults(db):
-    """
-    Apply safe defaults once per OS boot (not every service restart).
-    """
-    try:
-        boot_id = open("/proc/sys/kernel/random/boot_id").read().strip()
-    except Exception:
-        boot_id = None
-
-    last_boot = db.get_state("boot_id", None)
-    if boot_id and last_boot == boot_id:
-        return
-
-    db.set_state("boot_id", boot_id or str(time.time()))
-
-    db.set_state("light", 0)
-    db.set_state("web", 0)
-    db.set_state("mode", 0)
-    db.set_state("tune_status", 0)
-    db.set_state("tune_done", False)
-    db.set_state("mv_manual", 0.0)
-
-
-# Setup logger (journalctl by default)
-logger = logging.getLogger("modbus_server")
+# Setup logger
+logger = logging.getLogger("modbus_client")
 logger.setLevel(config.LOG_LEVEL)
-logger.propagate = False  # don't duplicate to root logger
+logger.propagate = False
 
 if not logger.handlers:
     fmt = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-
-    # Always log to stdout/stderr -> captured by systemd journal
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(fmt)
     logger.addHandler(console_handler)
-
-    # Optional file logging (OFF by default)
-    LOG_TO_FILE = getattr(config, "MODBUS_LOG_TO_FILE", False)
-    if LOG_TO_FILE:
+    
+    if config.LOG_TO_FILE:
         try:
             file_handler = logging.handlers.RotatingFileHandler(
                 config.MODBUS_LOG_FILE, maxBytes=5*1024*1024, backupCount=3
             )
             file_handler.setFormatter(fmt)
             logger.addHandler(file_handler)
-        except Exception as e:
-            logger.warning(f"File logging disabled: {e}")
+        except Exception:
+            pass
 
+def float_to_registers(f):
+    builder = BinaryPayloadBuilder(byteorder=Endian.Big, wordorder=Endian.Big)
+    builder.add_32bit_float(f)
+    return builder.to_registers()
 
+def registers_to_float(regs):
+    decoder = BinaryPayloadDecoder.fromRegisters(regs, byteorder=Endian.Big, wordorder=Endian.Big)
+    return decoder.decode_32bit_float()
 
-# Modbus data store
-store = ModbusSlaveContext(
-    di=ModbusSequentialDataBlock(0, [0]*10),
-    co=ModbusSequentialDataBlock(0, [0]*10),
-    hr=ModbusSequentialDataBlock(0, [0]*120), # ✅ Size 120 (Covering up to HR110)
-    ir=ModbusSequentialDataBlock(0, [0]*20),
-)
-context = ModbusServerContext(slaves=store, single=True)
-
-def update_modbus_registers():
-    """Reads SQLite and updates Modbus Registers with Sequence Handshake."""
+def modbus_loop():
+    client = ModbusTcpClient(config.PLC_IP, port=config.PLC_PORT, timeout=config.MODBUS_TIMEOUT)
     
-    # ✅ Ensure DB starts in known safe state after reboot (only once per boot)
-    apply_boot_defaults(db)
-    
-    # Internal state to track changes
-    last_cmd_state = {} 
-    gw_tx_seq = 0
-    last_tune_done_flag = 0 
-    
-    # Initialize last heartbeat from store to prevent false positive "Alive" on startup
-    # (Default store value is 0, so if we start at -1, 0 != -1 triggers "seen")
-    last_plc_heartbeat = store.getValues(3, 101, count=1)[0]
+    last_connection_attempt = 0
     
     while True:
         try:
-            # Update heartbeat for Gateway Service itself
-            db.set_state("modbus_last_tick_ts", time.time())
-            
-            # --- 1. Read State from DB ---
-            # Telemetry (Does NOT trigger sequence change)
-            rtd = db.get_state("rtd_temp", 0.0) or 0.0
-            
-            # Commands (Triggers sequence change)
-            command_state = {
-                "web_status": 1 if db.get_state("web", 0) else 0,
-                "mode": db.get_state("mode", 0),
-                "plc_status": 1 if db.get_state("plc_status", 0) else 0,
-                "mv_manual": db.get_state("mv_manual", 0.0),
-                "setpoint": db.get_state("setpoint", 0.0),
-                "tune_cmd": db.get_state("tune_status", 0), # 1=Start, 0=Stop
-                "pid_pb": db.get_state("pid_pb", 0.0),
-                "pid_ti": db.get_state("pid_ti", 0.0),
-                "pid_td": db.get_state("pid_td", 0.0),
-            }
-            
-            # --- 2. Check for Command Changes (Increment Sequence) ---
-            # Compare current command state with last transmitted state
-            has_changed = False
-            for key, val in command_state.items():
-                if key not in last_cmd_state or last_cmd_state[key] != val:
-                    has_changed = True
-                    break
-            
-            if has_changed:
-                gw_tx_seq = (gw_tx_seq + 1) & 0xFFFF # Fix: wrap to 16-bit
-                last_cmd_state = command_state.copy()
-                logger.info(f"Command changed. Incrementing gw_tx_seq to {gw_tx_seq}")
+            # Connection Logic
+            if not client.is_socket_open():
+                current_time = time.time()
+                if current_time - last_connection_attempt > 5.0:
+                    logger.info(f"Connecting to PLC at {config.PLC_IP}:{config.PLC_PORT}...")
+                    if client.connect():
+                        logger.info("Connected to PLC.")
+                        db.set_state("modbus_plc_synced", True)
+                    else:
+                        logger.error("Failed to connect to PLC.")
+                        db.set_state("modbus_plc_synced", False)
+                    last_connection_attempt = current_time
+                    
+            if not client.is_socket_open():
+                time.sleep(1)
+                continue
 
-            # --- 3. Prepare Writes ---
-            # Helper for float packing
-            def pack_float(f):
-                return list(struct.unpack(">HH", struct.pack(">f", f)))
+            # --- 1. WRITE COMMANDS (Gateway -> PLC) ---
+            # HR8-9: Setpoint
+            # HR10: Tune Cmd
+            # HR11-16: PID Params
+            
+            # Read current desired state from DB
+            setpoint = db.get_state("setpoint", 0.0)
+            tune_cmd = db.get_state("tune_status", 0) # 1=Start, 0=Stop
+            pid_pb = db.get_state("pid_pb", 0.0)
+            pid_ti = db.get_state("pid_ti", 0.0)
+            pid_td = db.get_state("pid_td", 0.0)
+            
+            # Pack data
+            write_payload = []
+            write_payload.extend(float_to_registers(setpoint)) # HR8-9
+            write_payload.append(tune_cmd)                     # HR10
+            write_payload.extend(float_to_registers(pid_pb))   # HR11-12
+            write_payload.extend(float_to_registers(pid_ti))   # HR13-14
+            write_payload.extend(float_to_registers(pid_td))   # HR15-16
 
-            # Construct Payload (HR1 - HR16)
+            # Write to HR8 (Start address)
+            # HR8 is the start. Length is 2+1+2+2+2 = 9 registers
+            try:
+                write_req = client.write_registers(8, write_payload, unit=1)
+                if write_req.isError():
+                    logger.error(f"Write Error: {write_req}")
+            except Exception as e:
+                logger.error(f"Write Exception: {e}")
+
+            # --- 2. READ STATUS (PLC -> Gateway) ---
+            # We read two blocks or one big block. 
+            # Block 1: HR0 - HR7 (8 regs)
+            # Block 2: HR100 - HR101 (2 regs)
+            
+            # Reading Block 1 (HR0 - HR7)
+            # HR0: Seq (Heartbeat)
             # HR1-2: RTD
             # HR3: Web Status
             # HR4: Mode
             # HR5: PLC Status
-            # HR6-7: MV Manual
-            # HR8-9: Setpoint
-            # HR10: Tune Command
-            # HR11-12: PID PB
-            # HR13-14: PID Ti
-            # HR15-16: PID Td
+            # HR6-7: Manual MV Feedback
             
-            registers_payload = []
-            registers_payload.extend(pack_float(rtd))                       # HR1-2
-            registers_payload.append(command_state["web_status"])           # HR3
-            registers_payload.append(command_state["mode"])                 # HR4
-            registers_payload.append(command_state["plc_status"])           # HR5
-            registers_payload.extend(pack_float(command_state["mv_manual"]))# HR6-7
-            registers_payload.extend(pack_float(command_state["setpoint"])) # HR8-9
-            registers_payload.append(command_state["tune_cmd"])             # HR10
-            registers_payload.extend(pack_float(command_state["pid_pb"]))   # HR11-12
-            registers_payload.extend(pack_float(command_state["pid_ti"]))   # HR13-14
-            registers_payload.extend(pack_float(command_state["pid_td"]))   # HR15-16
+            rr1 = client.read_holding_registers(0, 8, unit=1)
             
-            # --- 4. Write to Modbus Store (Commit Marker Last) ---
-            
-            # Step A: Write Payload (HR1 onwards)
-            store.setValues(3, 1, registers_payload)
-            
-            # Step B: Write Sequence (HR0) - The Commit Marker
-            store.setValues(3, 0, [gw_tx_seq])
-            
-            
-            # --- 5. Read PLC -> GW Block (HR100 - HR110) ---
-            # Size 11 registers
-            plc_data = store.getValues(3, 100, count=11)
-            
-            # HR100: plc_rx_seq
-            plc_rx_seq = plc_data[0]
-            
-            # Verify Ack
-            if plc_rx_seq == gw_tx_seq:
-                db.set_state("modbus_plc_synced", True)
+            if not rr1.isError():
+                regs1 = rr1.registers
+                
+                # Decode
+                seq_num = regs1[0] # HR0
+                rtd_temp = registers_to_float(regs1[1:3]) # HR1-2
+                web_status = regs1[3] # HR3
+                mode = regs1[4]       # HR4
+                plc_status = regs1[5] # HR5
+                manual_mv = registers_to_float(regs1[6:8]) # HR6-7
+                
+                # Update DB
+                db.set_state("rtd_temp", rtd_temp)
+                db.set_state("modbus_last_tick_ts", time.time()) # Updates heartbeat
+                
+                # Optional: Sync mode/status back to DB if PLC is authority
+                # db.set_state("mode", mode) 
+                
             else:
-                db.set_state("modbus_plc_synced", False)
+                logger.error(f"Read Error Block 1: {rr1}")
 
-            # HR101: PLC Heartbeat
-            plc_heartbeat = plc_data[1]
-            db.set_state("plc_heartbeat", plc_heartbeat) # Store for debugging
-            
-            if plc_heartbeat != last_plc_heartbeat:
-                # Heartbeat changed, PLC is alive
-                db.set_state("modbus_plc_last_seen", time.time())
-                last_plc_heartbeat = plc_heartbeat
+            # Reading Block 2 (HR100 - HR101) - Current MV
+            rr2 = client.read_holding_registers(100, 2, unit=1)
+            if not rr2.isError():
+                regs2 = rr2.registers
+                current_mv = registers_to_float(regs2[0:2])
+                db.set_state("mv", current_mv)
+            else:
+                logger.warning(f"Read Error Block 2: {rr2}")
 
-            # HR102-103: MV Feedback
-            mv_feedback = struct.unpack(">f", struct.pack(">HH", plc_data[2], plc_data[3]))[0]
-            db.set_state("mv", mv_feedback)
+            # Update loop speed
+            time.sleep(config.MODBUS_UPDATE_INTERVAL)
             
-            # HR104: Tune Done
-            tune_done_flag = plc_data[4]
-            if tune_done_flag == 1 and last_tune_done_flag == 0:
-                 # Read Tuned PID Params
-                 pid_pb_out = struct.unpack(">f", struct.pack(">HH", plc_data[5], plc_data[6]))[0]
-                 pid_ti_out = struct.unpack(">f", struct.pack(">HH", plc_data[7], plc_data[8]))[0]
-                 pid_td_out = struct.unpack(">f", struct.pack(">HH", plc_data[9], plc_data[10]))[0]
-                 
-                 # Update DB with new PID
-                 db.set_state("pid_pb", pid_pb_out)
-                 db.set_state("pid_ti", pid_ti_out)
-                 db.set_state("pid_td", pid_td_out)
-                 
-                 # Signal UI that tuning is done
-                 db.set_state("tune_done", True) 
-                 db.set_state("tune_status", 0) # Reset command to 0 automatically
-                 
-                 # Note: On next loop, tune_cmd will be 0, so PLC should see it and reset tune_done.
-                 
-            last_tune_done_flag = tune_done_flag
-                 
         except Exception as e:
-            logger.error(f"Error updating Modbus registers: {e}")
+            logger.error(f"Main loop error: {e}")
+            client.close()
             time.sleep(1)
 
-        time.sleep(config.MODBUS_UPDATE_INTERVAL)
-
 def main():
-    identity = ModbusDeviceIdentification()
-    identity.VendorName = "OrangePi"
-    identity.ProductCode = "OPI-Z3"
-    identity.ProductName = "Temp & Control Gateway"
-    identity.ModelName = "OrangePi 4 Pro"
-    identity.MajorMinorRevision = "2.0"
-
-    # Start update thread
-    threading.Thread(target=update_modbus_registers, daemon=True).start()
-
-    # Run Modbus TCP server
-    logger.info(f"Starting Modbus TCP Server at {config.MODBUS_HOST}:{config.MODBUS_PORT}")
-    StartTcpServer(context, identity=identity, address=(config.MODBUS_HOST, config.MODBUS_PORT))
+    logger.info("Starting Modbus TCP Client Service...")
+    modbus_loop()
 
 if __name__ == "__main__":
     main()
