@@ -184,7 +184,7 @@ def mode_tune():
 def get_control_status():
     # Check PLC Heartbeat
     plc_last = db.get_state("modbus_plc_last_seen", 0)
-    plc_alive = (time.time() - plc_last) < 5.0 # Consider alive if seen in last 5s
+    plc_alive = (time.time() - plc_last) < config.PLC_HEARTBEAT_TIMEOUT
     
     # Only report Synced if PLC is actually Alive
     is_synced = plc_alive and db.get_state("modbus_plc_synced", False)

@@ -33,6 +33,7 @@ RTD_CS_PIN = 13  # WiringPi Pin 13 / PD23
 SENSOR_SAMPLE_INTERVAL = 1.0  # Seconds
 RELAY_POLL_INTERVAL = 1.0     # Seconds
 MODBUS_UPDATE_INTERVAL = 0.5    # Seconds
+PLC_HEARTBEAT_TIMEOUT = 7.0     # Seconds (Increased from 5s to reduce flickering)
 
 # Trend Settings
 # 30 minutes @ 2-second sampling

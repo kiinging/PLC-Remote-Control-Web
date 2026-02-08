@@ -317,10 +317,10 @@ CASE State OF
         Enable           := TRUE,
         TCP_Socket       := TCP_Socket,
         Unit_ID          := UnitID,
-        Register_Address := UINT#0,
-        Register_Qty     := UINT#17,
+        Register_Address := 0,
+        Register_Qty     := 17,
         Send_Request     := Trigger_Read,
-        Register         := G_Modbus_ReadBuf,     (* use := not => *)
+        Register         => G_Modbus_ReadBuf,     (* use := not => *)
         Cmd_Ok           => Cmd_Read_Ok,
         Error            => Cmd_Read_Err
     );
@@ -335,10 +335,10 @@ CASE State OF
         Enable           := TRUE,
         TCP_Socket       := TCP_Socket,
         Unit_ID          := UnitID,
-        Register_Address := UINT#0,
-        Register_Qty     := UINT#17,
+        Register_Address := 0,
+        Register_Qty     := 17,
         Send_Request     := FALSE,
-        Register         := G_Modbus_ReadBuf,
+        Register         => G_Modbus_ReadBuf,
         Cmd_Ok           => Cmd_Read_Ok,
         Error            => Cmd_Read_Err
     );
@@ -414,8 +414,8 @@ CASE State OF
         Enable           := TRUE,
         TCP_Socket       := TCP_Socket,
         Unit_ID          := UnitID,
-        Register_Address := UINT#100,
-        Register_Qty     := UINT#11,
+        Register_Address := 100,
+        Register_Qty     := 11,
         Registers        := G_Modbus_WriteBuf,
         Send_Request     := Trigger_Write,
         Cmd_Ok           => Cmd_Write_Ok,
@@ -432,8 +432,8 @@ CASE State OF
         Enable           := TRUE,
         TCP_Socket       := TCP_Socket,
         Unit_ID          := UnitID,
-        Register_Address := UINT#100,
-        Register_Qty     := UINT#11,
+        Register_Address := 100,
+        Register_Qty     := 11,
         Registers        := G_Modbus_WriteBuf,
         Send_Request     := FALSE,
         Cmd_Ok           => Cmd_Write_Ok,
