@@ -3,7 +3,7 @@
 ## 1. System Architecture
 -   **Gateway**: Modbus TCP Client (Master)
 -   **PLC**: Modbus TCP Server (Slave)
--   **IP/Port**: PLC IP (e.g., 192.168.0.10) Port 502 (Standard)
+-   **IP/Port**: PLC IP (e.g., 192.168.0.134) Port 1502 (Standard)
 
 ## 2. Task Allocation
 | Task Name | Priority | Interval | Purpose |
@@ -118,97 +118,163 @@ This program wraps the `FB_ModbusServer` and handles data mapping between the PL
 | `W2R` | `FB_WordsToReal` | - | Helper |
 
 ### Structured Text Code
+
 ```pascal
+(*
+    CommTask_ModbusServer
+    - PLC is Modbus TCP SERVER (slave)
+    - Gateway/Web is Modbus TCP CLIENT (master)
+*)
+
+VAR
+    // -------- MTCP Server FB (from MTCP_Server_NJNX v2.6 library) --------
+    MB_Server : MTCP_Server_NJNX;   // <-- Use the exact FB type name from your library Toolbox
+
+    StartServer      : BOOL := TRUE;
+    Local_TcpPort    : UINT := UINT#1502;      // use 502 if you want standard Modbus TCP
+    ConnectionTimeout: TIME := T#0ms;          // 0 disables timeout logic in the FB
+    Reset_SdRcvCounter : BOOL := FALSE;
+
+    // -------- Server datastore (MUST be large enough for address 110) ----
+    Registers : ARRAY[0..200] OF WORD;         // HR0..HR200
+    Coils     : ARRAY[0..255] OF BOOL;         // optional
+
+    // -------- Server diagnostics ----------------------------------------
+    Server_Connected : BOOL;
+    Server_Error     : BOOL;
+    Server_ErrorID   : WORD;                   // adjust if your FB uses UINT
+    IP_Client        : STRING[15];
+    Port_Client      : UINT;
+    SdRcv_Counter    : UDINT;
+    SdRcv_Last       : UDINT;
+
+    Heartbeat_Ctr    : UINT;
+
+### Structured Text Code
+```pascal
+(*
+    CommTask_ModbusServer
+    - PLC is Modbus TCP SERVER (slave)
+    - Gateway/Web is Modbus TCP CLIENT (master)
+*)
+
 PROGRAM CommTask
 VAR
     (* Function Block Instance *)
-    FB_ModbusSrv : FB_ModbusServer;
+    MB_Server : FB_ModbusServer;
     
-    (* Socket for FB to use *)
-    Local_Socket : _sSOCKET;
+    (* Internal State *)
+    StartServer : BOOL := TRUE;
+    Local_TcpPort : UINT := 502;
+    ConnectionTimeout : TIME := T#5s;
+    Reset_SdRcvCounter : BOOL := FALSE;
+    
+    Server_Connected : BOOL;
+    Server_Error : BOOL;
+    Server_ErrorID : WORD;
+    
+    IP_Client : STRING[256];
+    Port_Client : UINT;
+    SdRcv_Counter : UDINT;
+    SdRcv_Last : UDINT := 0;
+    
+    Heartbeat_Ctr : UINT := 0;
     
     (* Helpers *)
-    R2W : FB_RealToWords;
-    W2R : FB_WordsToReal;
+    R2W_MV : FB_RealToWords;
+    R2W_PB : FB_RealToWords;
+    R2W_Ti : FB_RealToWords;
+    R2W_Td : FB_RealToWords;
     
-    (* Local Temps *)
-    TempReal : REAL;
+    i : INT;
+    New_Seq : WORD;
+    Last_Seq_Num : WORD;
 END_VAR
 
-(* ============================================= *)
-(* 1. MAP PLC DATA -> MODBUS REGISTERS (Outputs) *)
-(* ============================================= *)
-(* Prepare data for the Gateway to READ *)
+// =========================================================
+// 1) Run the Modbus TCP Server FB EVERY scan
+// =========================================================
+MB_Server(
+    Start             := StartServer,
+    Local_TcpPort     := Local_TcpPort,
+    ConnectionTimeout := ConnectionTimeout,
+    Reset_SdRcvCounter:= Reset_SdRcvCounter,
 
-(* HR0: Sequence Number (Echo back if needed, or just let GW read) *)
-G_Modbus_Registers[0] := G_Seq_Num;
+    Registers         := G_Modbus_Registers, (* Map Global Array *)
+    Coils             := G_Modbus_Coils,     (* Map Global Array *)
 
-(* HR1-2: RTD Temp (REAL) *)
-R2W(InReal := G_RTD_Temp);
-G_Modbus_Registers[1] := R2W.W_High;
-G_Modbus_Registers[2] := R2W.W_Low;
-
-(* HR3-5: Status (INT) *)
-G_Modbus_Registers[3] := INT_TO_WORD(G_Web_Status);
-G_Modbus_Registers[4] := INT_TO_WORD(G_Mode);
-G_Modbus_Registers[5] := INT_TO_WORD(G_PLC_Status);
-
-(* HR6-7: Manual MV Feedback (REAL) *)
-R2W(InReal := G_Manual_MV);
-G_Modbus_Registers[6] := R2W.W_High;
-G_Modbus_Registers[7] := R2W.W_Low;
-
-(* HR100-101: Current MV (REAL) *)
-R2W(InReal := G_Current_MV);
-G_Modbus_Registers[100] := R2W.W_High;
-G_Modbus_Registers[101] := R2W.W_Low;
-
-(* HR104: Tune Done *)
-G_Modbus_Registers[104] := INT_TO_WORD(G_Tune_Done);
-
-(* HR105-110: PID Output Params *)
-R2W(InReal := G_PID_PB_Out);
-G_Modbus_Registers[105] := R2W.W_High;
-G_Modbus_Registers[106] := R2W.W_Low;
-
-R2W(InReal := G_PID_Ti_Out);
-G_Modbus_Registers[107] := R2W.W_High;
-G_Modbus_Registers[108] := R2W.W_Low;
-
-R2W(InReal := G_PID_Td_Out);
-G_Modbus_Registers[109] := R2W.W_High;
-G_Modbus_Registers[110] := R2W.W_Low;
-
-
-(* ============================================= *)
-(* 2. EXECUTE MODBUS SERVER FB                   *)
-(* ============================================= *)
-
-FB_ModbusSrv(
-    Start := TRUE,
-    Local_TcpPort := 502,
-    ConnectionTimeout := T#5s,
-    Reset_SdRcvCounter := FALSE,
-    Registers := G_Modbus_Registers, (* Pass Global Array as IN_OUT *)
-    Coils := G_Modbus_Coils          (* Pass Global Array as IN_OUT *)
+    Connected         => Server_Connected,
+    Error             => Server_Error,
+    ErrorID           => Server_ErrorID,
+    IP_Client         => IP_Client,
+    Port_Client       => Port_Client,
+    SdRcv_Counter     => SdRcv_Counter
 );
 
 
-(* ============================================= *)
-(* 3. MAP MODBUS REGISTERS -> PLC DATA (Inputs)  *)
-(* ============================================= *)
-(* Process data written by the Gateway *)
+// =========================================================
+// 2) Heartbeat: increment when a Modbus transaction happened
+//    (so it tracks real comm activity)
+// =========================================================
+IF SdRcv_Counter <> SdRcv_Last THEN
+    SdRcv_Last := SdRcv_Counter;
+    Heartbeat_Ctr := Heartbeat_Ctr + 1;
+END_IF;
 
-(* HR8-9: Setpoint (REAL) *)
-G_Setpoint := FUN_WordsToReal(G_Modbus_Registers[8], G_Modbus_Registers[9]);
 
-(* HR10: Tune Cmd *)
-G_Tune_Cmd := WORD_TO_INT(G_Modbus_Registers[10]);
+// =========================================================
+// 3) Copy incoming gateway-written registers into your buffer
+//    (HR0..HR16 -> G_Modbus_Registers[0..16])
+// =========================================================
+(* Note: The FB writes directly to G_Modbus_Registers, 
+   so we just read from G_Modbus_Registers to update PLC Variables *)
 
-(* HR11-16: PID Params *)
-G_PID_PB := FUN_WordsToReal(G_Modbus_Registers[11], G_Modbus_Registers[12]);
-G_PID_Ti := FUN_WordsToReal(G_Modbus_Registers[13], G_Modbus_Registers[14]);
-G_PID_Td := FUN_WordsToReal(G_Modbus_Registers[15], G_Modbus_Registers[16]);
+G_RTD_Temp := FUN_WordsToReal(G_Modbus_Registers[1], G_Modbus_Registers[2]);
+
+New_Seq := G_Modbus_Registers[0];
+
+IF New_Seq <> Last_Seq_Num THEN
+    G_Web_Status := WORD_TO_INT(G_Modbus_Registers[3]);
+    G_Mode       := WORD_TO_INT(G_Modbus_Registers[4]);
+    G_PLC_Status := WORD_TO_INT(G_Modbus_Registers[5]);
+
+    G_Manual_MV  := FUN_WordsToReal(G_Modbus_Registers[6], G_Modbus_Registers[7]);
+    G_Setpoint   := FUN_WordsToReal(G_Modbus_Registers[8], G_Modbus_Registers[9]);
+
+    G_Tune_Cmd   := WORD_TO_INT(G_Modbus_Registers[10]);
+
+    G_PID_PB     := FUN_WordsToReal(G_Modbus_Registers[11], G_Modbus_Registers[12]);
+    G_PID_Ti     := FUN_WordsToReal(G_Modbus_Registers[13], G_Modbus_Registers[14]);
+    G_PID_Td     := FUN_WordsToReal(G_Modbus_Registers[15], G_Modbus_Registers[16]);
+
+    Last_Seq_Num := New_Seq;
+END_IF;
+
+
+// =========================================================
+// 4) BUILD WRITE BUFFER 
+//    (Update G_Modbus_Registers[100..110] for Gateway to Read)
+// =========================================================
+G_Modbus_Registers[100] := Last_Seq_Num;                // HR100 ack seq
+G_Modbus_Registers[101] := UINT_TO_WORD(Heartbeat_Ctr); // HR101 heartbeat
+
+R2W_MV(InReal := G_Current_MV);
+G_Modbus_Registers[102] := R2W_MV.W_High;               // HR102 - Index fixed to match
+G_Modbus_Registers[103] := R2W_MV.W_Low;                // HR103
+
+G_Modbus_Registers[104] := INT_TO_WORD(G_Tune_Done);    // HR104 tune done
+
+R2W_PB(InReal := G_PID_PB_Out);
+G_Modbus_Registers[105] := R2W_PB.W_High;               // HR105
+G_Modbus_Registers[106] := R2W_PB.W_Low;                // HR106
+
+R2W_Ti(InReal := G_PID_Ti_Out);
+G_Modbus_Registers[107] := R2W_Ti.W_High;               // HR107
+G_Modbus_Registers[108] := R2W_Ti.W_Low;                // HR108
+
+R2W_Td(InReal := G_PID_Td_Out);
+G_Modbus_Registers[109] := R2W_Td.W_High;               // HR109
+G_Modbus_Registers[110] := R2W_Td.W_Low;                // HR110
 
 END_PROGRAM
 ```
