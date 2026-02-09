@@ -21,7 +21,7 @@ LOG_LEVEL = logging.INFO
 # The "1502" restriction on Linux only applies when binding a SERVER to a port < 1024.
 # If your PLC (Omron) is listening on 502, keep this as 502.
 PLC_IP = "192.168.0.1" 
-PLC_PORT = 502  
+PLC_PORT = 1502  
 MODBUS_TIMEOUT = 1.0
 
 # Flask Settings
