@@ -134,8 +134,8 @@ export default function Booking() {
             <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
                 <Container>
                     <Navbar.Brand href="/dashboard">PLC Web Control</Navbar.Brand>
-                    <Navbar.Toggle />
-                    <Navbar.Collapse className="justify-content-end">
+                    <Navbar.Toggle aria-controls="booking-navbar-nav" />
+                    <Navbar.Collapse id="booking-navbar-nav" className="justify-content-end">
                         <Nav className="me-auto">
                             <Nav.Link onClick={() => navigate('/dashboard')}>Dashboard</Nav.Link>
                             <Nav.Link active>Book Lab</Nav.Link>

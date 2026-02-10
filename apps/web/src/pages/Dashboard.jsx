@@ -450,7 +450,8 @@ export default function Dashboard() {
             <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
                 <Container>
                     <Navbar.Brand>PLC Web Control</Navbar.Brand>
-                    <Navbar.Collapse className="justify-content-end">
+                    <Navbar.Toggle aria-controls="dashboard-navbar-nav" />
+                    <Navbar.Collapse id="dashboard-navbar-nav" className="justify-content-end">
                         <Nav className="me-auto">
                             <Nav.Link onClick={() => navigate('/booking')}>Book Lab</Nav.Link>
                         </Nav>
