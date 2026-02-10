@@ -407,9 +407,10 @@ def tune_status_route():
 # ---------------- Relay Control (ESP32) -----------------
 # =========================================================
 
-def soft_shutdown_sequence():
+def soft_shutdown_sequence(restart=False):
     """
     Orchestrate soft shutdown of Radxa before cutting power.
+    If restart is True, wait and power back on.
     """
     radxa_url = f"http://{config.RADXA_IP}:{config.RADXA_PORT}"
     
@@ -457,6 +458,31 @@ def soft_shutdown_sequence():
         db.set_state("relay_actual", False) # Assume success for UI responsiveness
     except Exception as e:
         print(f"❌ Failed to cut power: {e}")
+        
+    # 5. Restart Logic (if requested)
+    if restart:
+        print("⏳ Waiting 10s before powering ON (Power Cycle)...")
+        time.sleep(10.0)
+        
+        print("⚡ Powering ON Radxa...")
+        try:
+            db.set_state("relay_desired", 1)
+            esp32_client.set_relay(True)
+            db.set_state("relay_actual", True)
+            print("✅ Radxa Power ON command sent.")
+        except Exception as e:
+            print(f"❌ Failed to power on: {e}")
+
+@app.route('/camera/restart', methods=['POST'])
+def camera_restart():
+    """
+    Endpoint to trigger full camera repair cycle (Shutdown -> Off -> Wait -> On).
+    """
+    threading.Thread(target=soft_shutdown_sequence, kwargs={"restart": True}, daemon=True).start()
+    return jsonify({
+        "status": "restart_initiated",
+        "message": "Camera is restarting. Please wait ~2 minutes."
+    }), 200
 
 @app.route('/relay', methods=['POST'])
 def relay_control():
@@ -476,7 +502,7 @@ def relay_control():
         if target_state is False:
              # Soft Shutdown
              print("Initiating Soft Shutdown Sequence...")
-             threading.Thread(target=soft_shutdown_sequence, daemon=True).start()
+             threading.Thread(target=soft_shutdown_sequence, kwargs={"restart": False}, daemon=True).start()
              
              # Return "Pending" status to UI - keep relay=1 until it actually turns off?
              # Or let UI think it's off but hardware lags. 
