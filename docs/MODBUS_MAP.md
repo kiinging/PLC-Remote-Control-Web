@@ -1,25 +1,26 @@
 # Modbus Register Map
-**Device**: Orange Pi Gateway (Modbus TCP Server)
+**Device**: PLC (Modbus TCP Server)
 **Port**: 1502
 **Unit ID**: 1
 
-The Gateway acts as the **Server**. The PLC (Client) reads/writes registers using **Function 03** (Read Holding Registers) and **Function 16** (Write Multiple Registers).
+The Gateway acts as the **Client** (Master). The PLC acts as the **Server** (Slave).
+The Gateway connects to the PLC to Read/Write registers.
 
 ## Concept: Sequence Handshake
 Instead of individual acknowledgement flags for every command, we use a global sequence number strategy to synchronize state.
 
-1. **GW -> PLC Block**: The PLC reads this entire block every cycle (e.g., 1s).
+1. **GW -> PLC Block**: The Gateway writes this entire block to the PLC when changes occur.
    - If `gw_tx_seq` (HR0) is different from the PLC's internal `last_seen_seq`, the PLC accepts **ALL** command values (Mode, Setpoint, MV, PID, etc.) and updates its internal state.
    - The Gateway increments `gw_tx_seq` whenever *any* command variable changes.
 
-2. **PLC -> GW Block**: The PLC writes this block every cycle.
+2. **PLC -> GW Block**: The Gateway reads this block from the PLC every cycle.
    - The PLC updates `plc_rx_seq` (HR100) to match `gw_tx_seq` after it has successfully processed the new commands.
    - The Gateway confirms synchronization when `gw_tx_seq == plc_rx_seq`.
    - **Heartbeat**: The PLC increments `plc_heartbeat` (HR101) every second. The Gateway monitors this to detect if the PLC is online.
 
 ## Register Map
 
-### Block 1: Gateway to PLC (Read by PLC)
+### Block 1: Gateway to PLC (Written by Gateway)
 | Address | Variable | Type | Description |
 | :--- | :--- | :--- | :--- |
 | **HR0** | `gw_tx_seq` | UINT16 | **Sequence Number**. Increments on any command change. |
@@ -35,7 +36,7 @@ Instead of individual acknowledgement flags for every command, we use a global s
 | **HR15-16** | `pid_td` | FLOAT | **Derivative Time**. |
 | **HR17-19** | *Reserved* | - | Reserved for future expansion. |
 
-### Block 2: PLC to Gateway (Written by PLC)
+### Block 2: PLC to Gateway (Read by Gateway)
 | Address | Variable | Type | Description |
 | :--- | :--- | :--- | :--- |
 | **HR100** | `plc_rx_seq` | UINT16 | **Ack Sequence**. PLC copies `gw_tx_seq` here after processing. |
