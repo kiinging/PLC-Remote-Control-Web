@@ -144,6 +144,29 @@ def health():
         "frame_age_sec": age
     }), 200
 
+# ✅ Soft Shutdown Endpoint
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """
+    Trigger system shutdown.
+    Requires 'radxa' user to have sudo NOPASSWD for /sbin/shutdown.
+    """
+    import subprocess
+    logger.info("Received shutdown request. Initiating soft shutdown...")
+    
+    try:
+        # Run shutdown in background to allow response to return
+        def delayed_shutdown():
+            time.sleep(1)
+            subprocess.run(["sudo", "shutdown", "-h", "now"])
+            
+        threading.Thread(target=delayed_shutdown).start()
+        
+        return jsonify({"status": "shutting_down", "message": "System is going down now"}), 200
+    except Exception as e:
+        logger.error(f"Shutdown failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/')
 @basic_auth.required
 def index():

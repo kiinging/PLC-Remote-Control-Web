@@ -6,6 +6,8 @@ import os
 import esp32_client
 import config
 import wiringpi
+import threading
+import requests
 
 # ---------------- Boot-safe defaults (once per OS boot) ----------------
 def apply_boot_defaults(db):
@@ -404,6 +406,58 @@ def tune_status_route():
 # =========================================================
 # ---------------- Relay Control (ESP32) -----------------
 # =========================================================
+
+def soft_shutdown_sequence():
+    """
+    Orchestrate soft shutdown of Radxa before cutting power.
+    """
+    radxa_url = f"http://{config.RADXA_IP}:{config.RADXA_PORT}"
+    
+    # 1. Send Shutdown Command
+    try:
+        print(f"🛑 Sending shutdown command to Radxa at {radxa_url}...")
+        requests.post(f"{radxa_url}/shutdown", timeout=2)
+    except Exception as e:
+        print(f"⚠️ Failed to send shutdown command (Radxa might already be down): {e}")
+
+    # 2. Polling for 'Death' (Wait for it to go offline)
+    # Give it up to 30 seconds to shut down.
+    print("⏳ Waiting for Radxa to go offline...")
+    start_wait = time.time()
+    is_down = False
+    
+    while (time.time() - start_wait) < 45.0:
+        try:
+            # Check health endpoint
+            resp = requests.get(f"{radxa_url}/health", timeout=1)
+            if resp.status_code == 200:
+                # Still alive
+                pass
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+            # Connection failed -> likely down!
+            print("✅ Radxa appears to be DOWN (Connection Refused/Timeout).")
+            is_down = True
+            break
+            
+        time.sleep(2.0)
+        
+    if not is_down:
+        print("⚠️ Timeout waiting for Radxa shutdown. Proceeding to cut power anyway.")
+
+    # 3. Final Safety Delay (allow OS to sync disks after network goes down)
+    time.sleep(5.0)
+
+    # 4. Cut Power (ESP32 Relay OFF)
+    print("🔌 Cutting Power to Radxa (ESP32 Relay OFF)...")
+    try:
+        # Update DB State to OFF so relay_service doesn't fight us
+        db.set_state("relay_desired", 0)
+        
+        esp32_client.set_relay(False)
+        db.set_state("relay_actual", False) # Assume success for UI responsiveness
+    except Exception as e:
+        print(f"❌ Failed to cut power: {e}")
+
 @app.route('/relay', methods=['POST'])
 def relay_control():
     try:
@@ -415,20 +469,47 @@ def relay_control():
         if target_state is None:
              return jsonify({"error": "Missing 'on' or 'relay' field"}), 400
 
-        # Update Desired State
-        db.set_state("relay_desired", 1 if target_state else 0)
-
-        # Send command to ESP32
-        result = esp32_client.set_relay(target_state)
+        # Logic Branch:
+        # IF Turning OFF -> Start Soft Shutdown Sequence (Background)
+        # IF Turning ON -> Immediate Action
         
-        if result and result.get("success"):
-            # OPTIMIZATION: Update cache immediately on success
-            db.set_state("esp32_connected", True)
-            db.set_state("esp32_last_seen", time.time())
-            db.set_state("relay_actual", target_state)
-            return jsonify(result), 200
+        if target_state is False:
+             # Soft Shutdown
+             print("Initiating Soft Shutdown Sequence...")
+             threading.Thread(target=soft_shutdown_sequence, daemon=True).start()
+             
+             # Return "Pending" status to UI - keep relay=1 until it actually turns off?
+             # Or let UI think it's off but hardware lags. 
+             # Better: The user asked for OFF, so we acknowledge OFF request, 
+             # but the actual power cut happens later.
+             # We set 'relay_desired' to 0 in later stage? 
+             # Use a special transient state?
+             # Simple approach: Acknowledge logic receipt. 
+             # Don't update 'relay_desired' yet to prevent `relay_service.py` from cutting power immediately!
+             
+             return jsonify({
+                 "status": "shutdown_initiated",
+                 "message": "Soft shutdown started. Power will cut in ~30s.",
+                 "relay": 1 # Report ON for now so UI doesn't look broken if it checks status
+             }), 200
+
         else:
-            return jsonify({"error": "ESP32 Unavailable"}), 503
+            # Immediate Turn ON
+            # Update Desired State
+            db.set_state("relay_desired", 1)
+
+            # Send command to ESP32
+            result = esp32_client.set_relay(True)
+            
+            if result and result.get("success"):
+                # OPTIMIZATION: Update cache immediately on success
+                db.set_state("esp32_connected", True)
+                db.set_state("esp32_last_seen", time.time())
+                db.set_state("relay_actual", True)
+                return jsonify(result), 200
+            else:
+                return jsonify({"error": "ESP32 Unavailable"}), 503
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

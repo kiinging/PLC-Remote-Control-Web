@@ -24,6 +24,10 @@ PLC_IP = "192.168.0.1"
 PLC_PORT = 1502  
 MODBUS_TIMEOUT = 1.0
 
+# Radxa Camera Settings
+RADXA_IP = "192.168.8.140"
+RADXA_PORT = 5000
+
 # Flask Settings
 FLASK_HOST = "0.0.0.0"
 FLASK_PORT = 5000
