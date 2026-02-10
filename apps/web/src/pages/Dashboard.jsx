@@ -507,7 +507,7 @@ export default function Dashboard() {
                                             <small className="text-muted" style={{ fontSize: '0.7em' }}>GW Last: {new Date(gatewayTimestamp * 1000).toLocaleTimeString()}</small>
                                         )}
                                         {cameraTimestamp && cameraTimestamp !== '--' && (
-                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {cameraTimestamp}</small>
+                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {new Date(cameraTimestamp * 1000).toLocaleTimeString()}</small>
                                         )}
                                         {controlStatus.plc_last_seen && (
                                             <small className="text-muted" style={{ fontSize: '0.7em' }}>PLC Last: {new Date(controlStatus.plc_last_seen * 1000).toLocaleTimeString()}</small>
