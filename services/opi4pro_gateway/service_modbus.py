@@ -48,6 +48,10 @@ def modbus_loop():
     
     last_connection_attempt = 0
     
+    # Initialize state variables
+    gw_tx_seq = db.get_state("gw_tx_seq", 0)
+    last_snapshot = None
+
     while True:
         try:
             # Connection Logic
@@ -67,83 +71,90 @@ def modbus_loop():
                 time.sleep(1)
                 continue
 
-            # --- 1. WRITE COMMANDS (Gateway -> PLC) ---
-            # HR8-9: Setpoint
-            # HR10: Tune Cmd
-            # HR11-16: PID Params
+            # --- 1) WRITE GW -> PLC : HR0..HR16 (17 regs) ---
+            # Retrieve latest state from DB
+            gw_tx_seq = db.get_state("gw_tx_seq", 0) # Reload in case it changed externally, though main source is here.
             
-            # Read current desired state from DB
-            setpoint = db.get_state("setpoint", 0.0)
-            tune_cmd = db.get_state("tune_status", 0) # 1=Start, 0=Stop
-            pid_pb = db.get_state("pid_pb", 0.0)
-            pid_ti = db.get_state("pid_ti", 0.0)
-            pid_td = db.get_state("pid_td", 0.0)
+            web_status = int(db.get_state("web", 0))
+            mode       = int(db.get_state("mode", 0))
+            plc_status = int(db.get_state("plc_status", 0))
+
+            rtd_temp   = float(db.get_state("rtd_temp", 0.0)) # Note: Used to be read from PLC, now seems Gateway sends it? 
+            # WAIT: MODBUS_MAP says HR1-2 is rtd_temp (Process Temperature). 
+            # Usually Process Temp comes FROM PLC.
+            # But the map says "Block 1: Gateway to PLC (Read by PLC)" contains HR1-2 `rtd_temp`.
+            # This implies the Gateway is simulating the process or forwarding it from elsewhere?
+            # User snippet includes: write_payload.extend(float_to_registers(rtd_temp))
+            # So I will follow the snippet.
+
+            mv_manual  = float(db.get_state("mv_manual", 0.0))
+
+            setpoint   = float(db.get_state("setpoint", 0.0))
+            tune_cmd   = int(db.get_state("tune_status", 0))
+
+            pid_pb = float(db.get_state("pid_pb", 0.0))
+            pid_ti = float(db.get_state("pid_ti", 0.0))
+            pid_td = float(db.get_state("pid_td", 0.0))
+
+            # increment seq only when anything changes
+            # We construct snapshot from the VALUES we are about to write (excluding seq itself)
+            # Note: rtd_temp is in the snapshot in user snippet.
+            snapshot = (web_status, mode, plc_status, rtd_temp, mv_manual, setpoint, tune_cmd, pid_pb, pid_ti, pid_td)
             
-            # Pack data
+            if snapshot != last_snapshot:
+                gw_tx_seq = (gw_tx_seq + 1) & 0xFFFF
+                db.set_state("gw_tx_seq", gw_tx_seq)
+                last_snapshot = snapshot
+
             write_payload = []
-            write_payload.extend(float_to_registers(setpoint)) # HR8-9
-            write_payload.append(tune_cmd)                     # HR10
-            write_payload.extend(float_to_registers(pid_pb))   # HR11-12
-            write_payload.extend(float_to_registers(pid_ti))   # HR13-14
-            write_payload.extend(float_to_registers(pid_td))   # HR15-16
+            write_payload.append(gw_tx_seq)                         # HR0
+            write_payload.extend(float_to_registers(rtd_temp))      # HR1-2
+            write_payload.append(web_status)                        # HR3
+            write_payload.append(mode)                              # HR4
+            write_payload.append(plc_status)                        # HR5
+            write_payload.extend(float_to_registers(mv_manual))     # HR6-7
+            write_payload.extend(float_to_registers(setpoint))      # HR8-9
+            write_payload.append(tune_cmd)                          # HR10
+            write_payload.extend(float_to_registers(pid_pb))        # HR11-12
+            write_payload.extend(float_to_registers(pid_ti))        # HR13-14
+            write_payload.extend(float_to_registers(pid_td))        # HR15-16
 
-            # Write to HR8 (Start address)
-            # HR8 is the start. Length is 2+1+2+2+2 = 9 registers
-            try:
-                write_req = client.write_registers(8, write_payload, unit=1)
-                if write_req.isError():
-                    logger.error(f"Write Error: {write_req}")
-            except Exception as e:
-                logger.error(f"Write Exception: {e}")
+            wr = client.write_registers(0, write_payload, unit=1)
+            if wr.isError():
+                logger.error(f"Write Error: {wr}")
 
-            # --- 2. READ STATUS (PLC -> Gateway) ---
-            # We read two blocks or one big block. 
-            # Block 1: HR0 - HR7 (8 regs)
-            # Block 2: HR100 - HR101 (2 regs)
-            
-            # Reading Block 1 (HR0 - HR7)
-            # HR0: Seq (Heartbeat)
-            # HR1-2: RTD
-            # HR3: Web Status
-            # HR4: Mode
-            # HR5: PLC Status
-            # HR6-7: Manual MV Feedback
-            
-            rr1 = client.read_holding_registers(0, 8, unit=1)
-            
-            if not rr1.isError():
-                regs1 = rr1.registers
+            # --- 2) READ PLC -> GW : HR100..HR110 (11 regs) ---
+            rr = client.read_holding_registers(100, 11, unit=1)
+            if not rr.isError():
+                regs = rr.registers
+
+                ack_seq   = regs[0]                 # HR100
+                heartbeat = regs[1]                 # HR101
+                mv_fb     = registers_to_float(regs[2:4])   # HR102-103
+                tune_done = regs[4]                 # HR104
+                pb_out    = registers_to_float(regs[5:7])   # HR105-106
+                ti_out    = registers_to_float(regs[7:9])   # HR107-108
+                td_out    = registers_to_float(regs[9:11])  # HR109-110
+
+                db.set_state("mv", mv_fb)
+                db.set_state("tune_done", bool(tune_done))
+                db.set_state("pid_pb_out", pb_out)
+                db.set_state("pid_ti_out", ti_out)
+                db.set_state("pid_td_out", td_out)
+
+                db.set_state("modbus_plc_last_seen", time.time())
+                db.set_state("modbus_last_tick_ts", time.time())
                 
-                # Decode
-                seq_num = regs1[0] # HR0
-                rtd_temp = registers_to_float(regs1[1:3]) # HR1-2
-                web_status = regs1[3] # HR3
-                mode = regs1[4]       # HR4
-                plc_status = regs1[5] # HR5
-                manual_mv = registers_to_float(regs1[6:8]) # HR6-7
-                
-                # Update DB
-                db.set_state("rtd_temp", rtd_temp)
-                db.set_state("modbus_last_tick_ts", time.time()) # Updates heartbeat
-                
-                # Optional: Sync mode/status back to DB if PLC is authority
-                # db.set_state("mode", mode) 
+                # Check synchronization
+                is_synced = (ack_seq == gw_tx_seq)
+                db.set_state("modbus_plc_synced", is_synced)
                 
             else:
-                logger.error(f"Read Error Block 1: {rr1}")
-
-            # Reading Block 2 (HR100 - HR101) - Current MV
-            rr2 = client.read_holding_registers(100, 2, unit=1)
-            if not rr2.isError():
-                regs2 = rr2.registers
-                current_mv = registers_to_float(regs2[0:2])
-                db.set_state("mv", current_mv)
-            else:
-                logger.warning(f"Read Error Block 2: {rr2}")
-
+                logger.error(f"Read Error (HR100..110): {rr}")
+                
             # Update loop speed
             time.sleep(config.MODBUS_UPDATE_INTERVAL)
-            
+
         except Exception as e:
             logger.error(f"Main loop error: {e}")
             client.close()
