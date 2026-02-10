@@ -141,6 +141,7 @@ export default function Dashboard() {
 
     const pollCameraHealth = async () => {
         try {
+            const health = await api.getCameraHealth();
             // If status is not alive, mark offline immediately
             if (health.status !== 'alive') {
                 setCameraStatus('offline');
