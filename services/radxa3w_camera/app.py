@@ -46,14 +46,19 @@ def setup_camera():
 
     pipelines = [
         (
+            "Rockchip NV21 640x480",
+            "v4l2src device=/dev/video0 ! video/x-raw,format=NV21,width=640,height=480 ! "
+            "videoconvert ! video/x-raw,format=BGR ! appsink drop=1"
+        ),
+        (
+            "Rockchip UYVY 640x480",
+            "v4l2src device=/dev/video0 ! video/x-raw,format=UYVY,width=640,height=480 ! "
+            "videoconvert ! video/x-raw,format=BGR ! appsink drop=1"
+        ),
+        (
             "Generic 640x480",
             "v4l2src device=/dev/video0 ! videoconvert ! videoscale ! "
             "video/x-raw,width=640,height=480 ! video/x-raw,format=BGR ! appsink drop=1"
-        ),
-        (
-            "Small 320x240",
-            "v4l2src device=/dev/video0 ! video/x-raw,width=320,height=240 ! "
-            "videoconvert ! video/x-raw,format=BGR ! appsink drop=1"
         )
     ]
 
