@@ -9,7 +9,7 @@ After=network.target dev-video0.device
 User=radxa
 WorkingDirectory=/home/radxa/PLC-Remote-Control-Web/services/radxa3w_camera
 Environment="PATH=/home/radxa/PLC-Remote-Control-Web/services/radxa3w_camera/venv/bin:/usr/bin"
-ExecStart=/home/radxa/PLC-Remote-Control-Web/services/radxa3w_camera/venv/bin/gunicorn -b 0.0.0.0:5000 app:app --threads 2
+ExecStart=/home/radxa/PLC-Remote-Control-Web/services/radxa3w_camera/venv/bin/gunicorn -b 0.0.0.0:5000 app:app --workers 2 --threads 2
 Restart=always
 RestartSec=5
 Environment=PYTHONUNBUFFERED=1
