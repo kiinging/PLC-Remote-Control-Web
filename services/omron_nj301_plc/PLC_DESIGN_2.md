@@ -1,35 +1,3 @@
-### 1) Camera stream: 3 viewers + “too good” quality
-
-I looked at your Radxa camera service (`services/radxa3w_camera/app.py` + `camera_app.service`).
-
-**What happens with 3 devices watching at the same time?**
-
-* Your `/video_feed` is an **MJPEG stream** (an infinite generator). **Each viewer holds one Gunicorn thread forever**.
-* Your systemd service runs: `gunicorn ... --threads 2` (and default workers = 1).
-* So **only ~2 simultaneous viewers** can stream smoothly. The **3rd viewer will likely hang, connect very slowly, or time out** because there isn’t a free thread.
-
-✅ Fix (simple): increase concurrency in `camera_app.service`, e.g.
-
-* **Option A (easy):** `--threads 4`
-* **Option B (better isolation):** `--workers 2 --threads 2`  (total ~4 concurrent streams)
-
-**About compressing to half pixels**
-
-* You’re already doing some compression:
-
-  * capture pipeline is **640×480**
-  * JPEG encoding uses `quality=60`
-  * client stream is **~10 FPS** (`time.sleep(0.1)`)
-* Reducing to **320×240** will reduce:
-
-  * **CPU** (PIL JPEG encode time)
-  * **bandwidth per viewer**
-  * and it will generally **improve stability** over Cloudflare Tunnel / weaker networks, especially with multiple viewers.
-
-So: **yes**, halving resolution will usually improve stability *and* allow more viewers before it struggles (but you still should increase Gunicorn threads/workers).
-
----
-
 ## 2) PLC side: PrimaryTask (4ms) + ControlTask (40ms) to work with your CommTask (100ms)
 
 You now have:
