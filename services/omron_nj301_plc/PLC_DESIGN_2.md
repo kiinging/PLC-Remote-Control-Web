@@ -1,24 +1,28 @@
-## 2) PLC side: PrimaryTask (4ms) + ControlTask (40ms) to work with your CommTask (100ms)
+Yep — your Markdown went “out of control” because the **ControlTask block isn’t wrapped in a fenced code block**, and some lines like `PROGRAM PRG_ControlTask` are being interpreted as normal text instead of code.
+
+Here’s a **clean, copy-paste ready** version (all code sections are properly fenced). You can paste this directly into your `.md` file.
+
+---
+
+## 2) PLC side: PrimaryTask (4ms) + ControlTask (40ms) to work with CommTask (100ms)
 
 You now have:
 
 * **Web dashboard** → calls Gateway REST endpoints (`/web/on`, `/plc/on`, `/mode/...`, `/setpoint`, `/mv_manual`, `/tune_start`, `/pid`, etc.)
 * **Gateway** stores to SQLite, then `service_modbus.py` (Modbus **CLIENT**) writes **HR0..HR16** and reads **HR100..HR110**
-* **PLC** is Modbus **SERVER** (your `MB_Server(...)` in CommTask) and parses new sequence
+* **PLC** is Modbus **SERVER** (your `MB_Server(...)` in CommTask) and parses the new sequence
 
 ### Key idea for task split
 
-* **CommTask (100ms, low priority):** only comm + unpack/pack registers (you already did)
+* **CommTask (100ms, low priority):** only comm + unpack/pack registers
 * **ControlTask (40ms, mid):** PIDAT + MV selection + tune logic
 * **PrimaryTask (4ms, top):** safety, takeover arbitration, watchdog, PWM output, hard interlocks
 
-Below is a clean way to implement your requirements (including the **overheat latch that requires Web OFF→ON to reset**).
+This design includes the **overheat latch that requires Web OFF→ON to reset**.
 
 ---
 
-# A) Add a few helper globals (recommended)
-
-Add these globals (names are suggestions, keep yours if you prefer):
+## A) Add a few helper globals (recommended)
 
 ```iecst
 VAR_GLOBAL
@@ -39,14 +43,19 @@ VAR_GLOBAL
     HMI_Setpoint   : REAL;
     HMI_Manual_MV  : REAL;
     HMI_TuneCmd    : BOOL;
+
+    // Tune feedback to gateway (Modbus HR-friendly)
+    G_Tune_Done : WORD;   // 0/1
+    G_Tune_Busy : WORD;   // 0/1
+    G_Tune_Err  : WORD;   // 0/1
 END_VAR
 ```
 
-> If your NA5 already writes different tag names, just map those instead of `HMI_*`.
+> If your NA5 already uses different tag names, just map those instead of `HMI_*`.
 
 ---
 
-# B) PrimaryTask (4ms) — Safety + Takeover + PWM
+## B) PrimaryTask (4ms) — Safety + Takeover + PWM
 
 Assign a program like `PRG_PrimaryTask` into **PrimaryTask** (4ms, highest priority):
 
@@ -67,7 +76,7 @@ VAR
 END_VAR
 
 // ---------------------------------------------------------
-// 1) COMM ALIVE watchdog (uses your Heartbeat_Ctr that increments on Modbus traffic)
+// 1) COMM ALIVE watchdog (uses Heartbeat_Ctr that increments on Modbus traffic)
 // ---------------------------------------------------------
 IF UINT_TO_UINT(Heartbeat_Ctr) <> HB_Last THEN
     HB_Last := UINT_TO_UINT(Heartbeat_Ctr);
@@ -139,12 +148,12 @@ END_IF;
 
 // Call your TimeProportionalOut FB every 4ms for clean timing
 PWM_Out(
-    MV     := MV_Limited,     // adjust input name if different in your FB
+    MV     := MV_Limited,
     CtlPrd := T#1s,
     DOut   => Out_3
 );
 
-// Absolute safety override (belt + braces)
+// Absolute safety override
 IF G_OverheatLatched THEN
     Out_3 := FALSE;
 END_IF;
@@ -156,15 +165,9 @@ Out_0 := (G_Eff_PLC_Enable AND NOT G_OverheatLatched); // Green = running enable
 END_PROGRAM
 ```
 
-**Why this works well**
-
-* PWM timing stays “tight” (4ms task)
-* Even if ControlTask misbehaves, PrimaryTask can force `Out_3 = FALSE`
-* Web takeover is automatically dropped if comm stalls (`G_CommAlive = FALSE`)
-
 ---
 
-# C) ControlTask (40ms) — PIDAT + MV selection + Tune
+## C) ControlTask (40ms) — PIDAT + MV selection + Tune
 
 Assign `PRG_ControlTask` into **ControlTask** (40ms, medium priority):
 
@@ -177,12 +180,20 @@ VAR
 
     StartAT_Cmd : BOOL;
 
-    MV_fromPID  : REAL;
+    PB_Active    : REAL;
+    Ti_Active_s  : REAL;
+    Td_Active_s  : REAL;
 
-    // Optional: keep active params separate
-    PB_Active   : REAL;
-    Ti_Active   : REAL;
-    Td_Active   : REAL;
+    Ti_Time      : TIME;
+    Td_Time      : TIME;
+
+    MV_fromPID   : REAL;
+
+    // PIDAT outputs (local)
+    ATDone_FB  : BOOL;
+    ATBusy_FB  : BOOL;
+    ATErr_FB   : BOOL;
+    ATErrID_FB : UDINT;   // adjust to your library’s actual type if needed
 END_VAR
 
 // ---------------------------------------------------------
@@ -192,67 +203,76 @@ ManualMode := (G_Eff_Mode = 0);
 TuneMode   := (G_Eff_Mode = 2);
 
 // ---------------------------------------------------------
-// 2) Run condition (already selected Web/Local in PrimaryTask)
+// 2) Run condition
 // ---------------------------------------------------------
 RunCmd := G_Eff_PLC_Enable AND (NOT G_OverheatLatched);
 
 // ---------------------------------------------------------
-// 3) PID parameter source
-//    - Normal: use command values from gateway (G_PID_*)
-//    - During tuning: allow tuned values to become the “Out” values
+// 3) PID parameter source (REAL seconds stored for web/modbus)
 // ---------------------------------------------------------
 IF NOT TuneMode THEN
-    // follow commanded parameters
-    G_PID_PB_Out := G_PID_PB;
-    G_PID_Ti_Out := G_PID_Ti;
-    G_PID_Td_Out := G_PID_Td;
+    G_PID_PB_Out := G_PID_PB;    // REAL
+    G_PID_Ti_Out := G_PID_Ti;    // REAL seconds
+    G_PID_Td_Out := G_PID_Td;    // REAL seconds
 END_IF;
 
-PB_Active := G_PID_PB_Out;
-Ti_Active := G_PID_Ti_Out;
-Td_Active := G_PID_Td_Out;
+PB_Active   := G_PID_PB_Out;
+Ti_Active_s := G_PID_Ti_Out;
+Td_Active_s := G_PID_Td_Out;
 
 // ---------------------------------------------------------
-// 4) Auto-tune trigger
-//    StartAT runs while TuneMode + TuneCmd, and stops after ATDone
+// 3b) Convert REAL seconds -> TIME (seconds resolution via SecToTime)
 // ---------------------------------------------------------
-StartAT_Cmd := TuneMode AND G_Eff_TuneCmd AND RunCmd AND (NOT PIDAT_instance.ATDone);
+IF Ti_Active_s < 0.0 THEN Ti_Active_s := 0.0; END_IF;
+IF Ti_Active_s > 10000.0 THEN Ti_Active_s := 10000.0; END_IF;
+
+IF Td_Active_s < 0.0 THEN Td_Active_s := 0.0; END_IF;
+IF Td_Active_s > 10000.0 THEN Td_Active_s := 10000.0; END_IF;
+
+// Round to nearest second
+Ti_Time := SecToTime( REAL_TO_LINT(Ti_Active_s + 0.5) );
+Td_Time := SecToTime( REAL_TO_LINT(Td_Active_s + 0.5) );
 
 // ---------------------------------------------------------
-// 5) Call PIDAT (40ms task = good for thermal control)
-//    IMPORTANT: set OprSetParams cycle time = 40ms in your init/vars
+// 4) Auto-tune trigger (simple model)
+//   - Gateway keeps G_Eff_TuneCmd=TRUE until it reads TuneDone=1
+// ---------------------------------------------------------
+StartAT_Cmd := TuneMode AND RunCmd AND G_Eff_TuneCmd;
+
+// ---------------------------------------------------------
+// 5) Call PIDAT (ControlTask = 40ms)
 // ---------------------------------------------------------
 PIDAT_instance(
-    Run            := RunCmd,
-    ManCtl         := ManualMode,          // TRUE=manual, FALSE=auto/tune
-    StartAT        := StartAT_Cmd,
-    PV             := G_RTD_Temp,
-    SP             := G_Eff_Setpoint,
+    Run              := RunCmd,
+    ManCtl           := ManualMode,          // TRUE=manual, FALSE=auto/tune
+    StartAT          := StartAT_Cmd,
+    PV               := G_RTD_Temp,
+    SP               := G_Eff_Setpoint,
 
-    OprSetParams   := OprSetParams,        // your struct
-    InitSetParams  := InitSetParams,       // your struct (InitType can be tied to mode if you want)
+    OprSetParams     := OprSetParams,
+    InitSetParams    := InitSetParams,
 
     ProportionalBand := PB_Active,
-    IntegrationTime  := Ti_Active,
-    DerivativeTime   := Td_Active,
+    IntegrationTime  := Ti_Time,
+    DerivativeTime   := Td_Time,
 
-    ManMV          := G_Eff_Manual_MV,
+    ManMV            := G_Eff_Manual_MV,
 
-    ATDone         => ,
-    ATBusy         => ,
-    Error          => ,
-    ErrorID        => ,
-    MV             => MV_fromPID
+    ATDone           => ATDone_FB,
+    ATBusy           => ATBusy_FB,
+    Error            => ATErr_FB,
+    ErrorID          => ATErrID_FB,
+
+    MV               => MV_fromPID
 );
 
 // ---------------------------------------------------------
-// 6) Decide the final MV_percent + G_Current_MV
+// 6) Final MV selection
 // ---------------------------------------------------------
 IF NOT RunCmd THEN
     MV_percent   := 0.0;
     G_Current_MV := 0.0;
 ELSE
-    // PIDAT should output MV=ManMV when ManCtl=TRUE, but we keep logic explicit
     IF ManualMode THEN
         MV_percent   := G_Eff_Manual_MV;
         G_Current_MV := G_Eff_Manual_MV;
@@ -263,22 +283,21 @@ ELSE
 END_IF;
 
 // ---------------------------------------------------------
-// 7) Tune feedback to Gateway
+// 7) Tune feedback to Gateway (WORD for Modbus)
 // ---------------------------------------------------------
-IF PIDAT_instance.ATDone THEN
-    G_Tune_Done := 1;
-ELSE
-    G_Tune_Done := 0;
-END_IF;
+IF ATDone_FB THEN G_Tune_Done := WORD#1; ELSE G_Tune_Done := WORD#0; END_IF;
+IF ATBusy_FB THEN G_Tune_Busy := WORD#1; ELSE G_Tune_Busy := WORD#0; END_IF;
+IF ATErr_FB  THEN G_Tune_Err  := WORD#1; ELSE G_Tune_Err  := WORD#0; END_IF;
+
 END_PROGRAM
 ```
 
-### Notes you should apply in Sysmac Studio
-
-* Put **PWM_Out** FB call only in **PrimaryTask** (not in ControlTask), so the 1s time-proportioning is smooth.
-* Ensure `OprSetParams` (PIDAT) has the correct cycle time (40ms) so integral/derivative behave as expected.
-* Your CommTask (100ms) is fine for Modbus here because the Gateway also polls at **0.1s** (`MODBUS_UPDATE_INTERVAL = 0.1`).
-
 ---
 
-If you paste (or screenshot) your PIDAT `OprSetParams` / `InitSetParams` structs fields (the exact names Sysmac shows), I can adjust the ControlTask call so the **InitType mapping (0/1/2)** matches exactly how Omron expects it in your project.
+## Notes for Sysmac Studio
+
+* Put **PWM_Out** FB call only in **PrimaryTask** (not in ControlTask), so 1s time-proportioning is smooth.
+* Ensure `OprSetParams` cycle time matches **40ms** so PIDAT behaves correctly.
+* CommTask (100ms) is OK because gateway polls at **0.1s** (`MODBUS_UPDATE_INTERVAL = 0.1`).
+
+---
