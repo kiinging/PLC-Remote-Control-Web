@@ -414,25 +414,28 @@ def soft_shutdown_sequence(restart=False):
     """
     radxa_url = f"http://{config.RADXA_IP}:{config.RADXA_PORT}"
     
+    # Credentials for Radxa Basic Auth
+    radxa_auth = (config.RADXA_USER, config.RADXA_PASS)
+
     # 1. Send Shutdown Command
     try:
         print(f"🛑 Sending shutdown command to Radxa at {radxa_url}...")
-        requests.post(f"{radxa_url}/shutdown", timeout=2)
+        requests.post(f"{radxa_url}/shutdown", auth=radxa_auth, timeout=2)
     except Exception as e:
         print(f"⚠️ Failed to send shutdown command (Radxa might already be down): {e}")
 
     # 2. Polling for 'Death' (Wait for it to go offline)
-    # Give it up to 30 seconds to shut down.
+    # Give it up to 45 seconds to shut down.
     print("⏳ Waiting for Radxa to go offline...")
     start_wait = time.time()
     is_down = False
     
     while (time.time() - start_wait) < 45.0:
         try:
-            # Check health endpoint
-            resp = requests.get(f"{radxa_url}/health", timeout=1)
-            if resp.status_code == 200:
-                # Still alive
+            # Check health endpoint (auth required)
+            resp = requests.get(f"{radxa_url}/health", auth=radxa_auth, timeout=1)
+            if resp.status_code in (200, 401):
+                # 200 = still alive, 401 = still alive (auth works = server up)
                 pass
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
             # Connection failed -> likely down!

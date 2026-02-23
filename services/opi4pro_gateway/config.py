@@ -27,6 +27,8 @@ MODBUS_TIMEOUT = 1.0
 # Radxa Camera Settings
 RADXA_IP = "192.168.8.140"
 RADXA_PORT = 5000
+RADXA_USER = "radxa"
+RADXA_PASS = "radxa"
 
 # Flask Settings
 FLASK_HOST = "0.0.0.0"
