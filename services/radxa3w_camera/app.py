@@ -17,7 +17,9 @@ logger.setLevel(logging.INFO)
 # ---- Auth config ----
 app.config['BASIC_AUTH_USERNAME'] = 'radxa'
 app.config['BASIC_AUTH_PASSWORD'] = 'radxa'
-app.config['BASIC_AUTH_FORCE'] = True # Protect entire app
+# FORCE=False: only routes with @basic_auth.required are protected.
+# /health and /shutdown are intentionally public (called by OrangePi gateway).
+app.config['BASIC_AUTH_FORCE'] = False
 
 basic_auth = BasicAuth(app)
 
