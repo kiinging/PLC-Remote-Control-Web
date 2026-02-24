@@ -1,183 +1,230 @@
-Below is a practical, “do-this-next” workflow to add an **NA5 HMI** into your **NJ301-1100 / Sysmac Studio** project so you can **control locally**, while keeping your current **Web/Gateway (Modbus) control** + your 3 PLC Tasks architecture.
+# Omron NJ301 PLC Design Document — Part 3: NA5 HMI Integration
+
+## 0) Architecture Summary
+
+```
+Web App (remote)                     NA5 HMI (local panel)
+     │  REST API                           │  Sysmac variable mapping
+     ▼                                     ▼
+Gateway (OrangePi)              HMI_* global variables
+     │  Modbus TCP CLIENT                  │
+     ▼                                     │
+  CommTask (PLC)                           │
+  G_* globals <─────────── PrimaryTask arbitration ──────────► G_Eff_* globals
+                              G_WebActive TRUE  → use G_*              │
+                              G_WebActive FALSE → use HMI_*            ▼
+                                                                  ControlTask
+                                                                  PIDAT, MV, PWM
+```
+
+**Key rule:** NA5 writes only `HMI_*` globals. PLC selects via `G_WebActive`. No race.
 
 ---
 
-## 0) The clean architecture (keep your current Tasks)
+## 1) Keep Your Current 3-Task Design — No New Task Needed
 
-You already have this in PLC:
-
-* **CommTask**: Modbus TCP server + unpack/pack `G_*`
-* **PrimaryTask**: safety + takeover arbitration
-* **ControlTask**: PID + MV generation
-
-To add NA5 local control, do **NOT** let the NA write into `G_*` directly.
-
-Instead:
-
-* NA writes **HMI_*** commands (local operator commands)
-* PLC selects **effective** commands:
-
-  * if Web is active → use `G_*`
-  * else → use `HMI_*`
-
-This is exactly what your `WebActive THEN ... ELSE ...` structure is meant for.
+| Task | Role |
+| :--- | :--- |
+| CommTask | Modbus unpack/pack only — no HMI interaction |
+| PrimaryTask | Arbitration gate: `G_WebActive` → selects `G_Eff_*` from `G_*` or `HMI_*` |
+| ControlTask | Reads only `G_Eff_*` — source-agnostic (doesn't know if web or HMI) |
 
 ---
 
-## 1) Physical wiring & IP plan (simple and reliable)
+## 2) Physical Wiring & IP Plan
 
-### Recommended cabling
+### Recommended Cabling
 
-* **NA Ethernet Port 1** → same switch/network as **NJ Ethernet/IP port** (normal runtime comms)
-* **NA Ethernet Port 2** (optional) → your laptop for easy download/debug
+- **NA Ethernet Port 1** → same switch as NJ Ethernet/IP port (runtime comms)
+- **NA Ethernet Port 2** (optional) → laptop for Sysmac Studio download and debug
 
-  * NA manuals explicitly support using **Ethernet port 2** for direct Sysmac Studio connection, and you can tick **“Direct Connection with Sysmac Studio”** in HMI TCP/IP settings. 
+### IP Example
 
-### IP example (runtime network)
+| Device | IP |
+| :--- | :--- |
+| NJ301 | `192.168.0.1` |
+| NA5 Port 1 | `192.168.0.2` |
+| Gateway (OrangePi) | `192.168.0.100` |
+| Subnet mask | `255.255.255.0` |
 
-* NJ: `192.168.0.134`
-* NA (port 1): `192.168.0.20`
-* Mask: `255.255.255.0`
-
-*(Gateway Modbus on port 1502 can keep running—NA uses different comms stack, so it can coexist.)*
-
----
-
-## 2) Add the NA5 into the SAME Sysmac Studio project
-
-In Sysmac Studio (with your NJ project open):
-
-1. **Insert → HMI → NA5**
-2. Pick your exact NA5 model and confirm. ([Omron Store][1])
-3. In **Multiview Explorer**, use the device dropdown to switch between **Controller** and **HMI** (very important for the next steps). ([Omron Store][1])
+> Modbus TCP on port 1502 coexists — NA uses a different comms stack.
 
 ---
 
-## 3) Create the PLC “local HMI command” globals (HMI_*)
+## 3) Add NA5 to Sysmac Studio Project
 
-In the NJ project → **Programming → Data → Global Variables**, add (example):
+1. In Sysmac Studio with your NJ project open: **Insert → HMI → NA5**
+2. Select your exact NA5 model (e.g. NA5-7W001S-V1)
+3. Use the **Multiview Explorer device dropdown** to switch between Controller and HMI views
 
-```iecst
+---
+
+## 4) HMI_* Global Variables (PLC Side)
+
+Declare all of these in the NJ project as **Global Variables** (not local to any program):
+
+```pascal
 VAR_GLOBAL
-    // Local operator commands from NA
-    HMI_PLC_Enable : BOOL;
-    HMI_Mode       : INT;   // 0 manual, 1 auto, 2 tune
-    HMI_Setpoint   : REAL;
-    HMI_Manual_MV  : REAL;
-    HMI_TuneCmd    : BOOL;
+    // ── NA5 writes these (operator inputs) ───────────────────────────
+    HMI_Mode          : INT;    // 0=Manual, 1=Auto, 2=Tune
+    HMI_PLC_Enable    : BOOL;   // Start/Stop button
+    HMI_Setpoint      : REAL;   // Setpoint entry (°C)
+    HMI_Manual_MV     : REAL;   // Manual MV slider/entry (%)
+    HMI_TuneCmd       : BOOL;   // Momentary tune trigger
 
-    // Helpful status to display on NA
-    G_WebActive    : BOOL;  // optional: compute in PrimaryTask
+    // PID parameter entry — NOT applied until confirm button pressed
+    HMI_PID_PB        : REAL;   // Proportional Band entry
+    HMI_PID_Ti        : REAL;   // Integral Time entry (seconds)
+    HMI_PID_Td        : REAL;   // Derivative Time entry (seconds)
+    HMI_PID_Update    : BOOL;   // Apply/Confirm button (momentary BOOL)
+
+    // ── PLC writes these (NA5 reads for display) ──────────────────────
+    HMI_PID_Update_Feedback : BOOL;  // TRUE briefly after params applied → flash msg
+
+    // ── Status display (NA5 reads these) ──────────────────────────────
+    G_WebActive       : BOOL;   // TRUE = web owns control
+    G_CommAlive       : BOOL;   // TRUE = gateway comms healthy
+    G_RTD_Temp        : REAL;   // Process value display
+    G_Current_MV      : REAL;   // Active MV% display
+    G_OverheatLatched : BOOL;   // Trip alarm display
+    G_Eff_Mode        : INT;    // Active mode display
+    G_PID_PB_Out      : REAL;   // Active/post-tune PB (display + pre-fill after tune)
+    G_PID_Ti_Out      : REAL;   // Active/post-tune Ti
+    G_PID_Td_Out      : REAL;   // Active/post-tune Td
 END_VAR
 ```
 
-**Key rule:** NA needs **global** variables (not local). If you created them inside a program, “move to global”. ([Omron Store][1])
+---
+
+## 5) NA5 Variable Mapping (Sysmac Studio)
+
+1. In Multiview Explorer → select **NA5 device**
+2. Go to **Configurations and Setup → Variable Mapping**
+3. Expand **PLC device → User Variables**
+4. For each variable above: right-click → **Create Device Variable**
+
+> All variables must be **global** — local program variables are not visible to NA5.
 
 ---
 
-## 4) HMI communications settings (NA side)
+## 6) NA5 Screen Layout
 
-On the NA device in Multiview Explorer:
+### Page: "Overview" (read-only status)
 
-* **Configurations and Setup → HMI Settings**
+| Display Object | Bound Variable | Notes |
+| :--- | :--- | :--- |
+| PV Temperature | `G_RTD_Temp` | Numeric display, °C |
+| Current MV | `G_Current_MV` | Numeric display, % |
+| Active Mode | `G_Eff_Mode` | Text map: 0→Manual, 1→Auto, 2→Tune |
+| Web Active | `G_WebActive` | Indicator lamp |
+| Comm Alive | `G_CommAlive` | Indicator lamp |
+| Overheat Trip | `G_OverheatLatched` | Red alarm lamp |
 
-  * Set **TCP/IP** for **Ethernet Port 1** (runtime IP)
-  * If you want laptop direct download via NA Port 2:
+### Page: "Local Control"
 
-    * enable **Direct Connection with Sysmac Studio** and connect Sysmac Studio to **Ethernet Port 2** 
+| Control Object | Bound Variable | Notes |
+| :--- | :--- | :--- |
+| Mode selector | `HMI_Mode` | Dropdown or 3-button group |
+| Start/Stop toggle | `HMI_PLC_Enable` | Toggle BOOL |
+| Setpoint entry | `HMI_Setpoint` | Numeric input |
+| MV slider/entry | `HMI_Manual_MV` | Numeric input, visible only in Manual mode |
+| Tune trigger | `HMI_TuneCmd` | Momentary button, visible only in Tune mode |
 
----
+**Disable all local controls when web owns control:**
+- Bind each input object's **Enabled** property → `NOT G_WebActive`
+- Show a banner "⚠ WEB CONTROL ACTIVE" when `G_WebActive = TRUE`
 
-## 5) Variable Mapping (this is the “magic” step)
+### Page: "PID Tuning" (local HMI PID entry)
 
-On the NA device in Multiview Explorer:
+| Control Object | Bound Variable | Notes |
+| :--- | :--- | :--- |
+| PB DataEdit | `HMI_PID_PB` | Pre-fill from `G_PID_PB_Out` on page open |
+| Ti DataEdit | `HMI_PID_Ti` | Pre-fill from `G_PID_Ti_Out` |
+| Td DataEdit | `HMI_PID_Td` | Pre-fill from `G_PID_Td_Out` |
+| **Apply/Confirm button** | `HMI_PID_Update` | Momentary BOOL — PLC latches on rising edge |
+| Feedback label | `HMI_PID_Update_Feedback` | "✓ Applied" text, visible = TRUE |
 
-1. Go to **Configurations and Setup → Variable Mapping**
-2. Expand your **PLC device → User Variables**
-3. For the variables you want on HMI:
-
-   * right-click → **Create Device Variable** (or “with prefix”)
-4. Now you’ll have NA-side tags linked to PLC globals. ([Omron Store][1])
-
-**Good news:** When the NJ controller is **registered in the current project**, Sysmac Studio handles device registration automatically—your main work is comms + variable mapping. ([files.omron.eu][2])
-
-> Note: If you are using a **non-default PLC Ethernet port**, Omron notes you may need to uncheck “use IP address configured on internal device” and explicitly set the target port IP. ([files.omron.eu][2])
-
----
-
-## 6) Build NA pages (minimum set that matches your system)
-
-### Page: “Overview”
-
-Bind displays (read-only):
-
-* `G_RTD_Temp`
-* `G_Current_MV`
-* `G_OverheatLatched`
-* `G_CommAlive`
-* `G_Web_Status` (and/or `G_WebActive`)
-
-### Page: “Local Control”
-
-Bind inputs:
-
-* Toggle / button → `HMI_PLC_Enable`
-* Mode selector (0/1/2) → `HMI_Mode`
-* Numeric input → `HMI_Setpoint`
-* Numeric input/slider → `HMI_Manual_MV`
-* Momentary button → `HMI_TuneCmd` (set TRUE while pressed)
-
-**Tip (strongly recommended):** Disable local controls when web owns control:
-
-* For each control object, bind its **Enabled** property to `NOT G_WebActive`
-* And show a big banner: “WEB CONTROL ACTIVE”
-
-This prevents confusing “why isn’t my button working?” moments.
+> **Important:** `HMI_PID_PB/Ti/Td` are NOT applied to the running PID until the operator clicks Apply. Typing in the DataEdit field alone does nothing — this prevents accidental mid-entry changes.
 
 ---
 
-## 7) PLC arbitration (tie NA into your existing PrimaryTask logic)
+## 7) PrimaryTask Arbitration (Summary)
 
-In **PrimaryTask**, compute and expose a `G_WebActive` (so NA can show it), and keep your selection logic:
+```pascal
+// PrimaryTask — the single point of source selection
 
-```iecst
-// Web takeover decision
 G_WebActive := (G_Web_Status <> 0) AND G_CommAlive;
 
-// Select EFFECTIVE commands
+// Continuous commands: select source every scan
 IF G_WebActive THEN
-    // use G_* from gateway
+    G_Eff_Mode       := G_Mode;          // from Modbus HR4
+    G_Eff_PLC_Enable := (G_PLC_Status <> 0);
+    G_Eff_Setpoint   := G_Setpoint;
+    G_Eff_Manual_MV  := G_Manual_MV;
+    G_Eff_TuneCmd    := (G_Tune_Cmd <> 0);
 ELSE
-    // use HMI_* from NA
+    G_Eff_Mode       := HMI_Mode;        // from NA5
+    G_Eff_PLC_Enable := HMI_PLC_Enable;
+    G_Eff_Setpoint   := HMI_Setpoint;
+    G_Eff_Manual_MV  := HMI_Manual_MV;
+    G_Eff_TuneCmd    := HMI_TuneCmd;
 END_IF;
+
+// PID params: LATCH pattern (asymmetric)
+// Web:  latch every scan  — G_PID_* only changes when operator clicks "Send" on dashboard
+// HMI:  latch on Apply button rising edge only (HMI_PID_PB/Ti/Td change as user types)
+IF G_WebActive THEN
+    G_Eff_PID_PB := G_PID_PB;
+    G_Eff_PID_Ti := G_PID_Ti;
+    G_Eff_PID_Td := G_PID_Td;
+ELSIF HMI_PID_Update_Rise THEN
+    G_Eff_PID_PB := HMI_PID_PB;
+    G_Eff_PID_Ti := HMI_PID_Ti;
+    G_Eff_PID_Td := HMI_PID_Td;
+    HMI_PID_Update_Feedback := TRUE;
+END_IF;
+// No match → G_Eff_PID_* retains last value (latch)
 ```
 
-That’s it—no changes needed to CommTask mapping, Modbus registers, etc.
+---
+
+## 8) AutoTune Results — HMI Workflow
+
+After AutoTune completes (`ATDone_FB = TRUE`), ControlTask writes tuned params to `G_PID_PB_Out / Ti_Out / Td_Out`. These appear on the NA5 "PID Tuning" page automatically (since those DataEdits should pre-read `G_PID_*_Out`).
+
+**Operator workflow:**
+1. AutoTune completes → NA5 shows new PB/Ti/Td values in the DataEdit fields (from `G_PID_*_Out`)
+2. Operator reviews values → clicks **Apply** → `HMI_PID_Update_Rise` → PrimaryTask latches → immediately active
+
+This keeps the operator in control — tuned params are not auto-applied.
 
 ---
 
-## 8) Download/transfer (typical sequence)
+## 9) Download Sequence
 
-1. Connect PC ↔ NJ (USB or Ethernet) and go Online
-2. Connect PC ↔ NA (USB, or NA Ethernet port 2 “direct connection”) 
-3. **Synchronize/Transfer**:
-
-   * download controller project to NJ
-   * download HMI project to NA
-4. Put NJ in RUN, test NA buttons and watch `HMI_*` change in Watch window
+1. Connect PC → NJ (USB or Ethernet) → Online
+2. Connect PC → NA5 (USB or NA Ethernet Port 2 direct connection)
+3. **Transfer to NJ**: download controller project
+4. **Transfer to NA5**: download HMI project
+5. Put NJ in RUN → test NA buttons → watch `HMI_*` change in Watch window
 
 ---
 
-## 9) Common pitfalls (quick checklist)
+## 10) Common Pitfalls
 
-* ✅ Variables must be **Global** (not local) for NA mapping ([Omron Store][1])
-* ✅ You must do **Variable Mapping** on the NA side (it won’t “just see” PLC tags automatically) ([Omron Store][1])
-* ✅ Don’t let NA write `G_*` directly—use `HMI_*` then arbitrate in PrimaryTask
-* ✅ Show/disable controls based on `G_WebActive` so operators understand ownership
+| Check | Reason |
+| :--- | :--- |
+| ✅ HMI_* must be **Global** variables | Local vars are not visible to NA5 variable mapping |
+| ✅ Do **Variable Mapping** on NA side | Tags do not auto-appear — you must map them |
+| ✅ NA writes `HMI_*` only, never `G_*` | Prevents web/HMI fighting over same variable |
+| ✅ Disable local controls when `G_WebActive` | Prevents operator confusion |
+| ✅ PID Apply button is momentary BOOL | NA5 should set TRUE while pressed, FALSE on release |
+| ✅ `OprSetParams.CycleTime` = 40ms | Must match ControlTask interval for correct PIDAT timing |
 
 ---
 
-If you tell me your **NA5 exact model** (e.g., NA5-7W001S-V1) and whether you want **Local to auto-takeover when comm fails** (your current logic already does), I can propose a clean NA screen tag list + page layout that matches your dashboard features 1:1.
+## Resources
 
-[1]: https://store.omron.co.nz/knowledge-base/how-to-connect-an-na-hmi-to-an-nxnj-plc?srsltid=AfmBOor00TlzZh5aG6sq1xtq5r1EmUrfxOtqIboDlSd2ZLnqUvoJA6xF "How to connect an NA HMI to an NX/NJ PLC"
-[2]: https://files.omron.eu/downloads/latest/manual/en/v119_na_series_programmable_terminal_device_connection_users_manual_en.pdf?v=2 "NA-series Programmable Terminal Device Connection User’s Manual"
+- [How to connect NA HMI to NX/NJ PLC](https://store.omron.co.nz/knowledge-base/how-to-connect-an-na-hmi-to-an-nxnj-plc)
+- [NA-series Device Connection User's Manual](https://files.omron.eu/downloads/latest/manual/en/v119_na_series_programmable_terminal_device_connection_users_manual_en.pdf)
+- [Omron Sysmac KB](https://www.myomron.com/index.php?action=kb&article=1245%2F1000)
