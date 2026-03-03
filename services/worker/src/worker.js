@@ -64,12 +64,12 @@ export default {
       }
 
       // ---- PING
-      if (url.pathname === "/ping") {
+      if (url.pathname === "/api/ping") {
         return new Response("pong from worker");
       }
 
       // ---- DEBUG ENV
-      if (url.pathname === "/debug_env") {
+      if (url.pathname === "/api/debug_env") {
         return new Response(JSON.stringify(Object.keys(env)), {
           headers: { "Content-Type": "application/json" }
         });
@@ -218,8 +218,8 @@ export default {
 
       // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
 
-      // ✅ NEW: Relay Status (Pass-through)
-      if (url.pathname === "/relay_status" && request.method === "GET") {
+      // ✅ Relay Status (Pass-through)
+      if (url.pathname === "/api/relay_status" && request.method === "GET") {
         try {
           const r = await fetch("https://orangepi.plc-web.online/relay_status");
           return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
@@ -230,125 +230,127 @@ export default {
         }
       }
 
-      // ✅ NEW: Light Control
-      if (url.pathname === "/light/on" && request.method === "POST") {
+      // ✅ Light Control
+      if (url.pathname === "/api/light/on" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/light/on", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
-      if (url.pathname === "/light/off" && request.method === "POST") {
+      if (url.pathname === "/api/light/off" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/light/off", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ NEW: Web Control
-      if (url.pathname === "/web/on" && request.method === "POST") {
+      // ✅ Web Control
+      if (url.pathname === "/api/web/on" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/web/on", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
-      if (url.pathname === "/web/off" && request.method === "POST") {
+      if (url.pathname === "/api/web/off" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/web/off", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ NEW: PLC Control
-      if (url.pathname === "/plc/on" && request.method === "POST") {
+      // ✅ PLC Control
+      if (url.pathname === "/api/plc/on" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/plc/on", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
-      if (url.pathname === "/plc/off" && request.method === "POST") {
+      if (url.pathname === "/api/plc/off" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/plc/off", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ NEW: Mode Control
-      if (url.pathname.startsWith("/mode/") && request.method === "POST") {
-        const r = await fetch(`https://orangepi.plc-web.online${url.pathname}`, { method: "POST" });
+      // ✅ Mode Control
+      if (url.pathname.startsWith("/api/mode/") && request.method === "POST") {
+        // Strip /api prefix before forwarding to backend
+        const backendPath = url.pathname.replace(/^\/api/, "");
+        const r = await fetch(`https://orangepi.plc-web.online${backendPath}`, { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ NEW: Backward Compatibility for GET /relay
-      if (url.pathname === "/relay" && request.method === "GET") {
+      // ✅ Backward Compatibility for GET /api/relay
+      if (url.pathname === "/api/relay" && request.method === "GET") {
         const r = await fetch("https://orangepi.plc-web.online/relay_status");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      if (url.pathname === "/setpoint_status") {
+      if (url.pathname === "/api/setpoint_status") {
         const r = await fetch("https://orangepi.plc-web.online/setpoint_status");
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/mv_manual_status") {
+      if (url.pathname === "/api/mv_manual_status") {
         const r = await fetch("https://orangepi.plc-web.online/mv_manual_status");
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/pid_params") {
+      if (url.pathname === "/api/pid_params") {
         const r = await fetch("https://orangepi.plc-web.online/pid_params");
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/control_status") {
+      if (url.pathname === "/api/control_status") {
         const r = await fetch("https://orangepi.plc-web.online/control_status");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      if (url.pathname === "/start_light") {
+      if (url.pathname === "/api/start_light") {
         const r = await fetch("https://orangepi.plc-web.online/light/on", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/stop_light") {
+      if (url.pathname === "/api/stop_light") {
         const r = await fetch("https://orangepi.plc-web.online/light/off", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/start_web") {
+      if (url.pathname === "/api/start_web") {
         const r = await fetch("https://orangepi.plc-web.online/web/on", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/stop_web") {
+      if (url.pathname === "/api/stop_web") {
         const r = await fetch("https://orangepi.plc-web.online/web/off", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/web_ack") {
+      if (url.pathname === "/api/web_ack") {
         const r = await fetch("https://orangepi.plc-web.online/web_ack");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      if (url.pathname === "/start_plc") {
+      if (url.pathname === "/api/start_plc") {
         const r = await fetch("https://orangepi.plc-web.online/plc/on", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/stop_plc") {
+      if (url.pathname === "/api/stop_plc") {
         const r = await fetch("https://orangepi.plc-web.online/plc/off", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/manual_mode") {
+      if (url.pathname === "/api/manual_mode") {
         const r = await fetch("https://orangepi.plc-web.online/mode/manual", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/auto_mode") {
+      if (url.pathname === "/api/auto_mode") {
         const r = await fetch("https://orangepi.plc-web.online/mode/auto", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/tune_mode") {
+      if (url.pathname === "/api/tune_mode") {
         const r = await fetch("https://orangepi.plc-web.online/mode/tune", { method: "POST" });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/temp") {
+      if (url.pathname === "/api/temp") {
         const r = await fetch("https://orangepi.plc-web.online/temp");
         return withCors(request, await r.text(), r.status);
       }
 
       // ---- Gateway Heartbeat ----
-      if (url.pathname === "/heartbeat" && request.method === "GET") {
+      if (url.pathname === "/api/heartbeat" && request.method === "GET") {
         const session = await validateSession(request, env);
         if (!session) return withCors(request, "Unauthorized", 401);
 
@@ -361,7 +363,7 @@ export default {
       }
 
       // ---- Camera Health Check ----
-      if (url.pathname === "/camera_health" && request.method === "GET") {
+      if (url.pathname === "/api/camera_health" && request.method === "GET") {
         const session = await validateSession(request, env);
         if (!session) return withCors(request, "Unauthorized", 401);
 
@@ -382,7 +384,7 @@ export default {
         }
       }
 
-      if (url.pathname === "/video_feed") {
+      if (url.pathname === "/api/video_feed") {
         const session = await validateSession(request, env);
         if (!session) return withCors(request, "Unauthorized", 401);
 
@@ -397,7 +399,7 @@ export default {
         });
       }
 
-      if (url.pathname === "/setpoint" && request.method === "POST") {
+      if (url.pathname === "/api/setpoint" && request.method === "POST") {
         const body = await request.json();
         const r = await fetch("https://orangepi.plc-web.online/setpoint", {
           method: "POST",
@@ -407,13 +409,13 @@ export default {
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ NEW: Setpoint Acknowledgement
-      if (url.pathname === "/setpoint_ack" && request.method === "GET") {
+      // ✅ Setpoint Acknowledgement
+      if (url.pathname === "/api/setpoint_ack" && request.method === "GET") {
         const r = await fetch("https://orangepi.plc-web.online/setpoint_ack");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      if (url.pathname === "/pid" && request.method === "POST") {
+      if (url.pathname === "/api/pid" && request.method === "POST") {
         const body = await request.json();
         const r = await fetch("https://orangepi.plc-web.online/pid", {
           method: "POST",
@@ -423,13 +425,13 @@ export default {
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      if (url.pathname === "/pid_ack" && request.method === "GET") {
+      if (url.pathname === "/api/pid_ack" && request.method === "GET") {
         const r = await fetch("https://orangepi.plc-web.online/pid_ack");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
 
-      if (url.pathname === "/mv_manual" && request.method === "POST") {
+      if (url.pathname === "/api/mv_manual" && request.method === "POST") {
         const body = await request.json();
         const r = await fetch("https://orangepi.plc-web.online/mv_manual", {
           method: "POST",
@@ -440,14 +442,14 @@ export default {
       }
 
       // ---- Manual MV Acknowledgement ----
-      if (url.pathname === "/mv_manual_ack") {
+      if (url.pathname === "/api/mv_manual_ack") {
         const r = await fetch("https://orangepi.plc-web.online/mv_manual_ack");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       // -------------------- Auto-Tune Related Routes --------------------
       // ---- Send Tune Setpoint ----
-      if (url.pathname === "/tune_setpoint" && request.method === "POST") {
+      if (url.pathname === "/api/tune_setpoint" && request.method === "POST") {
         const body = await request.json();
         const r = await fetch("https://orangepi.plc-web.online/tune_setpoint", {
           method: "POST",
@@ -458,36 +460,36 @@ export default {
       }
 
       // ---- Tune Setpoint Acknowledgement ----
-      if (url.pathname === "/tune_setpoint_ack" && request.method === "GET") {
+      if (url.pathname === "/api/tune_setpoint_ack" && request.method === "GET") {
         const r = await fetch("https://orangepi.plc-web.online/tune_setpoint_ack");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       // ---- Start Auto-Tune ----
-      if (url.pathname === "/tune_start" && request.method === "POST") {
+      if (url.pathname === "/api/tune_start" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/tune_start", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       // ---- Tune Start Acknowledgement ----
-      if (url.pathname === "/tune_start_ack" && request.method === "GET") {
+      if (url.pathname === "/api/tune_start_ack" && request.method === "GET") {
         const r = await fetch("https://orangepi.plc-web.online/tune_start_ack");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       // ---- Stop Auto-Tune ----
-      if (url.pathname === "/tune_stop" && request.method === "POST") {
+      if (url.pathname === "/api/tune_stop" && request.method === "POST") {
         const r = await fetch("https://orangepi.plc-web.online/tune_stop", { method: "POST" });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       // ---- Poll Auto-Tune Status ----
-      if (url.pathname === "/tune_status" && request.method === "GET") {
+      if (url.pathname === "/api/tune_status" && request.method === "GET") {
         const r = await fetch("https://orangepi.plc-web.online/tune_status");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      if (url.pathname === "/tune_setpoint_status") {
+      if (url.pathname === "/api/tune_setpoint_status") {
         const r = await fetch("https://orangepi.plc-web.online/tune_setpoint_status");
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
@@ -495,7 +497,7 @@ export default {
       // ============================================
       // RELAY / HEATER Control (PROXIED TO GATEWAY)
       // ============================================
-      if (url.pathname === "/relay" && request.method === "POST") {
+      if (url.pathname === "/api/relay" && request.method === "POST") {
         try {
           const body = await request.clone().json();
 
@@ -517,8 +519,8 @@ export default {
 
 
       // ---- WebSocket relay to Orange Pi ----
-      if (url.pathname === "/ws") {
-        // 👇 Backend WS target (your Orange Pi’s internal websocket)
+      if (url.pathname === "/api/ws") {
+        // 👇 Backend WS target (your Orange Pi's internal websocket)
         const target = "ws://orangepi.plc-web.online:8765";
 
         // Create WS pair for the browser connection

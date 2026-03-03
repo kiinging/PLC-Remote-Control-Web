@@ -54,12 +54,12 @@ export default function Dashboard() {
     const [chartWindow, setChartWindow] = useState(30); // Minutes to display
 
     // Video
-    const [videoSrc, setVideoSrc] = useState('/video_feed');
+    const [videoSrc, setVideoSrc] = useState('/api/video_feed');
 
     // Auto-reload video when camera comes online
     useEffect(() => {
         if (cameraStatus === 'alive') {
-            setVideoSrc(`/video_feed?t=${Date.now()}`);
+            setVideoSrc(`/api/video_feed?t=${Date.now()}`);
         }
     }, [cameraStatus]);
 
@@ -89,14 +89,14 @@ export default function Dashboard() {
         }
 
         try {
-            const sp = await api.api.get('/setpoint_status').then(r => r.data);
+            const sp = await api.api.get('/api/setpoint_status').then(r => r.data);
             setSetpoint(sp.setpoint);
         } catch (e) {
             console.warn("Setpoint unavailable", e);
         }
 
         try {
-            const mv = await api.api.get('/mv_manual_status').then(r => r.data);
+            const mv = await api.api.get('/api/mv_manual_status').then(r => r.data);
             setManualMV(mv.mv_manual);
         } catch (e) {
             console.warn("Manual MV unavailable", e);
@@ -110,7 +110,7 @@ export default function Dashboard() {
 
         // Fetch Trend History (last hour = 3600 points)
         try {
-            const history = await api.api.get('/trend?limit=3600').then(r => r.data);
+            const history = await api.api.get('/api/trend?limit=3600').then(r => r.data);
             if (Array.isArray(history)) {
                 setChartData(history);
             }
@@ -257,7 +257,7 @@ export default function Dashboard() {
             if (r.alive) {
                 setRelayStatus('alive');
                 setRelay(r.relay === true); // Explicitly check true, as it might be null
-                if (!videoSrc) setVideoSrc('/video_feed');
+                if (!videoSrc) setVideoSrc('/api/video_feed');
             } else {
                 setRelayStatus('offline');
                 setRelay(false); // Default to off in UI if unknown, or maybe keep last known?
@@ -265,7 +265,7 @@ export default function Dashboard() {
             }
 
             // Always try to load video (add timestamp to bust cache)
-            if (!videoSrc) setVideoSrc(`/video_feed?t=${Date.now()}`);
+            if (!videoSrc) setVideoSrc(`/api/video_feed?t=${Date.now()}`);
         } catch (e) {
             console.warn("Relay status check failed", e);
             setEsp32Alive(false);
@@ -726,7 +726,7 @@ export default function Dashboard() {
                                         style={{ width: '100%', height: 'auto', display: 'block' }}
                                         onError={() => {
                                             console.log("Video stream failed, retrying in 1s...");
-                                            setTimeout(() => setVideoSrc(`/video_feed?t=${Date.now()}`), 1000);
+                                            setTimeout(() => setVideoSrc(`/api/video_feed?t=${Date.now()}`), 1000);
                                         }}
                                     />
                                 )}
