@@ -15,11 +15,11 @@ Detailed documentation has been moved to the `docs/` folder:
 **Step 1 — Build the frontend**:
 ```bash
 cd apps\web
-npm run dev
+npm run build
 ```
 
 **Step 2 — Deploy the worker**:
 ```bash
 cd \PLC-Remote-Control-Web
-npx wrangler dev
+npx wrangler deploy
 ```

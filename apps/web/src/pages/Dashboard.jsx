@@ -33,6 +33,7 @@ export default function Dashboard() {
     const [setpoint, setSetpoint] = useState(0);
     const [manualMV, setManualMV] = useState(0);
     const [realMV, setRealMV] = useState(0); // ✅ Real MV from PLC
+    const [setpointOut, setSetpointOut] = useState(0); // ✅ PLC confirmed setpoint (HR111-112)
 
 
     const [mvPending, setMvPending] = useState(false);
@@ -209,6 +210,10 @@ export default function Dashboard() {
             // ✅ Update Real MV from PLC status
             if (cStatus.mv !== undefined) {
                 setRealMV(cStatus.mv);
+            }
+            // ✅ Update PLC-confirmed setpoint (setpoint_out from HR111-112)
+            if (cStatus.setpoint_out !== undefined) {
+                setSetpointOut(cStatus.setpoint_out);
             }
         } catch (e) {
             // Keep last known control status
@@ -681,31 +686,34 @@ export default function Dashboard() {
                                     </div>
                                 )}
 
-                                {/* PLC Control (Moved Here) */}
-
-
+                                {/* Process Variables Display - 2-column grid */}
                                 <div className="mt-4 border-top pt-3">
-                                    {/* MV / Current / Power Display */}
-                                    <div className="d-flex justify-content-between align-items-center mb-1">
-                                        <span>Manipulated Value (MV)</span>
-                                        <span className="fw-bold">{Number(realMV).toFixed(1)} %</span>
-                                    </div>
-                                    <div className="d-flex justify-content-between align-items-center mb-1">
-                                        <span>Current (Calculated)</span>
-                                        <span className="fw-bold">{(1.2 * (realMV / 100)).toFixed(2)} A</span>
-                                    </div>
-                                    <div className="d-flex justify-content-between align-items-center mb-3">
-                                        <span>Power (Calculated)</span>
-                                        <span className="fw-bold text-warning">
-                                            {/* P = I^2 * 20 */}
-                                            {(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W
-                                        </span>
-                                    </div>
-
-                                    {/* PV Display */}
-                                    <div className="d-flex justify-content-between align-items-center">
-                                        <span>Process Value (PV)</span>
-                                        <span className="text-primary fw-bold">{Number(temp).toFixed(2)} °C</span>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem' }}>
+                                        {/* MV */}
+                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
+                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Manipulated Value (MV)</small>
+                                            <span className="fw-bold fs-5">{Number(realMV).toFixed(1)} %</span>
+                                        </div>
+                                        {/* Current */}
+                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
+                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Current (Calculated)</small>
+                                            <span className="fw-bold fs-5">{(1.2 * (realMV / 100)).toFixed(2)} A</span>
+                                        </div>
+                                        {/* Power */}
+                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
+                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Power (Calculated)</small>
+                                            <span className="fw-bold fs-5 text-warning">{(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W</span>
+                                        </div>
+                                        {/* Setpoint — PLC echo from HR111-112 */}
+                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
+                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (PLC Echo)</small>
+                                            <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
+                                        </div>
+                                        {/* PV — spans full width */}
+                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)', gridColumn: '1 / -1' }}>
+                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Process Value (PV)</small>
+                                            <span className="text-primary fw-bold fs-5">{Number(temp).toFixed(2)} °C</span>
+                                        </div>
                                     </div>
                                     <div className="text-muted small text-end mt-1">Last Update: {lastUpdate}</div>
                                 </div>

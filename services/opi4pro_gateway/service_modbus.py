@@ -124,7 +124,7 @@ def modbus_loop():
                 logger.error(f"Write Error: {wr}")
 
             # --- 2) READ PLC -> GW : HR100..HR110 (11 regs) ---
-            rr = client.read_holding_registers(100, 11, unit=1)
+            rr = client.read_holding_registers(100, 13, unit=1)  # HR100-HR112
             if not rr.isError():
                 regs = rr.registers
 
