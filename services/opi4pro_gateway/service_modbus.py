@@ -124,7 +124,7 @@ def modbus_loop():
                 logger.error(f"Write Error: {wr}")
 
             # --- 2) READ PLC -> GW : HR100..HR110 (11 regs) ---
-            rr = client.read_holding_registers(100, 11, unit=1)
+            rr = client.read_holding_registers(100, 13, unit=1)  # HR100-HR112
             if not rr.isError():
                 regs = rr.registers
 
@@ -135,12 +135,14 @@ def modbus_loop():
                 pb_out    = registers_to_float(regs[5:7])   # HR105-106
                 ti_out    = registers_to_float(regs[7:9])   # HR107-108
                 td_out    = registers_to_float(regs[9:11])  # HR109-110
+                setpoint_out = registers_to_float(regs[11:13])  # HR111-112
 
                 db.set_state("mv", mv_fb)
                 db.set_state("tune_done", bool(tune_done))
                 db.set_state("pid_pb_out", pb_out)
                 db.set_state("pid_ti_out", ti_out)
                 db.set_state("pid_td_out", td_out)
+                db.set_state("setpoint_out", setpoint_out)
 
                 db.set_state("modbus_plc_last_seen", time.time())
                 db.set_state("modbus_last_tick_ts", time.time())

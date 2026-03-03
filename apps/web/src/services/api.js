@@ -43,38 +43,38 @@ export const getUsers = async () => (await api.get('/api/users')).data;
 export const deleteUser = async (username) => (await api.post('/api/user/delete', { username })).data;
 
 // --- Control API wrappers ---
-export const getRelayStatus = async () => (await api.get('/relay_status')).data;
-export const setRelay = async (state) => (await api.post('/relay', { relay: state })).data;
+export const getRelayStatus = async () => (await api.get('/api/relay_status')).data;
+export const setRelay = async (state) => (await api.post('/api/relay', { relay: state })).data;
 
 // Gateway Heartbeat
-export const getGatewayHeartbeat = async () => (await api.get('/heartbeat')).data;
-export const getCameraHealth = async () => (await api.get('/camera_health')).data;
+export const getGatewayHeartbeat = async () => (await api.get('/api/heartbeat')).data;
+export const getCameraHealth = async () => (await api.get('/api/camera_health')).data;
 
-export const getControlStatus = async () => (await api.get('/control_status')).data;
-export const getTemp = async () => (await api.get('/temp')).data;
+export const getControlStatus = async () => (await api.get('/api/control_status')).data;
+export const getTemp = async () => (await api.get('/api/temp')).data;
 
-export const setMode = async (mode) => (await api.post(`/mode/${mode}`)).data; // manual, auto, tune
+export const setMode = async (mode) => (await api.post(`/api/mode/${mode}`)).data; // manual, auto, tune
 
-export const startProcess = async (type) => (await api.post(`/${type}/on`)).data; // light, web, plc
-export const stopProcess = async (type) => (await api.post(`/${type}/off`)).data;
-export const getWebAck = async () => (await api.get('/web_ack')).data;
+export const startProcess = async (type) => (await api.post(`/api/${type}/on`)).data; // light, web, plc
+export const stopProcess = async (type) => (await api.post(`/api/${type}/off`)).data;
+export const getWebAck = async () => (await api.get('/api/web_ack')).data;
 
 // PID & Setpoints
-export const getPidParams = async () => (await api.get('/pid_params')).data;
-export const setPidParams = async (params) => (await api.post('/pid', params)).data;
-export const getPidAck = async () => (await api.get('/pid_ack')).data;
+export const getPidParams = async () => (await api.get('/api/pid_params')).data;
+export const setPidParams = async (params) => (await api.post('/api/pid', params)).data;
+export const getPidAck = async () => (await api.get('/api/pid_ack')).data;
 
-export const setSetpoint = async (val) => (await api.post('/setpoint', { setpoint: val })).data;
-export const getSetpointAck = async () => (await api.get('/setpoint_ack')).data;
+export const setSetpoint = async (val) => (await api.post('/api/setpoint', { setpoint: val })).data;
+export const getSetpointAck = async () => (await api.get('/api/setpoint_ack')).data;
 
-export const setManualMV = async (val) => (await api.post('/mv_manual', { mv_manual: val })).data;
-export const getManualMVAck = async () => (await api.get('/mv_manual_ack')).data;
+export const setManualMV = async (val) => (await api.post('/api/mv_manual', { mv_manual: val })).data;
+export const getManualMVAck = async () => (await api.get('/api/mv_manual_ack')).data;
 
 // Tune
-export const startTune = async () => (await api.post('/tune_start')).data;
-export const stopTune = async () => (await api.post('/tune_stop')).data;
-export const getTuneStatus = async () => (await api.get('/tune_status')).data;
-export const setTuneSetpoint = async (val) => (await api.post('/tune_setpoint', { setpoint: val })).data;
-export const getTuneSetpointAck = async () => (await api.get('/tune_setpoint_ack')).data;
+export const startTune = async () => (await api.post('/api/tune_start')).data;
+export const stopTune = async () => (await api.post('/api/tune_stop')).data;
+export const getTuneStatus = async () => (await api.get('/api/tune_status')).data;
+export const setTuneSetpoint = async (val) => (await api.post('/api/tune_setpoint', { setpoint: val })).data;
+export const getTuneSetpointAck = async () => (await api.get('/api/tune_setpoint_ack')).data;
 
 export default api;
