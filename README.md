@@ -10,16 +10,16 @@ Detailed documentation has been moved to the `docs/` folder:
 -   **[Architecture](docs/ARCHITECTURE.md)**: System design, microservices, database schema, and IPC.
 -   **[Modbus Register Map](docs/MODBUS_MAP.md)**: **IMPORTANT** - Reference for PLC Programming (Register addresses and Handshakes).
 
-## 🚀 Quick Start (Local Dev)
+## 🚀 How to Build & Deploy
 
-**Frontend**:
+**Step 1 — Build the frontend**:
 ```bash
-cd apps/web
+cd apps\web
 npm run dev
 ```
 
-**Worker**:
+**Step 2 — Deploy the worker**:
 ```bash
-cd services/worker
+cd \PLC-Remote-Control-Web
 npx wrangler dev
 ```
