@@ -553,10 +553,7 @@ export default {
         }
         return response;
       } else {
-        // Fallback: Redirect to the Pages URL if ASSETS execution binding is missing
-        // This isolates the API worker from the frontend serving if necessary
-        const pagesUrl = "https://cloud-ui-4ws.pages.dev"; // Based on project ID seen in preview
-        return Response.redirect(`${pagesUrl}${url.pathname}${url.search}`, 302);
+        return new Response("Not Found", { status: 404 });
       }
 
     } catch (e) {
