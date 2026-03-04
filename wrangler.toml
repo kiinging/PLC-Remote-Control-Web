@@ -10,5 +10,6 @@ id = "53b5cca7e0e34c34978581f25ed8d010"
 
 [assets]
 directory = "apps/web/dist"
-not_found_handling = "single-page-application"
+binding = "ASSETS"
+run_worker_first = true
 
