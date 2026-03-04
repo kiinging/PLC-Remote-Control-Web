@@ -63,6 +63,19 @@ export default {
         return withCors(request, null, 204);
       }
 
+      // ---- SPA Page Routes (EARLY EXIT): Serve index.html for known client-side routes
+      // Must be BEFORE any asset/fallback logic so direct navigation and refresh work.
+      // Using a plain new Request() (no second arg) avoids inheriting browser cache headers.
+      const spaPageRoutes = ["/dashboard", "/login", "/settings", "/tune", "/about"];
+      if (
+        request.method === "GET" &&
+        spaPageRoutes.some(r => url.pathname === r || url.pathname.startsWith(r + "/"))
+      ) {
+        if (env.ASSETS) {
+          return env.ASSETS.fetch(new Request("https://plc-web.online/index.html"));
+        }
+      }
+
       // ---- PING
       if (url.pathname === "/api/ping") {
         return new Response("pong from worker");
@@ -557,21 +570,12 @@ export default {
       }
 
 
-      // ---- SPA Page Routes: serve index.html directly for known client-side routes
-      // This ensures refresh/direct navigation to /dashboard, /login, /settings etc. works
-      const spaRoutes = ["/dashboard", "/login", "/settings", "/tune", "/about"];
-      if (spaRoutes.some(route => url.pathname === route || url.pathname.startsWith(route + "/"))) {
-        if (env.ASSETS) {
-          return env.ASSETS.fetch(new Request("https://plc-web.online/index.html", request));
-        }
-      }
-
-      // ---- Default: serve static files
+      // ---- Default: serve static files (JS, CSS, images, etc.)
       if (env.ASSETS) {
         const response = await env.ASSETS.fetch(request);
         if (response.status === 404 && !url.pathname.startsWith("/api")) {
-          // SPA Fallback: serve index.html for any other unknown non-API routes
-          return env.ASSETS.fetch(new Request("https://plc-web.online/index.html", request));
+          // SPA Fallback: serve index.html for any other unknown non-API route
+          return env.ASSETS.fetch(new Request("https://plc-web.online/index.html"));
         }
         return response;
       } else {
