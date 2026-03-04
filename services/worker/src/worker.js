@@ -494,6 +494,17 @@ export default {
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
+      // ✅ Trend History (time-series buffer)
+      if (url.pathname === "/api/trend" && request.method === "GET") {
+        const limit = new URL(request.url).searchParams.get("limit") || "900";
+        try {
+          const r = await fetch(`https://orangepi.plc-web.online/trend?limit=${limit}`);
+          return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+        } catch (e) {
+          return withCors(request, JSON.stringify({ error: e.message }), 503, { "Content-Type": "application/json" });
+        }
+      }
+
       // ============================================
       // RELAY / HEATER Control (PROXIED TO GATEWAY)
       // ============================================
@@ -546,11 +557,20 @@ export default {
       }
 
 
+      // ---- SPA Page Routes: serve index.html directly for known client-side routes
+      // This ensures refresh/direct navigation to /dashboard, /login, /settings etc. works
+      const spaRoutes = ["/dashboard", "/login", "/settings", "/tune", "/about"];
+      if (spaRoutes.some(route => url.pathname === route || url.pathname.startsWith(route + "/"))) {
+        if (env.ASSETS) {
+          return env.ASSETS.fetch(new Request("https://plc-web.online/index.html", request));
+        }
+      }
+
       // ---- Default: serve static files
       if (env.ASSETS) {
         const response = await env.ASSETS.fetch(request);
         if (response.status === 404 && !url.pathname.startsWith("/api")) {
-          // SPA Fallback: serve index.html for unknown non-API routes
+          // SPA Fallback: serve index.html for any other unknown non-API routes
           return env.ASSETS.fetch(new Request("https://plc-web.online/index.html", request));
         }
         return response;
