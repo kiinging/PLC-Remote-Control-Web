@@ -236,7 +236,7 @@ export default function Dashboard() {
                 const newItem = {
                     time: now,
                     pv: tData.rtd_temp,
-                    sp: setpoint, // Unified SP
+                    sp: cStatus?.setpoint_out ?? setpointOut, // ✅ Use PLC Confirmed SP
                     mv: cStatus?.mv ?? manualMV // ✅ Use Real MV if available, else fallback
                 };
                 // Append new item, keep last 3600 points (1 hour)
@@ -746,13 +746,11 @@ export default function Dashboard() {
                                         <small className="text-muted" style={{ fontSize: '0.72em' }}>Power</small>
                                         <span className="fw-bold fs-5 text-warning">{(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W</span>
                                     </div>
-                                    {/* Setpoint — shown in Auto and Tune modes */}
-                                    {controlStatus.mode !== 0 && (
-                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (SP)</small>
-                                            <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
-                                        </div>
-                                    )}
+                                    {/* Setpoint — always show */}
+                                    <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (SP)</small>
+                                        <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
+                                    </div>
                                     {/* PV */}
                                     <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
                                         <small className="text-muted" style={{ fontSize: '0.72em' }}>Process Value (PV)</small>
