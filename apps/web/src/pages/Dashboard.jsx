@@ -686,39 +686,7 @@ export default function Dashboard() {
                                     </div>
                                 )}
 
-                                {/* Process Variables Display - 2-column grid */}
-                                <div className="mt-4 border-top pt-3">
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem' }}>
-                                        {/* MV */}
-                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Manipulated Value (MV)</small>
-                                            <span className="fw-bold fs-5">{Number(realMV).toFixed(1)} %</span>
-                                        </div>
-                                        {/* Current */}
-                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Current (Calculated)</small>
-                                            <span className="fw-bold fs-5">{(1.2 * (realMV / 100)).toFixed(2)} A</span>
-                                        </div>
-                                        {/* Power */}
-                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Power (Calculated)</small>
-                                            <span className="fw-bold fs-5 text-warning">{(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W</span>
-                                        </div>
-                                        {/* Show Setpoint only in Auto (1) and Tune (2) */}
-                                        {controlStatus.mode !== 0 && (
-                                            <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
-                                                <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (PLC Echo)</small>
-                                                <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
-                                            </div>
-                                        )}
-                                        {/* PV — spans full width */}
-                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)', gridColumn: '1 / -1' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Process Value (PV)</small>
-                                            <span className="text-primary fw-bold fs-5">{Number(temp).toFixed(2)} °C</span>
-                                        </div>
-                                    </div>
-                                    <div className="text-muted small text-end mt-1">Last Update: {lastUpdate}</div>
-                                </div>
+
 
                             </Card.Body>
                         </Card>
@@ -748,6 +716,49 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                 )}
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+
+                {/* Process Variables — full-width row above the trend chart */}
+                <Row className="mt-4">
+                    <Col lg={12}>
+                        <Card>
+                            <Card.Header className="d-flex justify-content-between align-items-center py-2">
+                                <span className="fw-semibold">Process Variables</span>
+                                <small className="text-muted">Last Update: {lastUpdate}</small>
+                            </Card.Header>
+                            <Card.Body className="py-3">
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
+                                    {/* MV */}
+                                    <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>Manipulated Value (MV)</small>
+                                        <span className="fw-bold fs-5">{Number(realMV).toFixed(1)} %</span>
+                                    </div>
+                                    {/* Current */}
+                                    <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>Current (Calculated)</small>
+                                        <span className="fw-bold fs-5">{(1.2 * (realMV / 100)).toFixed(2)} A</span>
+                                    </div>
+                                    {/* Power */}
+                                    <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>Power (Calculated)</small>
+                                        <span className="fw-bold fs-5 text-warning">{(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W</span>
+                                    </div>
+                                    {/* Setpoint — shown in Auto and Tune modes */}
+                                    {controlStatus.mode !== 0 && (
+                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (PLC Echo)</small>
+                                            <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
+                                        </div>
+                                    )}
+                                    {/* PV */}
+                                    <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
+                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>Process Value (PV)</small>
+                                        <span className="fw-bold fs-5 text-primary">{Number(temp).toFixed(2)} °C</span>
+                                    </div>
+                                </div>
                             </Card.Body>
                         </Card>
                     </Col>
