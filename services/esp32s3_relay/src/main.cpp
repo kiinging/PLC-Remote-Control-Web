@@ -186,9 +186,9 @@ void handleStatus() {
   doc["free_heap"] = ESP.getFreeHeap();
   doc["wifi_rssi"] = WiFi.RSSI();
 
-  String resp;
-  serializeJson(doc, resp);
-  server.send(200, "application/json", resp);
+  char buffer[256];
+  serializeJson(doc, buffer, sizeof(buffer));
+  server.send(200, "application/json", buffer);
 
   // Non-blocking LED blink: just toggle once — no delay()
   digitalWrite(PIN_LED, !digitalRead(PIN_LED));
@@ -210,13 +210,8 @@ void setup() {
   setRelay(false); // Start OFF
 
   // Hardware Watchdog — reboots the ESP32 if loop() freezes for >30 s
-  esp_task_wdt_config_t wdt_cfg = {
-    .timeout_ms = HW_WDT_TIMEOUT_S * 1000,
-    .idle_core_mask = 0,
-    .trigger_panic = true
-  };
-  esp_task_wdt_reconfigure(&wdt_cfg);
-  esp_task_wdt_add(NULL); // Subscribe the current (loop) task
+  esp_task_wdt_init(HW_WDT_TIMEOUT_S, true);
+  esp_task_wdt_add(NULL); // Add current thread (loop) to WDT monitoring  
 
   Serial.println("\n\n--- ESP32 Relay Node ---");
   Serial.printf("Connecting to %s...", SSID);
