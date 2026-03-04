@@ -704,11 +704,13 @@ export default function Dashboard() {
                                             <small className="text-muted" style={{ fontSize: '0.72em' }}>Power (Calculated)</small>
                                             <span className="fw-bold fs-5 text-warning">{(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W</span>
                                         </div>
-                                        {/* Setpoint — PLC echo from HR111-112 */}
-                                        <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (PLC Echo)</small>
-                                            <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
-                                        </div>
+                                        {/* Show Setpoint only in Auto (1) and Tune (2) */}
+                                        {controlStatus.mode !== 0 && (
+                                            <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)' }}>
+                                                <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (PLC Echo)</small>
+                                                <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
+                                            </div>
+                                        )}
                                         {/* PV — spans full width */}
                                         <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.08)', gridColumn: '1 / -1' }}>
                                             <small className="text-muted" style={{ fontSize: '0.72em' }}>Process Value (PV)</small>
