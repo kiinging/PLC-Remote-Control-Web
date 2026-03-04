@@ -599,6 +599,13 @@ export default function Dashboard() {
                                             <Button onClick={sendPid} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
 
+                                        <div className="small mt-2 mb-1">
+                                            <strong>Active: </strong>
+                                            PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
+                                            Ti: {controlStatus.pid_ti_out !== undefined ? Number(controlStatus.pid_ti_out).toFixed(1) : '--'},
+                                            Td: {controlStatus.pid_td_out !== undefined ? Number(controlStatus.pid_td_out).toFixed(1) : '--'}
+                                        </div>
+
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
                                             <span>
@@ -663,9 +670,9 @@ export default function Dashboard() {
                                         </InputGroup>
                                         <div className="small">
                                             <strong>Results: </strong>
-                                            PB: {tuneStatus.tune_completed ? tuneResults.pb : '--'},
-                                            Ti: {tuneStatus.tune_completed ? tuneResults.ti : '--'},
-                                            Td: {tuneStatus.tune_completed ? tuneResults.td : '--'}
+                                            PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
+                                            Ti: {controlStatus.pid_ti_out !== undefined ? Number(controlStatus.pid_ti_out).toFixed(1) : '--'},
+                                            Td: {controlStatus.pid_td_out !== undefined ? Number(controlStatus.pid_td_out).toFixed(1) : '--'}
                                         </div>
 
                                         <hr className="my-2" />

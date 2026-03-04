@@ -201,6 +201,9 @@ def get_control_status():
         "plc_ack": is_synced, # ✅ Derived from Sync Status
         "mv": db.get_state("mv", 0.0), # ✅ Real MV from PLC (HR102-103)
         "setpoint_out": db.get_state("setpoint_out", 0.0), # ✅ PLC confirmed setpoint (HR111-112)
+        "pid_pb_out": db.get_state("pid_pb_out", 0.0), # ✅ PLC confirmed PB
+        "pid_ti_out": db.get_state("pid_ti_out", 0.0), # ✅ PLC confirmed Ti
+        "pid_td_out": db.get_state("pid_td_out", 0.0), # ✅ PLC confirmed Td
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0), # For debug/advanced UI
         "plc_alive": plc_alive, # ✅ PLC Heartbeat Status
