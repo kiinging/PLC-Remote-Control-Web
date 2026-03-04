@@ -13,10 +13,12 @@ def log_trend_point():
         rtd = db.get_state("rtd_temp", 0.0)
         # mv/sp might be None in DB, default to 0.0
         mv = db.get_state("mv", 0.0)
-        setpoint = db.get_state("setpoint", 0.0)
-        
+        # Use PLC-confirmed setpoint (HR111-112 echo). Fall back to desired setpoint if not yet written.
+        setpoint_out = db.get_state("setpoint_out", None)
+        sp = setpoint_out if setpoint_out is not None else db.get_state("setpoint", 0.0)
+
         # Log to SQLite
-        db.log_trend(pv=rtd, sp=setpoint, mv=mv)
+        db.log_trend(pv=rtd, sp=sp, mv=mv)
         
     except Exception as e:
         print(f"Error logging trend: {e}")
