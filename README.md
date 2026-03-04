@@ -23,3 +23,4 @@ npm run build
 cd \PLC-Remote-Control-Web
 npx wrangler deploy
 ```
+
