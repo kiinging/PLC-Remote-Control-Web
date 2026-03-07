@@ -204,6 +204,9 @@ def get_control_status():
         "pid_pb_out": db.get_state("pid_pb_out", 0.0), # ✅ PLC confirmed PB
         "pid_ti_out": db.get_state("pid_ti_out", 0.0), # ✅ PLC confirmed Ti
         "pid_td_out": db.get_state("pid_td_out", 0.0), # ✅ PLC confirmed Td
+        "pid_pb_at": db.get_state("pid_pb_at", 0.0), # ✅ Tuned PB
+        "pid_ti_at": db.get_state("pid_ti_at", 0.0), # ✅ Tuned Ti
+        "pid_td_at": db.get_state("pid_td_at", 0.0), # ✅ Tuned Td
         "mode": db.get_state("mode"),
         "web_desired": db.get_state("web", 0), # For debug/advanced UI
         "plc_alive": plc_alive, # ✅ PLC Heartbeat Status

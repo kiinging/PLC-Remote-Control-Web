@@ -59,7 +59,7 @@ IF New_Seq <> Last_Seq_Num THEN
     G_Manual_MV  := FUN_WordsToReal(G_Modbus_ReadBuf[6], G_Modbus_ReadBuf[7]);
     G_Setpoint   := FUN_WordsToReal(G_Modbus_ReadBuf[8], G_Modbus_ReadBuf[9]);
 
-    G_AT_Request   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
+    G_StartAT   := WORD_TO_INT(G_Modbus_ReadBuf[10]);
 
     G_PID_PB     := FUN_WordsToReal(G_Modbus_ReadBuf[11], G_Modbus_ReadBuf[12]);
     G_PID_Ti     := FUN_WordsToReal(G_Modbus_ReadBuf[13], G_Modbus_ReadBuf[14]);
@@ -80,7 +80,7 @@ R2W_MV(InReal := G_Current_MV);
 G_Modbus_WriteBuf[2] := R2W_MV.W_High;               // HR102
 G_Modbus_WriteBuf[3] := R2W_MV.W_Low;                // HR103
 
-G_Modbus_WriteBuf[4] := G_Tune_Done;    // HR104 tune done
+G_Modbus_WriteBuf[4] := G_ATDone;    // HR104 tune done
 
 R2W_PB(InReal := G_PID_PB_Out);
 G_Modbus_WriteBuf[5] := R2W_PB.W_High;               // HR105
@@ -98,11 +98,23 @@ R2W_Setpoint(InReal := G_Eff_Setpoint);
 G_Modbus_WriteBuf[11]  := R2W_Setpoint.W_High;              // HR111
 G_Modbus_WriteBuf[12]  := R2W_Setpoint.W_Low;               // HR112
 
+R2W_PB_AT(InReal := G_PID_PB_AT);
+G_Modbus_WriteBuf[13]  := R2W_PB_AT.W_High;                 // HR113
+G_Modbus_WriteBuf[14]  := R2W_PB_AT.W_Low;                  // HR114
+
+R2W_Ti_AT(InReal := G_PID_Ti_AT);
+G_Modbus_WriteBuf[15]  := R2W_Ti_AT.W_High;                 // HR115
+G_Modbus_WriteBuf[16]  := R2W_Ti_AT.W_Low;                  // HR116
+
+R2W_Td_AT(InReal := G_PID_Td_AT);
+G_Modbus_WriteBuf[17]  := R2W_Td_AT.W_High;                 // HR117
+G_Modbus_WriteBuf[18]  := R2W_Td_AT.W_Low;                  // HR118
+
 
 // =========================================================
 // 6) Copy your write buffer into server registers
-//    (G_Modbus_WriteBuf -> HR100..HR110)
+//    (G_Modbus_WriteBuf -> HR100..HR118)
 // =========================================================
-FOR i := 0 TO 12 DO
+FOR i := 0 TO 18 DO
     Registers[100 + i] := G_Modbus_WriteBuf[i];
 END_FOR;

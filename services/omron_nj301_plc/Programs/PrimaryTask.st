@@ -78,14 +78,14 @@ IF G_WebActive THEN
     G_Eff_PLC_Enable := (G_PLC_Status <> 0);
     G_Eff_Setpoint      := G_Setpoint;
     G_Eff_Manual_MV := G_Manual_MV;
-    G_Eff_AT_Request    := (G_AT_Request <> 0);
+    G_Eff_StartAT    := (G_StartAT <> 0);
 ELSE
     // Local / NA5 takeover when Web is off
     G_Eff_Mode       := HMI_Mode;
     G_Eff_PLC_Enable := HMI_PLC_Enable;
     G_Eff_Setpoint   := HMI_Setpoint;
     G_Eff_Manual_MV  := HMI_Manual_MV;
-    G_Eff_AT_Request    := HMI_AT_Request;
+    G_Eff_StartAT    := HMI_StartAT;
 END_IF;
 
 // ---------------------------------------------------------
@@ -136,12 +136,12 @@ END_IF;
 // ---------------------------------------------------------
 // Start tuning
 IF HMI_AT_ON_Rise THEN
-    HMI_AT_Request := TRUE;
+    HMI_StartAT := TRUE;
 END_IF;
 
 // Stop tuning (operator interrupt)
 IF HMI_AT_OFF_Rise THEN
-    HMI_AT_Request := FALSE;
+    HMI_StartAT := FALSE;
 END_IF;
 
 

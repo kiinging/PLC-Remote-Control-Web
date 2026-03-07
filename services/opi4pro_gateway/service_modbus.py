@@ -123,8 +123,8 @@ def modbus_loop():
             if wr.isError():
                 logger.error(f"Write Error: {wr}")
 
-            # --- 2) READ PLC -> GW : HR100..HR110 (11 regs) ---
-            rr = client.read_holding_registers(100, 13, unit=1)  # HR100-HR112
+            # --- 2) READ PLC -> GW : HR100..HR118 (19 regs) ---
+            rr = client.read_holding_registers(100, 19, unit=1)  # HR100-HR118
             if not rr.isError():
                 regs = rr.registers
 
@@ -136,6 +136,9 @@ def modbus_loop():
                 ti_out    = registers_to_float(regs[7:9])   # HR107-108
                 td_out    = registers_to_float(regs[9:11])  # HR109-110
                 setpoint_out = registers_to_float(regs[11:13])  # HR111-112
+                pb_at     = registers_to_float(regs[13:15]) # HR113-114
+                ti_at     = registers_to_float(regs[15:17]) # HR115-116
+                td_at     = registers_to_float(regs[17:19]) # HR117-118
 
                 db.set_state("mv", mv_fb)
                 db.set_state("tune_done", bool(tune_done))
@@ -143,6 +146,9 @@ def modbus_loop():
                 db.set_state("pid_ti_out", ti_out)
                 db.set_state("pid_td_out", td_out)
                 db.set_state("setpoint_out", setpoint_out)
+                db.set_state("pid_pb_at", pb_at)
+                db.set_state("pid_ti_at", ti_at)
+                db.set_state("pid_td_at", td_at)
 
                 db.set_state("modbus_plc_last_seen", time.time())
                 db.set_state("modbus_last_tick_ts", time.time())

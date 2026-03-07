@@ -606,6 +606,13 @@ export default function Dashboard() {
                                             Td: {controlStatus.pid_td_out !== undefined ? Number(controlStatus.pid_td_out).toFixed(1) : '--'}
                                         </div>
 
+                                        <div className="small text-muted mb-1">
+                                            <strong>Results AT: </strong>
+                                            PB: {controlStatus.pid_pb_at !== undefined ? Number(controlStatus.pid_pb_at).toFixed(1) : '--'},
+                                            Ti: {controlStatus.pid_ti_at !== undefined ? Number(controlStatus.pid_ti_at).toFixed(1) : '--'},
+                                            Td: {controlStatus.pid_td_at !== undefined ? Number(controlStatus.pid_td_at).toFixed(1) : '--'}
+                                        </div>
+
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
                                             <span>
