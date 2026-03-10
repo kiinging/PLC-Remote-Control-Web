@@ -406,7 +406,9 @@ def tune_status_route():
     """Frontend polls this to update indicator."""
     return jsonify({
         "tuning_active": db.get_state("tune_status", 0) == 1,
-        "tune_completed": db.get_state("tune_done", False)
+        "tune_busy": db.get_state("tune_busy", False),
+        "tune_completed": db.get_state("tune_done", False),
+        "tune_err": db.get_state("tune_err", False)
     })
 
 

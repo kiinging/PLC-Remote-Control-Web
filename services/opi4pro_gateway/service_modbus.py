@@ -123,25 +123,29 @@ def modbus_loop():
             if wr.isError():
                 logger.error(f"Write Error: {wr}")
 
-            # --- 2) READ PLC -> GW : HR100..HR118 (19 regs) ---
-            rr = client.read_holding_registers(100, 19, unit=1)  # HR100-HR118
+            # --- 2) READ PLC -> GW : HR100..HR120 (21 regs) ---
+            rr = client.read_holding_registers(100, 21, unit=1)  # HR100-HR120
             if not rr.isError():
                 regs = rr.registers
 
                 ack_seq   = regs[0]                 # HR100
                 heartbeat = regs[1]                 # HR101
                 mv_fb     = registers_to_float(regs[2:4])   # HR102-103
-                tune_done = regs[4]                 # HR104
-                pb_out    = registers_to_float(regs[5:7])   # HR105-106
-                ti_out    = registers_to_float(regs[7:9])   # HR107-108
-                td_out    = registers_to_float(regs[9:11])  # HR109-110
-                setpoint_out = registers_to_float(regs[11:13])  # HR111-112
-                pb_at     = registers_to_float(regs[13:15]) # HR113-114
-                ti_at     = registers_to_float(regs[15:17]) # HR115-116
-                td_at     = registers_to_float(regs[17:19]) # HR117-118
+                tune_busy = regs[4]                 # HR104
+                tune_done = regs[5]                 # HR105
+                tune_err  = regs[6]                 # HR106
+                pb_out    = registers_to_float(regs[7:9])   # HR107-108
+                ti_out    = registers_to_float(regs[9:11])  # HR109-110
+                td_out    = registers_to_float(regs[11:13]) # HR111-112
+                setpoint_out = registers_to_float(regs[13:15])  # HR113-114
+                pb_at     = registers_to_float(regs[15:17]) # HR115-116
+                ti_at     = registers_to_float(regs[17:19]) # HR117-118
+                td_at     = registers_to_float(regs[19:21]) # HR119-120
 
                 db.set_state("mv", mv_fb)
+                db.set_state("tune_busy", bool(tune_busy))
                 db.set_state("tune_done", bool(tune_done))
+                db.set_state("tune_err", bool(tune_err))
                 db.set_state("pid_pb_out", pb_out)
                 db.set_state("pid_ti_out", ti_out)
                 db.set_state("pid_td_out", td_out)

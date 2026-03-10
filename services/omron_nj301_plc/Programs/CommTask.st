@@ -77,44 +77,49 @@ G_Modbus_WriteBuf[0] := Last_Seq_Num;                // HR100 ack seq
 G_Modbus_WriteBuf[1] := UINT_TO_WORD(Heartbeat_Ctr); // HR101 heartbeat
 
 R2W_MV(InReal := G_Current_MV);
-G_Modbus_WriteBuf[2] := R2W_MV.W_High;               // HR102
+G_Modbus_WriteBuf[2] := R2W_MV.W_High;               // HR102  -- Current_MV
 G_Modbus_WriteBuf[3] := R2W_MV.W_Low;                // HR103
 
-G_Modbus_WriteBuf[4] := G_ATDone;    // HR104 tune done
+// ===== Autotune Status =====
+G_Modbus_WriteBuf[4] := G_ATBusy;        // HR104  autotune running
+G_Modbus_WriteBuf[5] := G_ATDone;     // HR105  autotune finished
+G_Modbus_WriteBuf[6] := G_Tune_Err;      // HR106  autotune error
 
+// ===== Current PID parameters =====
 R2W_PB(InReal := G_PID_PB_Out);
-G_Modbus_WriteBuf[5] := R2W_PB.W_High;               // HR105
-G_Modbus_WriteBuf[6] := R2W_PB.W_Low;                // HR106
+G_Modbus_WriteBuf[7] := R2W_PB.W_High;               // HR107
+G_Modbus_WriteBuf[8] := R2W_PB.W_Low;                // HR108
 
 R2W_Ti(InReal := G_PID_Ti_Out);
-G_Modbus_WriteBuf[7] := R2W_Ti.W_High;               // HR107
-G_Modbus_WriteBuf[8] := R2W_Ti.W_Low;                // HR108
+G_Modbus_WriteBuf[9]  := R2W_Ti.W_High;              // HR109
+G_Modbus_WriteBuf[10] := R2W_Ti.W_Low;               // HR110
 
 R2W_Td(InReal := G_PID_Td_Out);
-G_Modbus_WriteBuf[9]  := R2W_Td.W_High;              // HR109
-G_Modbus_WriteBuf[10] := R2W_Td.W_Low;               // HR110
+G_Modbus_WriteBuf[11] := R2W_Td.W_High;              // HR111
+G_Modbus_WriteBuf[12] := R2W_Td.W_Low;               // HR112
 
+// ===== Current Setpoint =====
 R2W_Setpoint(InReal := G_Eff_Setpoint);
-G_Modbus_WriteBuf[11]  := R2W_Setpoint.W_High;              // HR111
-G_Modbus_WriteBuf[12]  := R2W_Setpoint.W_Low;               // HR112
+G_Modbus_WriteBuf[13] := R2W_Setpoint.W_High;        // HR113
+G_Modbus_WriteBuf[14] := R2W_Setpoint.W_Low;         // HR114
 
+// ===== Autotune Results =====
 R2W_PB_AT(InReal := G_PID_PB_AT);
-G_Modbus_WriteBuf[13]  := R2W_PB_AT.W_High;                 // HR113
-G_Modbus_WriteBuf[14]  := R2W_PB_AT.W_Low;                  // HR114
+G_Modbus_WriteBuf[15] := R2W_PB_AT.W_High;           // HR115
+G_Modbus_WriteBuf[16] := R2W_PB_AT.W_Low;            // HR116
 
 R2W_Ti_AT(InReal := G_PID_Ti_AT);
-G_Modbus_WriteBuf[15]  := R2W_Ti_AT.W_High;                 // HR115
-G_Modbus_WriteBuf[16]  := R2W_Ti_AT.W_Low;                  // HR116
+G_Modbus_WriteBuf[17] := R2W_Ti_AT.W_High;           // HR117
+G_Modbus_WriteBuf[18] := R2W_Ti_AT.W_Low;            // HR118
 
 R2W_Td_AT(InReal := G_PID_Td_AT);
-G_Modbus_WriteBuf[17]  := R2W_Td_AT.W_High;                 // HR117
-G_Modbus_WriteBuf[18]  := R2W_Td_AT.W_Low;                  // HR118
-
+G_Modbus_WriteBuf[19] := R2W_Td_AT.W_High;           // HR119
+G_Modbus_WriteBuf[20] := R2W_Td_AT.W_Low;            // HR120
 
 // =========================================================
 // 6) Copy your write buffer into server registers
-//    (G_Modbus_WriteBuf -> HR100..HR118)
+//    (G_Modbus_WriteBuf -> HR100..HR110)
 // =========================================================
-FOR i := 0 TO 18 DO
+FOR i := 0 TO 20 DO
     Registers[100 + i] := G_Modbus_WriteBuf[i];
 END_FOR;

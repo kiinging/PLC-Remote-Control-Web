@@ -691,6 +691,12 @@ export default function Dashboard() {
                                             <Button variant="secondary" size="sm" onClick={handleStopTune} disabled={isReadOnly}>Stop Tune</Button>
                                         </div>
 
+                                        <div className="mt-2 mb-2">
+                                            {tuneStatus.tune_busy && <Alert variant="warning" className="py-1 small mb-0">Autotuning...</Alert>}
+                                            {tuneStatus.tune_completed && <Alert variant="success" className="py-1 small mb-0">Tune Complete</Alert>}
+                                            {tuneStatus.tune_err && <Alert variant="danger" className="py-1 small mb-0">Tune Failed</Alert>}
+                                        </div>
+
                                         <div className="small mt-2 mb-1">
                                             <strong>Active: </strong>
                                             PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
