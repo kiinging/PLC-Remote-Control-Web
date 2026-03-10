@@ -599,13 +599,6 @@ export default function Dashboard() {
                                             <Button onClick={sendPid} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
 
-                                        <div className="small mt-2 mb-1">
-                                            <strong>Active: </strong>
-                                            PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
-                                            Ti: {controlStatus.pid_ti_out !== undefined ? Number(controlStatus.pid_ti_out).toFixed(1) : '--'},
-                                            Td: {controlStatus.pid_td_out !== undefined ? Number(controlStatus.pid_td_out).toFixed(1) : '--'}
-                                        </div>
-
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
                                             <span>
@@ -620,6 +613,13 @@ export default function Dashboard() {
                                                 <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
                                             </div>
 
+                                        </div>
+
+                                        <div className="small mt-2 mb-1">
+                                            <strong>Active: </strong>
+                                            PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
+                                            Ti: {controlStatus.pid_ti_out !== undefined ? Number(controlStatus.pid_ti_out).toFixed(1) : '--'},
+                                            Td: {controlStatus.pid_td_out !== undefined ? Number(controlStatus.pid_td_out).toFixed(1) : '--'}
                                         </div>
                                     </div>
                                 )}
@@ -655,7 +655,7 @@ export default function Dashboard() {
 
                                 {controlStatus.mode === 2 && ( // Tune
                                     <div className="border p-2 rounded bg-body-secondary">
-                                        <h6>Auto Tune</h6>
+                                        <h6>PID Control</h6>
                                         <Alert variant="info" className="py-1 small">
                                             Cycling output to find PID values.
                                         </Alert>
