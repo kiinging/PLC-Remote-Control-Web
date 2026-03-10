@@ -656,19 +656,42 @@ export default function Dashboard() {
                                 {controlStatus.mode === 2 && ( // Tune
                                     <div className="border p-2 rounded bg-body-secondary">
                                         <h6>PID Control</h6>
-                                        <Alert variant="info" className="py-1 small">
-                                            Cycling output to find PID values.
-                                        </Alert>
-                                        <div className="mb-2">
-                                            <Button variant="warning" size="sm" className="me-2" onClick={handleStartTune} disabled={tuneStatus.tuning_active || isReadOnly}>Start Tune</Button>
-                                            <Button variant="secondary" size="sm" onClick={handleStopTune} disabled={isReadOnly}>Stop Tune</Button>
-                                        </div>
                                         <InputGroup size="sm" className="mb-2">
-                                            <InputGroup.Text>Tune SP</InputGroup.Text>
+                                            <InputGroup.Text>Setpoint</InputGroup.Text>
                                             <Form.Control type="number" value={setpoint} onChange={e => setSetpoint(e.target.value)} disabled={isReadOnly} />
                                             <Button onClick={sendSetpoint} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
-                                        <div className="small mt-1 mb-1">
+                                        <InputGroup size="sm" className="mb-2">
+                                            <InputGroup.Text>PB</InputGroup.Text>
+                                            <Form.Control type="number" value={pidParams.pb} onChange={e => setPidParams({ ...pidParams, pb: e.target.value })} disabled={isReadOnly} />
+                                            <InputGroup.Text>Ti</InputGroup.Text>
+                                            <Form.Control type="number" value={pidParams.ti} onChange={e => setPidParams({ ...pidParams, ti: e.target.value })} disabled={isReadOnly} />
+                                            <InputGroup.Text>Td</InputGroup.Text>
+                                            <Form.Control type="number" value={pidParams.td} onChange={e => setPidParams({ ...pidParams, td: e.target.value })} disabled={isReadOnly} />
+                                            <Button onClick={sendPid} disabled={isReadOnly}>Send</Button>
+                                        </InputGroup>
+
+                                        <hr className="my-2" />
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <span>
+                                                Auto Control
+                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
+                                            </span>
+                                            <div>
+                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
+                                                    {controlStatus.plc ? 'ON' : 'OFF'}
+                                                </Badge>
+                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
+                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="d-flex align-items-center gap-2 mt-2">
+                                            <Button variant="warning" size="sm" onClick={handleStartTune} disabled={tuneStatus.tuning_active || isReadOnly}>Start Tune</Button>
+                                            <Button variant="secondary" size="sm" onClick={handleStopTune} disabled={isReadOnly}>Stop Tune</Button>
+                                        </div>
+
+                                        <div className="small mt-2 mb-1">
                                             <strong>Active: </strong>
                                             PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
                                             Ti: {controlStatus.pid_ti_out !== undefined ? Number(controlStatus.pid_ti_out).toFixed(1) : '--'},
@@ -679,22 +702,6 @@ export default function Dashboard() {
                                             PB: {controlStatus.pid_pb_at !== undefined ? Number(controlStatus.pid_pb_at).toFixed(1) : '--'},
                                             Ti: {controlStatus.pid_ti_at !== undefined ? Number(controlStatus.pid_ti_at).toFixed(1) : '--'},
                                             Td: {controlStatus.pid_td_at !== undefined ? Number(controlStatus.pid_td_at).toFixed(1) : '--'}
-                                        </div>
-
-                                        <hr className="my-2" />
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <span>
-                                                Heater Power
-                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
-                                            </span>
-                                            <div>
-                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
-                                                    {controlStatus.plc ? 'ON' : 'OFF'}
-                                                </Badge>
-                                                <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
-                                                <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
-                                            </div>
-
                                         </div>
                                     </div>
                                 )}
