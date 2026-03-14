@@ -8,6 +8,8 @@ import config
 import wiringpi
 import threading
 import requests
+import smtplib
+from email.mime.text import MIMEText
 
 # ---------------- Boot-safe defaults (once per OS boot) ----------------
 def apply_boot_defaults(db):
@@ -574,6 +576,38 @@ def relay_status():
         "desired": bool(db.get_state("relay_desired", 0))
     }), 200
 
+
+@app.route('/api/feedback', methods=['POST'])
+def send_feedback():
+    try:
+        data = request.get_json()
+        name = data.get("name", "Anonymous")
+        comment = data.get("comment", "")
+
+        if not comment:
+            return jsonify({"error": "Comment is empty"}), 400
+
+        # Construct Email
+        msg = MIMEText(f"Feedback from: {name}\n\nComment:\n{comment}")
+        msg['Subject'] = f"PLC Web Feedback from {name}"
+        msg['From'] = config.SMTP_USER
+        msg['To'] = config.FEEDBACK_RECEIVER
+
+        # Send Email
+        try:
+            with smtplib.SMTP(config.SMTP_SERVER, config.SMTP_PORT) as server:
+                server.starttls()
+                server.login(config.SMTP_USER, config.SMTP_PASS)
+                server.send_message(msg)
+            print(f"✅ Feedback email sent from {name}")
+            return jsonify({"message": "Feedback sent successfully"}), 200
+        except Exception as e:
+            print(f"❌ SMTP Error: {e}")
+            # Even if email fails, we might want to log it to DB or just return error
+            return jsonify({"error": "Failed to send email. Check SMTP settings."}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ---------------- Main ----------------
 def main():

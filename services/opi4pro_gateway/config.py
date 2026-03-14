@@ -51,3 +51,10 @@ TREND_BUFFER_LENGTH = int(30 * 60 / SENSOR_SAMPLE_INTERVAL)
 
 
 LOG_TO_FILE = False
+
+# SMTP Settings for Feedback
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
+SMTP_USER = "YOUR_GMAIL@gmail.com"             # Example: user@gmail.com
+SMTP_PASS = "YOUR_GMAIL_APP_PASSWORD"          # Use an App Password, not regular password
+FEEDBACK_RECEIVER = "wongkiinging@gmail.com"

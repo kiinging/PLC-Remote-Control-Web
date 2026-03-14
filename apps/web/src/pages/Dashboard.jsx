@@ -35,24 +35,21 @@ export default function Dashboard() {
     const [realMV, setRealMV] = useState(0); // ✅ Real MV from PLC
     const [setpointOut, setSetpointOut] = useState(0); // ✅ PLC confirmed setpoint (HR111-112)
 
-
     const [mvPending, setMvPending] = useState(false);
-
     const [webPending, setWebPending] = useState(false);
     const [plcPending, setPlcPending] = useState(false); // ✅ PLC Pending State
 
-
-
-
     // Tune States
     const [tuneStatus, setTuneStatus] = useState({ tuning_active: false, tune_completed: false });
-    // const [tuneSetpoint, setTuneSetpoint] = useState(70); // Unused, reusing setpoint
     const [tuneResults, setTuneResults] = useState({ pb: 0, ti: 0, td: 0 });
 
     // Chart Data
-    // We keep up to 1 hour of data (3600 points) in state, but may render less
     const [chartData, setChartData] = useState([]);
     const [chartWindow, setChartWindow] = useState(30); // Minutes to display
+
+    // Feedback State
+    const [feedback, setFeedback] = useState("");
+    const [feedbackMsg, setFeedbackMsg] = useState({ type: '', text: '' });
 
     // Video
     const [videoSrc, setVideoSrc] = useState('/api/video_feed');
@@ -64,7 +61,6 @@ export default function Dashboard() {
         }
     }, [cameraStatus]);
 
-
     // Load Initial Data
     useEffect(() => {
         fetchInitialData();
@@ -73,27 +69,11 @@ export default function Dashboard() {
     }, []);
 
     const fetchInitialData = async () => {
-        // Try each API call independently so one failure doesn't block others
         try {
             const cStatus = await api.getControlStatus();
             setControlStatus(cStatus);
         } catch (e) {
             console.warn("Control status unavailable", e);
-        }
-
-        try {
-            const pid = await api.getPidParams();
-            setPidParams(pid);
-            setTuneResults(pid);
-        } catch (e) {
-            console.warn("PID params unavailable", e);
-        }
-
-        try {
-            const sp = await api.api.get('/api/setpoint_status').then(r => r.data);
-            setSetpoint(sp.setpoint);
-        } catch (e) {
-            console.warn("Setpoint unavailable", e);
         }
 
         try {
@@ -109,7 +89,6 @@ export default function Dashboard() {
             console.warn("Relay status unavailable", e);
         }
 
-        // Fetch Trend History (last hour = 3600 points)
         try {
             const history = await api.api.get('/api/trend?limit=3600').then(r => r.data);
             if (Array.isArray(history)) {
@@ -130,11 +109,8 @@ export default function Dashboard() {
             if (heartbeat.timestamp) {
                 setGatewayTimestamp(heartbeat.timestamp);
             }
-        } catch (e) {
-            // Keep last seen timestamp, will check timeout below
-        }
+        } catch (e) {}
 
-        // Check if gateway is offline (no successful heartbeat for 5 seconds)
         if (lastGatewaySeenRef.current !== 0 && Date.now() - lastGatewaySeenRef.current > 5000) {
             setGatewayStatus('offline');
         }
@@ -143,29 +119,21 @@ export default function Dashboard() {
     const pollCameraHealth = async () => {
         try {
             const health = await api.getCameraHealth();
-            // If status is not alive, mark offline immediately
             if (health.status !== 'alive') {
                 setCameraStatus('offline');
-                return; // Don't update last seen
+                return;
             }
-
             lastCameraSeenRef.current = Date.now();
-
-            // Check frame age to determine if camera is degraded
             if (!health.has_frame || (health.frame_age_sec != null && health.frame_age_sec > 5)) {
                 setCameraStatus('degraded');
             } else {
                 setCameraStatus('alive');
             }
-
             if (health.ts) {
-                setCameraTimestamp(health.ts); // Use 'ts' from camera health
+                setCameraTimestamp(health.ts);
             }
-        } catch (e) {
-            // Keep last seen timestamp, will check timeout below
-        }
+        } catch (e) {}
 
-        // Check if camera is offline (no successful health check for 5 seconds)
         if (lastCameraSeenRef.current !== 0 && Date.now() - lastCameraSeenRef.current > 5000) {
             setCameraStatus('offline');
         }
@@ -175,77 +143,44 @@ export default function Dashboard() {
         let tData = null;
         let cStatus = null;
 
-        // Poll Gateway Heartbeat
-        try {
-            await pollGatewayHeartbeat();
-        } catch (e) {
-            // Gateway polling error handled in pollGatewayHeartbeat
-        }
+        try { await pollGatewayHeartbeat(); } catch (e) {}
+        try { await pollCameraHealth(); } catch (e) {}
+        try { refreshRelay(); } catch (e) {}
 
-        // Poll Camera Health
-        try {
-            await pollCameraHealth();
-        } catch (e) {
-            // Camera polling error handled in pollCameraHealth
-        }
-
-        try {
-            refreshRelay();
-        } catch (e) {
-            // Keep last known relay status
-        }
-
-        // Try each API call independently
         try {
             tData = await api.getTemp();
             setTemp(tData.rtd_temp);
             setLastUpdate(tData.last_update);
-        } catch (e) {
-            // Orange Pi offline - keep showing last known temp
-        }
+        } catch (e) {}
 
         try {
             cStatus = await api.getControlStatus();
             setControlStatus(cStatus);
-            // ✅ Update Real MV from PLC status
-            if (cStatus.mv !== undefined) {
-                setRealMV(cStatus.mv);
-            }
-            // ✅ Update PLC-confirmed setpoint (setpoint_out from HR111-112)
-            if (cStatus.setpoint_out !== undefined) {
-                setSetpointOut(cStatus.setpoint_out);
-            }
-        } catch (e) {
-            // Keep last known control status
-        }
-
+            if (cStatus.mv !== undefined) setRealMV(cStatus.mv);
+            if (cStatus.setpoint_out !== undefined) setSetpointOut(cStatus.setpoint_out);
+        } catch (e) {}
 
         try {
             if (cStatus && cStatus.mode === 2) {
                 const tStatus = await api.getTuneStatus();
                 setTuneStatus(tStatus);
             }
-        } catch (e) {
-            // Tuning status unavailable
-        }
+        } catch (e) {}
 
-        // Update chart only if we have temp data
         if (tData) {
             const now = new Date().toLocaleTimeString();
             setChartData(prev => {
                 const newItem = {
                     time: now,
                     pv: tData.rtd_temp,
-                    sp: cStatus?.setpoint_out ?? setpointOut, // ✅ Use PLC Confirmed SP
-                    mv: cStatus?.mv ?? manualMV // ✅ Use Real MV if available, else fallback
+                    sp: cStatus?.setpoint_out ?? setpointOut,
+                    mv: cStatus?.mv ?? manualMV
                 };
-                // Append new item, keep last 3600 points (1 hour)
                 const newData = [...prev, newItem];
                 if (newData.length > 3600) newData.shift();
                 return newData;
             });
         }
-
     };
 
     const [esp32Alive, setEsp32Alive] = useState(false);
@@ -254,62 +189,39 @@ export default function Dashboard() {
     const refreshRelay = async () => {
         try {
             const r = await api.getRelayStatus();
-            // New API returns: { alive: bool, relay: bool|null, last_seen_s: number, desired: bool }
-
             setEsp32Alive(r.alive);
             setEsp32LastSeen(r.last_seen_s);
-
             if (r.alive) {
                 setRelayStatus('alive');
-                setRelay(r.relay === true); // Explicitly check true, as it might be null
-                if (!videoSrc) setVideoSrc('/api/video_feed');
+                setRelay(r.relay === true);
             } else {
                 setRelayStatus('offline');
-                setRelay(false); // Default to off in UI if unknown, or maybe keep last known?
-                // r.desired could be used to show "pending" state if needed
+                setRelay(false);
             }
-
-            // Always try to load video (add timestamp to bust cache)
             if (!videoSrc) setVideoSrc(`/api/video_feed?t=${Date.now()}`);
         } catch (e) {
-            console.warn("Relay status check failed", e);
             setEsp32Alive(false);
             setRelayStatus('offline');
         }
     };
 
     const handleRelayToggle = async (state) => {
-        // Optimistic update
         setRelay(state);
-
         try {
             await api.setRelay(state);
-            // Don't refresh immediately - let the next poll (1s interval) update the real state
-            // This prevents race conditions where the UI gets reverted before the backend processes it
-            console.log("Relay command sent, awaiting backend confirmation...");
         } catch (e) {
-            console.error("Failed to toggle relay", e);
-            // Revert state if failed (next poll would fix it too)
             refreshRelay();
         }
-
-
     };
 
-    // Generic Control Handlers
     const toggleProcess = async (type, action) => {
         if (type === 'web') {
-            // Special handling for Web Control with Spinner
             setWebPending(true);
             try {
                 if (action === 'start') await api.startProcess(type);
                 else await api.stopProcess(type);
-
-                // Start polling for Ack (handled by main poll loop or specific effect)
-                // We leave webPending = true until the next poll confirms the change
             } catch (e) {
-                console.error("Failed to toggle web process", e);
-                setWebPending(false); // Stop spinner if gateway call failed
+                setWebPending(false);
             }
         } else if (type === 'plc') {
             setPlcPending(true);
@@ -331,7 +243,6 @@ export default function Dashboard() {
 
     const sendPid = async () => {
         await api.setPidParams(pidParams);
-        // Legacy had ack check loop, here we trust or add alert
     };
 
     const sendSetpoint = async () => {
@@ -341,9 +252,8 @@ export default function Dashboard() {
 
     const sendManualMV = async () => {
         if (isReadOnly) return;
-        setMvPending(true); // Start spinner
+        setMvPending(true);
         await api.setManualMV(manualMV);
-        // We rely on the generic poll to clear this when ack is received
     };
 
     const handleStartTune = async () => {
@@ -356,51 +266,40 @@ export default function Dashboard() {
         await api.stopTune();
     };
 
-    // --- Web Ack Logic (Integrated into Main Poll) ---
-    // We remove the separate useEffect and rely on optionsPoll updating controlStatus
-    // We use loose equality (== true) or just truthy check to handle 1 vs true
+    const handleFeedbackSubmit = async (e) => {
+        e.preventDefault();
+        if (!feedback.trim()) return;
+        setFeedbackMsg({ type: 'info', text: 'Sending...' });
+        try {
+            await api.sendFeedback({
+                name: user?.username || user?.email?.split('@')[0] || 'User',
+                comment: feedback
+            });
+            setFeedbackMsg({ type: 'success', text: 'Feedback sent successfully!' });
+            setFeedback("");
+            setTimeout(() => setFeedbackMsg({ type: '', text: '' }), 5000);
+        } catch (e) {
+            setFeedbackMsg({ type: 'danger', text: 'Failed to send feedback. Try again later.' });
+        }
+    };
+
     useEffect(() => {
-        if (webPending && controlStatus.web_ack) {
-            setWebPending(false);
-        }
-        // Also check PLC Ack
-        if (plcPending && controlStatus.plc_ack) {
-            setPlcPending(false);
-        }
+        if (webPending && controlStatus.web_ack) setWebPending(false);
+        if (plcPending && controlStatus.plc_ack) setPlcPending(false);
+        if (mvPending && controlStatus.mv_ack) setMvPending(false);
+    }, [controlStatus, webPending, mvPending, plcPending]);
 
-        // Also check PLC Ack
-        if (plcPending && controlStatus.plc_ack) {
-            setPlcPending(false);
-        }
-
-        // Also check MV Ack
-        if (mvPending && controlStatus.mv_ack) {
-            setMvPending(false);
-        }
-    }, [controlStatus, webPending, mvPending]);
-
-    // --- Chart Controls ---
-    const handleExpand = () => {
-        setChartWindow(prev => Math.min(prev + 10, 60)); // Max 60 mins
-    };
-
-    const handleContract = () => {
-        setChartWindow(prev => Math.max(prev - 10, 10)); // Min 10 mins
-    };
-
+    const handleExpand = () => setChartWindow(prev => Math.min(prev + 10, 60));
+    const handleContract = () => setChartWindow(prev => Math.max(prev - 10, 10));
     const handleClearChart = () => {
-        if (window.confirm("Are you sure you want to clear the chart history?")) {
-            setChartData([]);
-        }
+        if (window.confirm("Are you sure you want to clear the chart history?")) setChartData([]);
     };
 
     const handleDownloadCSV = () => {
         if (chartData.length === 0) return;
-
         const headers = ["Time,PV(degC),SP(degC),MV(%)"];
         const rows = chartData.map(d => `${d.time},${d.pv},${d.sp},${d.mv}`);
         const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
-
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -410,35 +309,28 @@ export default function Dashboard() {
         document.body.removeChild(link);
     };
 
-    // Get visible data based on window
     const getVisibleData = () => {
-        const pointsToShow = chartWindow * 60; // 1 point per second ideally
+        const pointsToShow = chartWindow * 60;
         return chartData.slice(-pointsToShow);
     };
 
-
-    // Helpers for UI
     const getModeName = (m) => ['Manual', 'Auto', 'Tune'][m] || 'Unknown';
     const getModeColor = (m) => ['danger', 'success', 'warning'][m] || 'secondary';
 
-    // Access Control Logic
     const [isReadOnly, setIsReadOnly] = useState(true);
     const [bookingChecked, setBookingChecked] = useState(false);
 
     const checkAccess = async () => {
-        // Admin always has access
         if (user?.username === 'admin') {
             setIsReadOnly(false);
             setBookingChecked(true);
             return;
         }
-
         try {
             const hasBooking = await bookingService.hasActiveBooking();
             setIsReadOnly(!hasBooking);
         } catch (e) {
-            console.error("Failed to check booking", e);
-            setIsReadOnly(true); // Fail safe
+            setIsReadOnly(true);
         } finally {
             setBookingChecked(true);
         }
@@ -446,7 +338,7 @@ export default function Dashboard() {
 
     useEffect(() => {
         checkAccess();
-        const interval = setInterval(checkAccess, 60000); // Check every minute
+        const interval = setInterval(checkAccess, 60000);
         return () => clearInterval(interval);
     }, [user]);
 
@@ -475,7 +367,6 @@ export default function Dashboard() {
             </Navbar>
 
             <Container>
-                {/* Read Only Alert */}
                 {bookingChecked && isReadOnly && (
                     <Alert variant="warning" className="d-flex justify-content-between align-items-center">
                         <div>
@@ -487,90 +378,56 @@ export default function Dashboard() {
                 )}
 
                 <Row className="g-4">
-                    {/* Controls Column */}
                     <Col lg={6}>
                         <Card className="mb-3">
                             <Card.Header>Control Panel</Card.Header>
                             <Card.Body>
-                                {/* System Status Indicators */}
                                 <div className="mb-3 pb-3 border-bottom">
                                     <div className="d-flex align-items-center flex-wrap gap-2">
                                         <strong className="me-2">System Status</strong>
-                                        <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'}>
-                                            Gateway: {gatewayStatus.toUpperCase()}
-                                        </Badge>
-                                        <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>
-                                            Camera: {cameraStatus.toUpperCase()}
-                                        </Badge>
-                                        {/* PLC Status */}
-                                        <Badge bg={controlStatus.plc_alive ? 'success' : 'danger'}>
-                                            PLC: {controlStatus.plc_alive ? 'ALIVE' : 'OFFLINE'}
-                                        </Badge>
+                                        <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'}>Gateway: {gatewayStatus.toUpperCase()}</Badge>
+                                        <Badge bg={cameraStatus === 'alive' ? 'success' : cameraStatus === 'degraded' ? 'warning' : 'danger'}>Camera: {cameraStatus.toUpperCase()}</Badge>
+                                        <Badge bg={controlStatus.plc_alive ? 'success' : 'danger'}>PLC: {controlStatus.plc_alive ? 'ALIVE' : 'OFFLINE'}</Badge>
                                     </div>
                                     <div className="d-flex gap-3 align-items-center mt-1">
-                                        {/* Timestamps in a small row below if needed, or keeping it clean */}
-                                        {gatewayTimestamp && gatewayTimestamp !== '--' && (
-                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>GW Last: {new Date(gatewayTimestamp * 1000).toLocaleTimeString()}</small>
-                                        )}
-                                        {cameraTimestamp && cameraTimestamp !== '--' && (
-                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {new Date(cameraTimestamp * 1000).toLocaleTimeString()}</small>
-                                        )}
-                                        {controlStatus.plc_last_seen && (
-                                            <small className="text-muted" style={{ fontSize: '0.7em' }}>PLC Last: {new Date(controlStatus.plc_last_seen * 1000).toLocaleTimeString()}</small>
-                                        )}
+                                        {gatewayTimestamp && gatewayTimestamp !== '--' && <small className="text-muted" style={{ fontSize: '0.7em' }}>GW Last: {new Date(gatewayTimestamp * 1000).toLocaleTimeString()}</small>}
+                                        {cameraTimestamp && cameraTimestamp !== '--' && <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {new Date(cameraTimestamp * 1000).toLocaleTimeString()}</small>}
+                                        {controlStatus.plc_last_seen && <small className="text-muted" style={{ fontSize: '0.7em' }}>PLC Last: {new Date(controlStatus.plc_last_seen * 1000).toLocaleTimeString()}</small>}
                                     </div>
-
-                                    {/* Process Power Control */}
                                     <div className="mt-3 mb-2">
                                         <div className="d-flex justify-content-between align-items-center">
                                             <div className="d-flex align-items-center">
-                                                <strong className="me-2">Process Power (Relay)</strong>
-                                                <Badge bg={esp32Alive ? 'success' : 'secondary'}>
-                                                    {esp32Alive ? 'ESP32: ALIVE' : 'ESP32: OFFLINE'}
-                                                </Badge>
+                                                <strong className="me-2">Process Power</strong>
+                                                <Badge bg={esp32Alive ? 'success' : 'secondary'}>{esp32Alive ? 'ESP32: ALIVE' : 'ESP32: OFFLINE'}</Badge>
                                             </div>
-
                                             <div className="d-flex align-items-center">
-                                                <Badge bg={relay ? 'success' : 'secondary'} className="me-2">
-                                                    {relay ? 'ON' : 'OFF'}
-                                                </Badge>
+                                                <Badge bg={relay ? 'success' : 'secondary'} className="me-2">{relay ? 'ON' : 'OFF'}</Badge>
                                                 <Button variant="success" size="sm" className="me-1" onClick={() => handleRelayToggle(true)} disabled={relay || !esp32Alive || isReadOnly}>Start</Button>
                                                 <Button variant="danger" size="sm" onClick={() => handleRelayToggle(false)} disabled={!relay || !esp32Alive || isReadOnly}>Stop</Button>
-
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Light */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
                                     <strong>Light Control</strong>
                                     <div>
-                                        <Badge bg={controlStatus.light ? 'success' : 'secondary'} className="me-2">
-                                            {controlStatus.light ? 'ON' : 'OFF'}
-                                        </Badge>
+                                        <Badge bg={controlStatus.light ? 'success' : 'secondary'} className="me-2">{controlStatus.light ? 'ON' : 'OFF'}</Badge>
                                         <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('light', 'start')} disabled={!!controlStatus.light || isReadOnly}>Start</Button>
                                         <Button variant="danger" size="sm" onClick={() => toggleProcess('light', 'stop')} disabled={!controlStatus.light || isReadOnly}>Stop</Button>
                                     </div>
                                 </div>
 
-                                {/* Web Control Remained Here */}
                                 <div className="d-flex justify-content-between align-items-center mb-2">
-                                    <strong>Web Control
-                                        {webPending && <span className="ms-2 spinner-border spinner-border-sm text-primary" role="status" />}
-                                    </strong>
+                                    <strong>Web Control {webPending && <span className="ms-2 spinner-border spinner-border-sm text-primary" />}</strong>
                                     <div>
-                                        <Badge bg={controlStatus.web ? 'success' : 'secondary'} className="me-2">
-                                            {controlStatus.web ? 'ON' : 'OFF'}
-                                        </Badge>
+                                        <Badge bg={controlStatus.web ? 'success' : 'secondary'} className="me-2">{controlStatus.web ? 'ON' : 'OFF'}</Badge>
                                         <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('web', 'start')} disabled={!!controlStatus.web || isReadOnly || webPending}>Start</Button>
                                         <Button variant="danger" size="sm" onClick={() => toggleProcess('web', 'stop')} disabled={!controlStatus.web || isReadOnly || webPending}>Stop</Button>
                                     </div>
                                 </div>
 
                                 <hr />
-
-                                {/* Mode Selection */}
                                 <div className="d-flex justify-content-between align-items-center mb-3">
                                     <strong>Mode: <Badge bg={getModeColor(controlStatus.mode)}>{getModeName(controlStatus.mode)}</Badge></strong>
                                     <div>
@@ -580,8 +437,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
-                                {/* Dynamic Controls based on Mode */}
-                                {controlStatus.mode === 1 && ( // Auto
+                                {controlStatus.mode === 1 && (
                                     <div className="border p-2 rounded bg-body-secondary">
                                         <h6>PID Control</h6>
                                         <InputGroup size="sm" className="mb-2">
@@ -598,62 +454,42 @@ export default function Dashboard() {
                                             <Form.Control type="number" value={pidParams.td} onChange={e => setPidParams({ ...pidParams, td: e.target.value })} disabled={isReadOnly} />
                                             <Button onClick={sendPid} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
-
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>
-                                                Auto Control
-                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
-                                            </span>
+                                            <span>Auto Control {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" />}</span>
                                             <div>
-                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
-                                                    {controlStatus.plc ? 'ON' : 'OFF'}
-                                                </Badge>
+                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">{controlStatus.plc ? 'ON' : 'OFF'}</Badge>
                                                 <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
                                                 <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
                                             </div>
-
                                         </div>
-
-                                        <div className="small mt-2 mb-1">
-                                            <strong>Active: </strong>
-                                            PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
-                                            Ti: {controlStatus.pid_ti_out !== undefined ? Number(controlStatus.pid_ti_out).toFixed(1) : '--'},
-                                            Td: {controlStatus.pid_td_out !== undefined ? Number(controlStatus.pid_td_out).toFixed(1) : '--'}
+                                        <div className="small mt-2">
+                                            <strong>Active:</strong> PB: {Number(controlStatus.pid_pb_out || 0).toFixed(1)}, Ti: {Number(controlStatus.pid_ti_out || 0).toFixed(1)}, Td: {Number(controlStatus.pid_td_out || 0).toFixed(1)}
                                         </div>
                                     </div>
                                 )}
 
-                                {controlStatus.mode === 0 && ( // Manual
+                                {controlStatus.mode === 0 && (
                                     <div className="border p-2 rounded bg-body-secondary">
                                         <h6>Manual Control</h6>
                                         <InputGroup size="sm">
                                             <InputGroup.Text>MV (%)</InputGroup.Text>
                                             <Form.Control type="number" value={manualMV} onChange={e => setManualMV(e.target.value)} disabled={isReadOnly || mvPending} />
-                                            <Button onClick={sendManualMV} disabled={isReadOnly || mvPending}>
-                                                {mvPending ? <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" /> : 'Send'}
-                                            </Button>
+                                            <Button onClick={sendManualMV} disabled={isReadOnly || mvPending}>{mvPending ? <span className="spinner-border spinner-border-sm" /> : 'Send'}</Button>
                                         </InputGroup>
-
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>
-                                                Manual Control
-                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
-                                            </span>
+                                            <span>Manual Control {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" />}</span>
                                             <div>
-                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
-                                                    {controlStatus.plc ? 'ON' : 'OFF'}
-                                                </Badge>
+                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">{controlStatus.plc ? 'ON' : 'OFF'}</Badge>
                                                 <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
                                                 <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
                                             </div>
-
                                         </div>
                                     </div>
                                 )}
 
-                                {controlStatus.mode === 2 && ( // Tune
+                                {controlStatus.mode === 2 && (
                                     <div className="border p-2 rounded bg-body-secondary">
                                         <h6>PID Control</h6>
                                         <InputGroup size="sm" className="mb-2">
@@ -670,76 +506,45 @@ export default function Dashboard() {
                                             <Form.Control type="number" value={pidParams.td} onChange={e => setPidParams({ ...pidParams, td: e.target.value })} disabled={isReadOnly} />
                                             <Button onClick={sendPid} disabled={isReadOnly}>Send</Button>
                                         </InputGroup>
-
                                         <hr className="my-2" />
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <span>
-                                                Auto Control
-                                                {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" role="status" />}
-                                            </span>
+                                            <span>Auto Control {plcPending && <span className="spinner-border spinner-border-sm ms-2 text-primary" />}</span>
                                             <div>
-                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">
-                                                    {controlStatus.plc ? 'ON' : 'OFF'}
-                                                </Badge>
+                                                <Badge bg={controlStatus.plc ? 'success' : 'secondary'} className="me-2">{controlStatus.plc ? 'ON' : 'OFF'}</Badge>
                                                 <Button variant="success" size="sm" className="me-1" onClick={() => toggleProcess('plc', 'start')} disabled={!!controlStatus.plc || isReadOnly || plcPending}>Start</Button>
                                                 <Button variant="danger" size="sm" onClick={() => toggleProcess('plc', 'stop')} disabled={!controlStatus.plc || isReadOnly || plcPending}>Stop</Button>
                                             </div>
                                         </div>
-
-                                        <div className="d-flex align-items-center gap-2 mt-2">
-                                            <Button variant="warning" size="sm" onClick={handleStartTune} disabled={tuneStatus.tuning_active || isReadOnly}>Start Tune</Button>
+                                        <div className="d-flex gap-2 mt-2">
+                                            <Button variant="warning" size="sm" onClick={handleStartTune} disabled={tuneStatus.tune_busy || isReadOnly}>Start Tune</Button>
                                             <Button variant="secondary" size="sm" onClick={handleStopTune} disabled={isReadOnly}>Stop Tune</Button>
                                         </div>
-
-                                        <div className="mt-2 mb-2">
-                                            {tuneStatus.tune_busy && <Alert variant="warning" className="py-1 small mb-0">Autotuning...</Alert>}
-                                            {tuneStatus.tune_completed && <Alert variant="success" className="py-1 small mb-0">Tune Complete</Alert>}
-                                            {tuneStatus.tune_err && <Alert variant="danger" className="py-1 small mb-0">Tune Failed</Alert>}
+                                        <div className="mt-2">
+                                            {tuneStatus.tune_busy && <Alert variant="warning" className="py-1 small mb-1">Autotuning...</Alert>}
+                                            {tuneStatus.tune_completed && <Alert variant="success" className="py-1 small mb-1">Tune Complete</Alert>}
+                                            {tuneStatus.tune_err && <Alert variant="danger" className="py-1 small mb-1">Tune Failed</Alert>}
                                         </div>
-
-                                        <div className="small mt-2 mb-1">
-                                            <strong>Active: </strong>
-                                            PB: {controlStatus.pid_pb_out !== undefined ? Number(controlStatus.pid_pb_out).toFixed(1) : '--'},
-                                            Ti: {controlStatus.pid_ti_out !== undefined ? Number(controlStatus.pid_ti_out).toFixed(1) : '--'},
-                                            Td: {controlStatus.pid_td_out !== undefined ? Number(controlStatus.pid_td_out).toFixed(1) : '--'}
+                                        <div className="small mt-2">
+                                            <strong>Active:</strong> PB: {Number(controlStatus.pid_pb_out || 0).toFixed(1)}, Ti: {Number(controlStatus.pid_ti_out || 0).toFixed(1)}, Td: {Number(controlStatus.pid_td_out || 0).toFixed(1)}
                                         </div>
                                         <div className="small">
-                                            <strong>Results: </strong>
-                                            PB: {controlStatus.pid_pb_at !== undefined ? Number(controlStatus.pid_pb_at).toFixed(1) : '--'},
-                                            Ti: {controlStatus.pid_ti_at !== undefined ? Number(controlStatus.pid_ti_at).toFixed(1) : '--'},
-                                            Td: {controlStatus.pid_td_at !== undefined ? Number(controlStatus.pid_td_at).toFixed(1) : '--'}
+                                            <strong>Results:</strong> PB: {Number(controlStatus.pid_pb_at || 0).toFixed(1)}, Ti: {Number(controlStatus.pid_ti_at || 0).toFixed(1)}, Td: {Number(controlStatus.pid_td_at || 0).toFixed(1)}
                                         </div>
                                     </div>
                                 )}
-
-
-
                             </Card.Body>
                         </Card>
                     </Col>
 
-                    {/* Video Column */}
                     <Col lg={6}>
                         <Card className="text-center">
                             <Card.Header>Live Video</Card.Header>
-                            <Card.Body className="p-0 bg-black" style={{ minHeight: '360px', position: 'relative' }}>
-                                {cameraStatus === 'alive' && videoSrc && (
-                                    <img
-                                        src={videoSrc}
-                                        alt="Live Feed"
-                                        style={{ width: '100%', height: 'auto', display: 'block' }}
-                                        onError={() => {
-                                            console.log("Video stream failed, retrying in 1s...");
-                                            setTimeout(() => setVideoSrc(`/api/video_feed?t=${Date.now()}`), 1000);
-                                        }}
-                                    />
-                                )}
-                                {cameraStatus !== 'alive' && (
+                            <Card.Body className="p-0 bg-black" style={{ minHeight: '360px' }}>
+                                {cameraStatus === 'alive' && videoSrc ? (
+                                    <img src={videoSrc} alt="Live Feed" style={{ width: '100%', height: 'auto' }} onError={() => setTimeout(() => setVideoSrc(`/api/video_feed?t=${Date.now()}`), 1000)} />
+                                ) : (
                                     <div className="d-flex align-items-center justify-content-center text-white" style={{ height: '360px' }}>
-                                        <div className="text-center">
-                                            <h5 className="mb-0">OFFLINE</h5>
-                                            <small className="text-muted">Video feed unavailable</small>
-                                        </div>
+                                        <div className="text-center"><h5>OFFLINE</h5><small className="text-muted">Video feed unavailable</small></div>
                                     </div>
                                 )}
                             </Card.Body>
@@ -747,7 +552,6 @@ export default function Dashboard() {
                     </Col>
                 </Row>
 
-                {/* Process Variables — full-width row above the trend chart */}
                 <Row className="mt-4">
                     <Col lg={12}>
                         <Card>
@@ -757,31 +561,26 @@ export default function Dashboard() {
                             </Card.Header>
                             <Card.Body className="py-3">
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem' }}>
-                                    {/* MV */}
                                     <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
-                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>Manipulated Value (MV)</small>
+                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>MV (%)</small>
                                         <span className="fw-bold fs-5">{Number(realMV).toFixed(1)} %</span>
                                     </div>
-                                    {/* Current */}
                                     <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
                                         <small className="text-muted" style={{ fontSize: '0.72em' }}>Current</small>
                                         <span className="fw-bold fs-5">{(1.2 * (realMV / 100)).toFixed(2)} A</span>
                                     </div>
-                                    {/* Power */}
                                     <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
                                         <small className="text-muted" style={{ fontSize: '0.72em' }}>Power</small>
                                         <span className="fw-bold fs-5 text-warning">{(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W</span>
                                     </div>
-                                    {/* Setpoint — hide in Manual mode */}
                                     {controlStatus.mode !== 0 && (
                                         <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
-                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (SP)</small>
+                                            <small className="text-muted" style={{ fontSize: '0.72em' }}>Setpoint (°C)</small>
                                             <span className="fw-bold fs-5 text-info">{Number(setpointOut).toFixed(2)} °C</span>
                                         </div>
                                     )}
-                                    {/* PV */}
                                     <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
-                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>Process Value (PV)</small>
+                                        <small className="text-muted" style={{ fontSize: '0.72em' }}>PV (°C)</small>
                                         <span className="fw-bold fs-5 text-primary">{Number(temp).toFixed(2)} °C</span>
                                     </div>
                                 </div>
@@ -790,7 +589,6 @@ export default function Dashboard() {
                     </Col>
                 </Row>
 
-                {/* Full-width Chart Row */}
                 <Row className="mt-4">
                     <Col lg={12}>
                         <Card>
@@ -798,19 +596,43 @@ export default function Dashboard() {
                                 <span>MV & PV Trends</span>
                                 <div>
                                     <span className="me-2 text-muted small">Window: {chartWindow} min</span>
-                                    <Button variant="outline-primary" size="sm" className="me-1" onClick={handleExpand} disabled={chartWindow >= 60}>Wait +</Button>
-                                    <Button variant="outline-primary" size="sm" className="me-2" onClick={handleContract} disabled={chartWindow <= 10}>Wait -</Button>
-                                    <Button variant="outline-secondary" size="sm" className="me-2" onClick={handleDownloadCSV}>CSV</Button>
-                                    <Button variant="outline-danger" size="sm" onClick={handleClearChart}>Clear</Button>
+                                    <Button variant="outline-secondary" size="sm" className="me-1" onClick={handleContract}>-</Button>
+                                    <Button variant="outline-secondary" size="sm" className="me-1" onClick={handleExpand}>+</Button>
+                                    <Button variant="outline-danger" size="sm" className="me-1" onClick={handleClearChart}>Clear</Button>
+                                    <Button variant="outline-success" size="sm" onClick={handleDownloadCSV}>CSV</Button>
                                 </div>
                             </Card.Header>
-                            <Card.Body style={{ height: '450px' }}>
-                                <TrendChart dataPoints={getVisibleData()} />
+                            <Card.Body>
+                                <div style={{ height: '350px' }}><TrendChart data={getVisibleData()} /></div>
                             </Card.Body>
                         </Card>
                     </Col>
                 </Row>
-            </Container >
+
+                <Row className="mt-4 mb-5">
+                    <Col lg={12}>
+                        <Card>
+                            <Card.Header className="fw-bold">Feedback</Card.Header>
+                            <Card.Body>
+                                {feedbackMsg.text && <Alert variant={feedbackMsg.type} className="py-2 small">{feedbackMsg.text}</Alert>}
+                                <Form onSubmit={handleFeedbackSubmit}>
+                                    <Row className="align-items-center mb-3">
+                                        <Col sm={2}><strong>Name:</strong></Col>
+                                        <Col sm={10}><span className="text-muted">{user?.username || user?.email?.split('@')[0] || 'User'}</span></Col>
+                                    </Row>
+                                    <Form.Group className="mb-3">
+                                        <Form.Label className="small fw-bold">Comment:</Form.Label>
+                                        <Form.Control as="textarea" rows={3} placeholder="How can we improve?" value={feedback} onChange={e => setFeedback(e.target.value)} required />
+                                    </Form.Group>
+                                    <div className="text-end">
+                                        <Button variant="primary" type="submit" disabled={!feedback.trim() || feedbackMsg.type === 'info'}>Submit</Button>
+                                    </div>
+                                </Form>
+                            </Card.Body>
+                        </Card>
+                    </Col>
+                </Row>
+            </Container>
         </>
     );
 }

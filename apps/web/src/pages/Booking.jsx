@@ -27,23 +27,20 @@ export default function Booking() {
         const today = new Date();
         today.setMinutes(0, 0, 0); // Round down to nearest hour
 
-        // Generate for next 3 days, 8 AM - 10 PM (Kuching Time ideally, but simplifying to local browser time for now)
-        // Note: The requirement asks for Asia/Kuching. 
-        // We will display times in local browser time but assume the user is in Kuching or consistent.
-
-        for (let d = 0; d < 3; d++) {
+        // Generate for next 5 days, 0 AM - 12 PM (Kuching Time ideally, but simplifying to local browser time for now)
+        for (let d = 0; d < 5; d++) {
             const date = new Date(today);
             date.setDate(date.getDate() + d);
 
-            // Create slots from current hour (if today) until 23:00 - Allow booking current slot for immediate access
+            // Create 2-hour slots from current hour (if today) until 23:00 - Allow booking current slot for immediate access
             let startHour = (d === 0) ? today.getHours() : 0;
 
-            for (let h = startHour; h < 24; h++) {
+            for (let h = startHour; h < 24; h += 2) {
                 const slotStart = new Date(date);
                 slotStart.setHours(h, 0, 0, 0);
 
                 const slotEnd = new Date(slotStart);
-                slotEnd.setHours(h + 1);
+                slotEnd.setHours(h + 2);
 
                 generated.push({
                     start: slotStart,
@@ -58,9 +55,9 @@ export default function Booking() {
         try {
             setLoading(true);
             const now = new Date().toISOString();
-            // Get bookings for next 7 days
+            // Get bookings for next 10 days
             const nextWeek = new Date();
-            nextWeek.setDate(nextWeek.getDate() + 7);
+            nextWeek.setDate(nextWeek.getDate() + 10);
 
             const data = await bookingService.getBookings(now, nextWeek.toISOString());
             setBookings(data);
@@ -192,7 +189,7 @@ export default function Booking() {
 
                     <Col lg={8} className="order-lg-1">
                         <Card>
-                            <Card.Header>Available Slots (Next 3 Days)</Card.Header>
+                            <Card.Header>Available Slots (Next 5 Days)</Card.Header>
                             <Card.Body style={{ maxHeight: '600px', overflowY: 'auto' }}>
                                 <div className="d-grid gap-2">
                                     {slots.map((slot, idx) => {

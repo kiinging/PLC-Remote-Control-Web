@@ -74,7 +74,6 @@ export const getManualMVAck = async () => (await api.get('/api/mv_manual_ack')).
 export const startTune = async () => (await api.post('/api/tune_start')).data;
 export const stopTune = async () => (await api.post('/api/tune_stop')).data;
 export const getTuneStatus = async () => (await api.get('/api/tune_status')).data;
-export const setTuneSetpoint = async (val) => (await api.post('/api/tune_setpoint', { setpoint: val })).data;
-export const getTuneSetpointAck = async () => (await api.get('/api/tune_setpoint_ack')).data;
+export const sendFeedback = async (data) => (await api.post('/api/feedback', data)).data;
 
 export default api;
