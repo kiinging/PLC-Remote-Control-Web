@@ -74,6 +74,9 @@ export const getManualMVAck = async () => (await api.get('/api/mv_manual_ack')).
 export const startTune = async () => (await api.post('/api/tune_start')).data;
 export const stopTune = async () => (await api.post('/api/tune_stop')).data;
 export const getTuneStatus = async () => (await api.get('/api/tune_status')).data;
-export const sendFeedback = async (data) => (await api.post('/api/feedback', data)).data;
+
+// Reviews API
+export const submitReview = async (data) => (await api.post('/api/reviews', data)).data;
+export const getReviews = async (limit = 15) => (await api.get(`/api/reviews?limit=${limit}`)).data;
 
 export default api;

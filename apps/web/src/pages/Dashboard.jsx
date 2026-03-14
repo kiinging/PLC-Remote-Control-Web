@@ -47,9 +47,11 @@ export default function Dashboard() {
     const [chartData, setChartData] = useState([]);
     const [chartWindow, setChartWindow] = useState(30); // Minutes to display
 
-    // Feedback State
-    const [feedback, setFeedback] = useState("");
-    const [feedbackMsg, setFeedbackMsg] = useState({ type: '', text: '' });
+    // Review States
+    const [review, setReview] = useState("");
+    const [rating, setRating] = useState(5);
+    const [recentReviews, setRecentReviews] = useState([]);
+    const [reviewMsg, setReviewMsg] = useState({ type: '', text: '' });
 
     // Video
     const [videoSrc, setVideoSrc] = useState('/api/video_feed');
@@ -96,6 +98,13 @@ export default function Dashboard() {
             }
         } catch (e) {
             console.warn("Trend history unavailable", e);
+        }
+
+        try {
+            const reviews = await api.getReviews();
+            setRecentReviews(reviews);
+        } catch (e) {
+            console.warn("Reviews unavailable", e);
         }
     };
 
@@ -266,20 +275,25 @@ export default function Dashboard() {
         await api.stopTune();
     };
 
-    const handleFeedbackSubmit = async (e) => {
+    const handleReviewSubmit = async (e) => {
         e.preventDefault();
-        if (!feedback.trim()) return;
-        setFeedbackMsg({ type: 'info', text: 'Sending...' });
+        if (!review.trim()) return;
+        setReviewMsg({ type: 'info', text: 'Submitting...' });
         try {
-            await api.sendFeedback({
+            await api.submitReview({
                 name: user?.username || user?.email?.split('@')[0] || 'User',
-                comment: feedback
+                rating: rating,
+                comment: review
             });
-            setFeedbackMsg({ type: 'success', text: 'Feedback sent successfully!' });
-            setFeedback("");
-            setTimeout(() => setFeedbackMsg({ type: '', text: '' }), 5000);
+            setReviewMsg({ type: 'success', text: 'Review submitted successfully!' });
+            setReview("");
+            setRating(5);
+            // Refresh list
+            const updated = await api.getReviews();
+            setRecentReviews(updated);
+            setTimeout(() => setReviewMsg({ type: '', text: '' }), 5000);
         } catch (e) {
-            setFeedbackMsg({ type: 'danger', text: 'Failed to send feedback. Try again later.' });
+            setReviewMsg({ type: 'danger', text: 'Failed to submit review. Try again later.' });
         }
     };
 
@@ -612,22 +626,75 @@ export default function Dashboard() {
                 <Row className="mt-4 mb-5">
                     <Col lg={12}>
                         <Card>
-                            <Card.Header className="fw-bold">Feedback</Card.Header>
+                            <Card.Header className="fw-bold fs-5 text-center text-uppercase">⭐ Experience Review Section</Card.Header>
                             <Card.Body>
-                                {feedbackMsg.text && <Alert variant={feedbackMsg.type} className="py-2 small">{feedbackMsg.text}</Alert>}
-                                <Form onSubmit={handleFeedbackSubmit}>
-                                    <Row className="align-items-center mb-3">
-                                        <Col sm={2}><strong>Name:</strong></Col>
-                                        <Col sm={10}><span className="text-muted">{user?.username || user?.email?.split('@')[0] || 'User'}</span></Col>
-                                    </Row>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label className="small fw-bold">Comment:</Form.Label>
-                                        <Form.Control as="textarea" rows={3} placeholder="How can we improve?" value={feedback} onChange={e => setFeedback(e.target.value)} required />
-                                    </Form.Group>
-                                    <div className="text-end">
-                                        <Button variant="primary" type="submit" disabled={!feedback.trim() || feedbackMsg.type === 'info'}>Submit</Button>
-                                    </div>
-                                </Form>
+                                <Row>
+                                    <Col md={5} className="border-end">
+                                        {reviewMsg.text && <Alert variant={reviewMsg.type} className="py-2 small">{reviewMsg.text}</Alert>}
+                                        <Form onSubmit={handleReviewSubmit}>
+                                            <div className="mb-3">
+                                                <label className="fw-bold small d-block mb-1">Your Rating:</label>
+                                                <div className="fs-3 text-warning cursor-pointer" style={{ letterSpacing: '2px' }}>
+                                                    {[1, 2, 3, 4, 5].map((s) => (
+                                                        <span 
+                                                            key={s} 
+                                                            onClick={() => setRating(s)}
+                                                            style={{ cursor: 'pointer', transition: 'transform 0.1s' }}
+                                                            onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'}
+                                                            onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                                                        >
+                                                            {s <= rating ? '⭐' : '☆'}
+                                                        </span>
+                                                    ))}
+                                                    <small className="text-muted fs-6 ms-2">(Click to rate 1-5)</small>
+                                                </div>
+                                            </div>
+                                            <Form.Group className="mb-3">
+                                                <Form.Label className="small fw-bold">Your Review:</Form.Label>
+                                                <Form.Control 
+                                                    as="textarea" 
+                                                    rows={3} 
+                                                    placeholder="The PID response was..." 
+                                                    value={review} 
+                                                    onChange={e => setReview(e.target.value)} 
+                                                    required 
+                                                />
+                                            </Form.Group>
+                                            <div className="d-flex justify-content-between align-items-center">
+                                                <span className="small text-muted">Posting as: <strong>{user?.username || user?.email?.split('@')[0] || 'User'}</strong></span>
+                                                <Button variant="primary" type="submit" disabled={!review.trim() || reviewMsg.type === 'info'}>Submit Review</Button>
+                                            </div>
+                                        </Form>
+                                    </Col>
+                                    <Col md={7}>
+                                        <div className="d-flex justify-content-between align-items-center mb-3">
+                                            <h6 className="mb-0 text-uppercase">📝 Recent Student Reviews</h6>
+                                            <Badge bg="secondary">Total Reviews: {recentReviews.length}</Badge>
+                                        </div>
+                                        <div className="review-list" style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '10px' }}>
+                                            {recentReviews.length > 0 ? (
+                                                recentReviews.map((r, idx) => (
+                                                    <div key={idx} className="mb-3 p-3 rounded bg-body-tertiary border-start border-4 border-primary shadow-sm">
+                                                        <div className="d-flex justify-content-between align-items-start mb-1">
+                                                            <div>
+                                                                <span className="text-warning small me-2">{'⭐'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</span>
+                                                                <strong className="small">{r.name}</strong>
+                                                            </div>
+                                                            <small className="text-muted" style={{ fontSize: '0.75em' }}>
+                                                                {new Date(r.ts * 1000).toLocaleString()}
+                                                            </small>
+                                                        </div>
+                                                        <p className="mb-0 small" style={{ fontStyle: 'italic', color: 'var(--bs-emphasis-color)' }}>"{r.comment}"</p>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="text-center text-muted py-5">
+                                                    <p>No reviews yet. Be the first to share your experience!</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Col>
+                                </Row>
                             </Card.Body>
                         </Card>
                     </Col>

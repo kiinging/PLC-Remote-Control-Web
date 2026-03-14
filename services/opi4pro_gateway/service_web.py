@@ -577,35 +577,28 @@ def relay_status():
     }), 200
 
 
-@app.route('/api/feedback', methods=['POST'])
-def send_feedback():
+@app.route('/api/reviews', methods=['POST'])
+def add_review():
     try:
         data = request.get_json()
-        name = data.get("name", "Anonymous")
+        name = data.get("name", "John D.")
+        rating = data.get("rating", 5)
         comment = data.get("comment", "")
 
         if not comment:
             return jsonify({"error": "Comment is empty"}), 400
 
-        # Construct Email
-        msg = MIMEText(f"Feedback from: {name}\n\nComment:\n{comment}")
-        msg['Subject'] = f"PLC Web Feedback from {name}"
-        msg['From'] = config.SMTP_USER
-        msg['To'] = config.FEEDBACK_RECEIVER
+        db.add_review(name, rating, comment)
+        return jsonify({"message": "Review submitted successfully"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-        # Send Email
-        try:
-            with smtplib.SMTP(config.SMTP_SERVER, config.SMTP_PORT) as server:
-                server.starttls()
-                server.login(config.SMTP_USER, config.SMTP_PASS)
-                server.send_message(msg)
-            print(f"✅ Feedback email sent from {name}")
-            return jsonify({"message": "Feedback sent successfully"}), 200
-        except Exception as e:
-            print(f"❌ SMTP Error: {e}")
-            # Even if email fails, we might want to log it to DB or just return error
-            return jsonify({"error": "Failed to send email. Check SMTP settings."}), 500
-
+@app.route('/api/reviews', methods=['GET'])
+def get_reviews():
+    try:
+        limit = request.args.get("limit", default=15, type=int)
+        reviews = db.get_recent_reviews(limit=limit)
+        return jsonify(reviews), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

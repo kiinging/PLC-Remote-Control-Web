@@ -44,6 +44,18 @@ class GatewayDB:
                     );
                 """)
                 conn.execute("CREATE INDEX IF NOT EXISTS idx_trend_ts ON trend(ts);")
+
+                # Reviews Table
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS reviews (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        ts INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        rating INTEGER NOT NULL,
+                        comment TEXT NOT NULL
+                    );
+                """)
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_reviews_ts ON reviews(ts);")
                 conn.commit()
                 
         except sqlite3.Error as e:
@@ -135,6 +147,31 @@ class GatewayDB:
                 conn.execute("DELETE FROM trend WHERE ts < ?", (cutoff,))
         except Exception as e:
             logger.error(f"prune_trend error: {e}")
+
+    def add_review(self, name, rating, comment):
+        """Save a student review."""
+        try:
+            ts = int(time.time())
+            with self._get_conn() as conn:
+                conn.execute(
+                    "INSERT INTO reviews (ts, name, rating, comment) VALUES (?, ?, ?, ?)",
+                    (ts, name, rating, comment)
+                )
+        except Exception as e:
+            logger.error(f"add_review error: {e}")
+
+    def get_recent_reviews(self, limit=10):
+        """Get the last N reviews."""
+        try:
+            with self._get_conn() as conn:
+                cursor = conn.execute(
+                    "SELECT ts, name, rating, comment FROM reviews ORDER BY ts DESC LIMIT ?",
+                    (limit,)
+                )
+                return [{"ts": r[0], "name": r[1], "rating": r[2], "comment": r[3]} for r in cursor.fetchall()]
+        except Exception as e:
+            logger.error(f"get_recent_reviews error: {e}")
+            return []
 
 # Global instance for easy import, but config checks happen at runtime
 db = GatewayDB()
