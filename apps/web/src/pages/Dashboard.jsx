@@ -617,7 +617,7 @@ export default function Dashboard() {
                                 </div>
                             </Card.Header>
                             <Card.Body>
-                                <div style={{ height: '350px' }}><TrendChart data={getVisibleData()} /></div>
+                                <div style={{ height: '350px' }}><TrendChart dataPoints={getVisibleData()} /></div>
                             </Card.Body>
                         </Card>
                     </Col>
@@ -677,7 +677,7 @@ export default function Dashboard() {
                                                     <div key={idx} className="mb-3 p-3 rounded bg-body-tertiary border-start border-4 border-primary shadow-sm">
                                                         <div className="d-flex justify-content-between align-items-start mb-1">
                                                             <div>
-                                                                <span className="text-warning small me-2">{'⭐'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</span>
+                                                                <span className="text-warning small me-2">{'⭐'.repeat(Math.max(0, Math.min(5, parseInt(r.rating) || 0)))}{'☆'.repeat(5 - Math.max(0, Math.min(5, parseInt(r.rating) || 0)))}</span>
                                                                 <strong className="small">{r.name}</strong>
                                                             </div>
                                                             <small className="text-muted" style={{ fontSize: '0.75em' }}>
