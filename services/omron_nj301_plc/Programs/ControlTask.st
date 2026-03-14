@@ -1,7 +1,9 @@
 (*
     ControlTask_PID
     - With HMI_PID_Update apply button
-    - 
+    - ---------------------------------------- 
+	- G_PID_*_Out : return to web
+	- G_Eff_PID_* : send to PIDAT
 *)
 
 
@@ -78,11 +80,9 @@ IF ATDone_Rise THEN
     // Capture tuned parameters
     G_PID_PB_AT := PB_Active;
 	
-	 // Convert TIME -> REAL seconds
-    G_PID_Ti_AT := LINT_TO_REAL(TimeToLINT(Ti_Time)) / 1000.0;
-    G_PID_Td_AT := LINT_TO_REAL(TimeToLINT(Td_Time)) / 1000.0;
-
-
+    // Convert TIME -> REAL seconds
+    G_PID_Ti_AT := LINT_TO_REAL(TimeToSec(In := Ti_Time));
+    G_PID_Td_AT := LINT_TO_REAL(TimeToSec(In := Td_Time));
 
     // Reset autotune command
     IF G_WebActive THEN
@@ -100,7 +100,10 @@ G_PID_Ti_Out := G_Eff_PID_Ti;
 G_PID_Td_Out := G_Eff_PID_Td;
 
 
-IF ATBusy_FB THEN G_ATBusy := WORD#1; ELSE G_ATBusy := WORD#0; END_IF;
+IF ATBusy_FB THEN 
+	G_ATBusy := WORD#1; 
+ELSE G_ATBusy := WORD#0; 
+END_IF;
+
 IF ATErr_FB  THEN G_Tune_Err  := WORD#1; ELSE G_Tune_Err  := WORD#0; END_IF;
-
-
+IF G_ATDone_FB THEN  G_ATDone := WORD#1;ELSE  G_ATDone := WORD#0; END_IF;

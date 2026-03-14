@@ -204,4 +204,4 @@ END_IF;
 // ---------------------------------------------------------
 Out_0 := (G_Mode_Manual AND G_Eff_PLC_Enable AND NOT G_OverheatLatched);
 Out_1 := (G_Mode_Auto   AND G_Eff_PLC_Enable AND NOT G_OverheatLatched);
-Out_2 := (G_Mode_AT   AND G_Eff_PLC_Enable AND NOT G_OverheatLatched);
+Out_2 := (ATBusy_FB   AND G_Eff_PLC_Enable AND NOT G_OverheatLatched);
