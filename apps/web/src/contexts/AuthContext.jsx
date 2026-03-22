@@ -1,12 +1,17 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { checkSession, exchangeAuth } from '../services/api';
+import { eventLogService } from '../services/eventLogService';
 
 const AuthContext = createContext(null);
+
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    const isAdmin = user?.email === ADMIN_EMAIL;
 
     useEffect(() => {
         // 1. Check initial Supabase session
@@ -40,6 +45,10 @@ export const AuthProvider = ({ children }) => {
                         console.error("Failed to sync backend session", e);
                     }
                 }
+                // Log login event to event_logs table
+                if (event === 'SIGNED_IN' && session?.user?.email) {
+                    await eventLogService.logLogin(session.user.email);
+                }
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
             }
@@ -53,11 +62,10 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, logout, loading }}>
+        <AuthContext.Provider value={{ user, logout, loading, isAdmin }}>
             {!loading && children}
         </AuthContext.Provider>
     );
 };
 
 export const useAuth = () => useContext(AuthContext);
-

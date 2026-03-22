@@ -6,10 +6,14 @@ import TrendChart from '../components/TrendChart';
 import ThemeToggle from '../components/ThemeToggle';
 import { bookingService } from '../services/bookingService';
 import * as api from '../services/api';
+import { eventLogService } from '../services/eventLogService';
 
 export default function Dashboard() {
-    const { user, logout } = useAuth();
+    const { user, logout, isAdmin } = useAuth();
     const navigate = useNavigate();
+
+    // Temperature alert debounce ref (prevents spamming Supabase)
+    const tempAlertSentRef = useRef(false);
 
     // Status States
     const [relay, setRelay] = useState(false);
@@ -178,10 +182,23 @@ export default function Dashboard() {
 
         if (tData) {
             const now = new Date().toLocaleTimeString();
+            const currentTemp = tData.rtd_temp;
+
+            // Temperature alert logging: debounced, logs once per crossing above 100°C
+            if (typeof currentTemp === 'number' && currentTemp > 100) {
+                if (!tempAlertSentRef.current) {
+                    tempAlertSentRef.current = true;
+                    eventLogService.logTempAlert(user?.email || 'unknown', currentTemp);
+                }
+            } else if (currentTemp <= 95) {
+                // Reset flag once temp drops back below 95°C (hysteresis)
+                tempAlertSentRef.current = false;
+            }
+
             setChartData(prev => {
                 const newItem = {
                     time: now,
-                    pv: tData.rtd_temp,
+                    pv: currentTemp,
                     sp: cStatus?.setpoint_out ?? setpointOut,
                     mv: cStatus?.mv ?? manualMV
                 };
@@ -335,7 +352,8 @@ export default function Dashboard() {
     const [bookingChecked, setBookingChecked] = useState(false);
 
     const checkAccess = async () => {
-        if (user?.username === 'admin') {
+        // Admin always has full access — no booking required
+        if (isAdmin) {
             setIsReadOnly(false);
             setBookingChecked(true);
             return;
@@ -364,13 +382,24 @@ export default function Dashboard() {
                     <Navbar.Toggle aria-controls="dashboard-navbar-nav" />
                     <Navbar.Collapse id="dashboard-navbar-nav" className="justify-content-end">
                         <Nav className="me-auto">
-                            <Nav.Link onClick={() => navigate('/booking')}>Book Lab</Nav.Link>
+                            {/* Students see Book Lab; Admin does not need it */}
+                            {!isAdmin && (
+                                <Nav.Link onClick={() => navigate('/booking')}>Book Lab</Nav.Link>
+                            )}
+                            {/* Admin sees Event Log */}
+                            {isAdmin && (
+                                <Nav.Link onClick={() => navigate('/event-log')}>📋 Event Log</Nav.Link>
+                            )}
                         </Nav>
                         <ThemeToggle className="me-3" />
                         <Navbar.Text className="me-3">
-                            Signed in as: <a href="#login">{user?.username || user?.email?.split('@')[0] || 'User'}</a>
+                            Signed in as:{' '}
+                            <a href="#login">{user?.email?.split('@')[0] || 'User'}</a>
+                            {isAdmin && (
+                                <Badge bg="danger" className="ms-1" style={{ fontSize: '0.65em' }}>Admin</Badge>
+                            )}
                         </Navbar.Text>
-                        {user?.username === 'admin' && (
+                        {isAdmin && (
                             <Button variant="outline-warning" size="sm" className="me-2" onClick={() => navigate('/admin')}>
                                 Admin Panel
                             </Button>

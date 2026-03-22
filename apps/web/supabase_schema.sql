@@ -52,3 +52,28 @@ $$;
 create trigger check_booking_overlap
 before insert or update on public.bookings
 for each row execute procedure public.check_overlap();
+
+-- ============================================================
+-- Event Logs Table (login events & temperature alerts)
+-- ============================================================
+create table public.event_logs (
+  id uuid default gen_random_uuid() primary key,
+  event_type text not null,        -- 'login' | 'temp_alert'
+  user_email text,                 -- who triggered it
+  details jsonb,                   -- e.g. { "temperature": 105.3 }
+  created_at timestamptz default now()
+);
+
+alter table public.event_logs enable row level security;
+
+-- Any authenticated user can insert (log their own events)
+create policy "Insert own events"
+on public.event_logs for insert
+to authenticated
+with check (true);
+
+-- Any authenticated user can read (admin filter enforced client-side)
+create policy "Authenticated reads logs"
+on public.event_logs for select
+to authenticated
+using (true);

@@ -6,12 +6,20 @@ import Signup from './pages/Signup';
 import Admin from './pages/Admin';
 import Dashboard from './pages/Dashboard';
 import Booking from './pages/Booking';
+import EventLog from './pages/EventLog';
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth();
   if (!user) {
     return <Navigate to="/login" replace />;
   }
+  return children;
+}
+
+function AdminRoute({ children }) {
+  const { user, isAdmin } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return children;
 }
 
@@ -22,7 +30,7 @@ function App() {
         <ThemeProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} /> {/* Added Signup route */}
+            <Route path="/signup" element={<Signup />} />
             <Route path="/admin" element={
               <ProtectedRoute>
                 <Admin />
@@ -42,6 +50,14 @@ function App() {
                 <ProtectedRoute>
                   <Booking />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/event-log"
+              element={
+                <AdminRoute>
+                  <EventLog />
+                </AdminRoute>
               }
             />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
