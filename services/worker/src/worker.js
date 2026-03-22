@@ -222,6 +222,72 @@ export default {
         return Response.json({ user: session.user }, { headers: getCorsHeaders(request) });
       }
 
+      // ---- ADMIN: Delete Supabase User
+      if (url.pathname === "/api/admin/delete-user" && request.method === "POST") {
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+
+        const { email } = await request.json();
+        if (!email) return withCors(request, "Missing email", 400);
+
+        // Protect the admin account from self-deletion
+        const adminEmail = env.ADMIN_EMAIL || "wongkiinging@gmail.com";
+        if (email === adminEmail) {
+          return withCors(request, "Cannot delete admin account", 403);
+        }
+
+        const supabaseUrl = env.SUPABASE_URL;
+        const serviceKey = env.SUPABASE_SERVICE_KEY;
+
+        if (!serviceKey || !supabaseUrl) {
+          return withCors(request, "Server misconfigured: missing Supabase service key", 500);
+        }
+
+        try {
+          // Step 1: Find user UUID by email via Admin API
+          const listResp = await fetch(`${supabaseUrl}/auth/v1/admin/users?email=${encodeURIComponent(email)}`, {
+            headers: {
+              "apikey": serviceKey,
+              "Authorization": `Bearer ${serviceKey}`
+            }
+          });
+          const listData = await listResp.json();
+          const users = listData.users || [];
+          const target = users.find(u => u.email === email);
+
+          if (!target) {
+            return withCors(request, JSON.stringify({ ok: false, error: "User not found in Supabase" }), 404, {
+              "Content-Type": "application/json"
+            });
+          }
+
+          // Step 2: Delete the user by UUID
+          const delResp = await fetch(`${supabaseUrl}/auth/v1/admin/users/${target.id}`, {
+            method: "DELETE",
+            headers: {
+              "apikey": serviceKey,
+              "Authorization": `Bearer ${serviceKey}`
+            }
+          });
+
+          if (!delResp.ok) {
+            const errText = await delResp.text();
+            return withCors(request, JSON.stringify({ ok: false, error: errText }), delResp.status, {
+              "Content-Type": "application/json"
+            });
+          }
+
+          return withCors(request, JSON.stringify({ ok: true, deleted: email }), 200, {
+            "Content-Type": "application/json"
+          });
+
+        } catch (e) {
+          return withCors(request, JSON.stringify({ ok: false, error: e.message }), 500, {
+            "Content-Type": "application/json"
+          });
+        }
+      }
+
       // ---- DASHBOARD ACCESS (root handled above in SPA routes; this is kept as fallback)
       // Auth is now fully Supabase-based — no server-side cookie redirect needed.
 

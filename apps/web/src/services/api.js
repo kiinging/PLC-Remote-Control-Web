@@ -41,6 +41,8 @@ export const exchangeAuth = async (access_token, user_email) => {
 // --- Admin API ---
 export const getUsers = async () => (await api.get('/api/users')).data;
 export const deleteUser = async (username) => (await api.post('/api/user/delete', { username })).data;
+// Supabase-based user deletion (used by new Admin.jsx)
+export const deleteSupabaseUser = async (email) => (await api.post('/api/admin/delete-user', { email })).data;
 
 // --- Control API wrappers ---
 export const getRelayStatus = async () => (await api.get('/api/relay_status')).data;
