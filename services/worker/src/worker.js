@@ -66,10 +66,13 @@ export default {
       // ---- SPA Page Routes (EARLY EXIT): Serve index.html for known client-side routes
       // Must be BEFORE any asset/fallback logic so direct navigation and refresh work.
       // Using a plain new Request() (no second arg) avoids inheriting browser cache headers.
-      const spaPageRoutes = ["/dashboard", "/login", "/settings", "/tune", "/about"];
+      const spaPageRoutes = [
+        "/dashboard", "/login", "/signup", "/admin",
+        "/booking", "/event-log", "/settings", "/tune", "/about"
+      ];
       if (
         request.method === "GET" &&
-        spaPageRoutes.some(r => url.pathname === r || url.pathname.startsWith(r + "/"))
+        (url.pathname === "/" || spaPageRoutes.some(r => url.pathname === r || url.pathname.startsWith(r + "/")))
       ) {
         if (env.ASSETS) {
           return env.ASSETS.fetch(new Request("https://plc-web.online/index.html"));
@@ -219,15 +222,8 @@ export default {
         return Response.json({ user: session.user }, { headers: getCorsHeaders(request) });
       }
 
-      // ---- DASHBOARD ACCESS
-      if (url.pathname === "/") {
-        const session = await validateSession(request, env);
-        if (!session) {
-          return Response.redirect("https://plc-web.online/login", 302);
-        }
-        // Serve the SPA (index.html)
-        return env.ASSETS.fetch(new Request("https://plc-web.online/index.html", request));
-      }
+      // ---- DASHBOARD ACCESS (root handled above in SPA routes; this is kept as fallback)
+      // Auth is now fully Supabase-based — no server-side cookie redirect needed.
 
       // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
 
