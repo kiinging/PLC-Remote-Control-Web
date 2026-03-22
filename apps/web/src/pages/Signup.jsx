@@ -1,7 +1,4 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Container, Card, Form, Button, Alert } from 'react-bootstrap';
-import { register } from '../services/api';
+import { supabase } from '../services/supabase';
 
 export default function Signup() {
     const [username, setUsername] = useState('');
@@ -14,18 +11,36 @@ export default function Signup() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validation
+        if (username.includes(' ')) {
+            return setError("Username cannot contain spaces");
+        }
         if (password !== confirmPassword) {
             return setError("Passwords do not match");
+        }
+        if (password.length < 4) {
+            return setError("Password should be at least 4 characters");
         }
 
         try {
             setError('');
             setLoading(true);
-            await register(username, password);
+            
+            // Map username to dummy email for Supabase
+            const email = `${username}@student.local`;
+            
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+            });
+
+            if (error) throw error;
+
             setSuccess("Account created! Redirecting to login...");
             setTimeout(() => navigate('/login'), 2000);
         } catch (err) {
-            setError(err.response?.data?.message || err.message || 'Failed to create account');
+            setError(err.message || 'Failed to create account');
         } finally {
             setLoading(false);
         }

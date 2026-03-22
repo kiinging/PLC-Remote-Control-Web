@@ -62,8 +62,18 @@ export const AuthProvider = ({ children }) => {
         window.location.href = '/login';
     };
 
+    const getUsername = (email) => {
+        if (!email) return '';
+        if (email.endsWith('@student.local')) {
+            return email.split('@')[0];
+        }
+        return email; // Return full email for others (like admin)
+    };
+
+    const userDisplay = getUsername(user?.email);
+
     return (
-        <AuthContext.Provider value={{ user, logout, loading, isAdmin }}>
+        <AuthContext.Provider value={{ user, userDisplay, logout, loading, isAdmin }}>
             {!loading && children}
         </AuthContext.Provider>
     );

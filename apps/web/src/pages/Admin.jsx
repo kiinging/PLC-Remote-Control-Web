@@ -80,6 +80,11 @@ export default function Admin() {
         return new Date(iso).toLocaleString();
     };
 
+    const formatEmail = (email) => {
+        if (email.endsWith('@student.local')) return email.split('@')[0];
+        return email;
+    };
+
     return (
         <Container className="mt-4">
             <div className="d-flex justify-content-between align-items-center mb-4">
@@ -131,7 +136,7 @@ export default function Admin() {
                                     <tr key={u.email}>
                                         <td>{idx + 1}</td>
                                         <td>
-                                            <span className="fw-semibold">{u.email}</span>
+                                            <span className="fw-semibold">{formatEmail(u.email)}</span>
                                         </td>
                                         <td>
                                             {u.email === ADMIN_EMAIL

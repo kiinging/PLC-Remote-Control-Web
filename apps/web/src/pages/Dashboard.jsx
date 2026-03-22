@@ -9,7 +9,7 @@ import * as api from '../services/api';
 import { eventLogService } from '../services/eventLogService';
 
 export default function Dashboard() {
-    const { user, logout, isAdmin } = useAuth();
+    const { user, userDisplay, logout, isAdmin } = useAuth();
     const navigate = useNavigate();
 
     // Temperature alert debounce ref (prevents spamming Supabase)
@@ -394,7 +394,7 @@ export default function Dashboard() {
                         <ThemeToggle className="me-3" />
                         <Navbar.Text className="me-3">
                             Signed in as:{' '}
-                            <a href="#login">{user?.email?.split('@')[0] || 'User'}</a>
+                            <a href="#login">{userDisplay || 'User'}</a>
                             {isAdmin && (
                                 <Badge bg="danger" className="ms-1" style={{ fontSize: '0.65em' }}>Admin</Badge>
                             )}

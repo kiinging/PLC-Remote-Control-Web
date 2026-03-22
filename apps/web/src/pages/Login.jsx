@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 const Login = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState(''); // Email or Username
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -27,17 +27,26 @@ const Login = () => {
         setLoading(true);
         setError(null);
 
+        // Map identifier (username) to email if it's not already an email
+        const email = identifier.includes('@') ? identifier : `${identifier}@student.local`;
+
         try {
             if (isSignUp) {
                 if (password !== confirmPassword) {
                     throw new Error("Passwords do not match");
+                }
+                if (password.length < 4) {
+                    throw new Error("Password must be at least 4 characters");
                 }
                 const { error } = await supabase.auth.signUp({
                     email,
                     password,
                 });
                 if (error) throw error;
-                setError("Account created! You may need to verify your email.");
+                setError("Account created! Logging you in...");
+                
+                // If "Confirm Email" is OFF in dashboard, this will log them in immediately.
+                // If it's ON, they will see a success message but need to verify.
                 setIsSignUp(false);
             } else {
                 const { error } = await supabase.auth.signInWithPassword({
@@ -45,7 +54,6 @@ const Login = () => {
                     password,
                 });
                 if (error) throw error;
-                // AuthContext will handle the state change
             }
         } catch (error) {
             setError(error.message);
@@ -82,13 +90,13 @@ const Login = () => {
 
                             <Form onSubmit={handleLogin}>
                                 <Form.Group className="mb-3">
-                                    <Form.Label>Email address</Form.Label>
+                                    <Form.Label>Username or Email</Form.Label>
                                     <Form.Control
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
+                                        type="text"
+                                        value={identifier}
+                                        onChange={(e) => setIdentifier(e.target.value)}
                                         required
-                                        placeholder="Enter your email"
+                                        placeholder="Enter username or email"
                                     />
                                 </Form.Group>
 
