@@ -1,5 +1,5 @@
 -- Create Bookings Table
-create table public.bookings (
+create table if not exists public.bookings (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users not null,
   start_time timestamptz not null,
@@ -11,7 +11,10 @@ create table public.bookings (
 -- Enable RLS
 alter table public.bookings enable row level security;
 
--- Policies
+-- Policies (Drop first to avoid "already exists")
+drop policy if exists "Enable read access for all users" on public.bookings;
+drop policy if exists "Enable insert for authenticated users" on public.bookings;
+drop policy if exists "Enable delete for users based on user_id" on public.bookings;
 
 -- 1. Read: Everyone can read bookings (to see busy slots)
 create policy "Enable read access for all users"
@@ -48,7 +51,8 @@ begin
 end;
 $$;
 
--- Trigger for Overlap
+-- Trigger for Overlap (Drop if exists then create)
+drop trigger if exists check_booking_overlap on public.bookings;
 create trigger check_booking_overlap
 before insert or update on public.bookings
 for each row execute procedure public.check_overlap();
@@ -56,7 +60,7 @@ for each row execute procedure public.check_overlap();
 -- ============================================================
 -- Event Logs Table (login events & temperature alerts)
 -- ============================================================
-create table public.event_logs (
+create table if not exists public.event_logs (
   id uuid default gen_random_uuid() primary key,
   event_type text not null,        -- 'login' | 'temp_alert'
   user_email text,                 -- who triggered it
@@ -65,6 +69,10 @@ create table public.event_logs (
 );
 
 alter table public.event_logs enable row level security;
+
+-- Policies (Drop first)
+drop policy if exists "Insert own events" on public.event_logs;
+drop policy if exists "Authenticated reads logs" on public.event_logs;
 
 -- Any authenticated user can insert (log their own events)
 create policy "Insert own events"

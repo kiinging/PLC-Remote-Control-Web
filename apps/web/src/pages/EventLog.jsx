@@ -33,7 +33,7 @@ export default function EventLog() {
             setTempLogs(temps);
         } catch (e) {
             console.error(e);
-            setError('Failed to load event logs. Make sure the event_logs table exists in Supabase.');
+            setError('Failed to load event logs. Make sure the event_logs table exists in Supabase (check supabase_schema.sql).');
         } finally {
             setLoading(false);
         }

@@ -56,7 +56,7 @@ export default function Admin() {
             setUsers(list);
         } catch (err) {
             console.error("Admin fetch error:", err);
-            setError('Failed to fetch users: ' + (err.message || err));
+            setError('Failed to fetch users. Ensure the event_logs table exists (check supabase_schema.sql). ' + (err.message || err));
         } finally {
             setLoading(false);
         }

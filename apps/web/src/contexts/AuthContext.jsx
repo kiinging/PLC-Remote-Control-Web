@@ -60,24 +60,20 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         console.log("Auth: Initiating logout...");
         try {
-            // 1. Clear Backend Session (Cookie)
-            try {
-                await checkSession(); // Quick check if session still exists
-                await apiLogout();
-                console.log("Auth: Backend session cleared");
-            } catch (e) {
-                console.warn("Auth: Backend logout skipped or failed", e.message);
-            }
+            // 1. Fire and forget backend logout
+            apiLogout().catch(e => console.warn("Auth: Backend logout skipped/failed", e.message));
 
-            // 2. Clear Supabase Session
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-            console.log("Auth: Supabase signed out");
+            // 2. Clear Supabase Session (with a timeout to prevent hanging)
+            await Promise.race([
+                supabase.auth.signOut(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Signout timeout')), 3000))
+            ]).catch(e => console.warn("Auth: Supabase signout warning", e.message));
 
         } catch (e) {
-            console.error("Auth: Logout error (proceeding to redirect):", e.message);
+            console.error("Auth: Logout process error", e.message);
         } finally {
-            // 3. Force redirect to login page
+            // 3. Clear local state and hard redirect to login
+            setUser(null);
             console.log("Auth: Redirecting to login");
             window.location.href = '/login';
         }
