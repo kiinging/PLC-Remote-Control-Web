@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
-import { checkSession, exchangeAuth } from '../services/api';
+import { checkSession, exchangeAuth, logout as apiLogout } from '../services/api';
 import { eventLogService } from '../services/eventLogService';
 
 const AuthContext = createContext(null);
@@ -58,8 +58,29 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const logout = async () => {
-        await supabase.auth.signOut();
-        window.location.href = '/login';
+        console.log("Auth: Initiating logout...");
+        try {
+            // 1. Clear Backend Session (Cookie)
+            try {
+                await checkSession(); // Quick check if session still exists
+                await apiLogout();
+                console.log("Auth: Backend session cleared");
+            } catch (e) {
+                console.warn("Auth: Backend logout skipped or failed", e.message);
+            }
+
+            // 2. Clear Supabase Session
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+            console.log("Auth: Supabase signed out");
+
+        } catch (e) {
+            console.error("Auth: Logout error (proceeding to redirect):", e.message);
+        } finally {
+            // 3. Force redirect to login page
+            console.log("Auth: Redirecting to login");
+            window.location.href = '/login';
+        }
     };
 
     const getUsername = (email) => {

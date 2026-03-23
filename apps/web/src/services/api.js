@@ -13,16 +13,6 @@ export const api = axios.create({
     }
 });
 
-export const login = async (username, password) => {
-    const response = await api.post('/api/login', { username, password });
-    return response.data;
-};
-
-export const register = async (username, password) => {
-    const response = await api.post('/api/signup', { username, password });
-    return response.data;
-};
-
 export const logout = async () => {
     const response = await api.post('/api/logout');
     return response.data;
@@ -39,8 +29,6 @@ export const exchangeAuth = async (access_token, user_email) => {
 };
 
 // --- Admin API ---
-export const getUsers = async () => (await api.get('/api/users')).data;
-export const deleteUser = async (username) => (await api.post('/api/user/delete', { username })).data;
 // Supabase-based user deletion (used by new Admin.jsx)
 export const deleteSupabaseUser = async (email) => (await api.post('/api/admin/delete-user', { email })).data;
 

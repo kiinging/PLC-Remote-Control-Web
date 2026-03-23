@@ -91,103 +91,11 @@ export default {
         });
       }
 
-      // ---- LOGIN
-      if (url.pathname === "/api/login" && request.method === "POST") {
-        const { username, password } = await request.json();
-
-        // Hardcoded Fallback User (Bypass KV)
-        if (username === "admin" && password === "admin123") {
-          return withCors(request, JSON.stringify({ ok: true }), 200, {
-            "Content-Type": "application/json",
-            "Set-Cookie": setCookie(username) // Session is just username
-          });
-        }
-
-        if (!env.USERS) {
-          return withCors(request, "CRITICAL: env.USERS is undefined", 500);
-        }
-
-        const storedPass = await env.USERS.get(username);
-
-        if (!storedPass) return withCors(request, "Invalid user", 401);
-        if (storedPass !== password) return withCors(request, "Invalid password", 401);
-
-        // No KV write for session. Just set cookie.
-        return withCors(request, JSON.stringify({ ok: true }), 200, {
-          "Content-Type": "application/json",
-          "Set-Cookie": setCookie(username)
-        });
-
-      }
-
-      // ---- SIGNUP
-      if (url.pathname === "/api/signup" && request.method === "POST") {
-        const { username, password } = await request.json();
-
-        // Simple validation
-        if (!username || !password) return withCors(request, "Missing fields", 400);
-
-        if (!env.USERS) {
-          return withCors(request, "CRITICAL: env.USERS is undefined", 500);
-        }
-
-        // Check if user exists
-        const existing = await env.USERS.get(username);
-        if (existing) return withCors(request, "User already exists", 409);
-
-        // Create user
-        await env.USERS.put(username, password);
-
-        return withCors(request, JSON.stringify({ ok: true }), 201, {
-          "Content-Type": "application/json"
-        });
-      }
-
-      // ---- LIST USERS (Admin)
-      if (url.pathname === "/api/users" && request.method === "GET") {
-        const session = await validateSession(request, env);
-        if (!session) return withCors(request, "Unauthorized", 401);
-
-        // (Optional) Add role check here if "admin" stored in session
-        // For now, allow any logged-in user to see list (for simplicity) or restrict to specific usernames
-        // if (session.user !== 'admin') return withCors(request, "Forbidden", 403);
-
-        const list = await env.USERS.list();
-        const users = list.keys.map(k => k.name).filter(n => !n.startsWith("session:"));
-
-        return withCors(request, JSON.stringify({ users }), 200, {
-          "Content-Type": "application/json"
-        });
-      }
-
-      // ---- DELETE USER (Admin)
-      if (url.pathname === "/api/user/delete" && request.method === "POST") {
-        const session = await validateSession(request, env);
-        if (!session) return withCors(request, "Unauthorized", 401);
-        // if (session.user !== 'admin') return withCors(request, "Forbidden", 403);
-
-        const { username } = await request.json();
-        await env.USERS.delete(username);
-        return withCors(request, JSON.stringify({ ok: true }), 200, { "Content-Type": "application/json" });
-      }
-
       // ---- LOGOUT
       if (url.pathname === "/api/logout" && request.method === "POST") {
-        const cookie = request.headers.get("Cookie") || "";
-        const match = cookie.match(/plc_session=([^;]+)/);
-
-        if (match) {
-          const token = match[1];
-          try {
-            await env.USERS.delete(`session:${token}`);
-          } catch (err) {
-            console.error("KV delete failed:", err);
-          }
-        }
-
         return withCors(request, JSON.stringify({ ok: true }), 200, {
           "Content-Type": "application/json",
-          "Set-Cookie": "plc_session=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Lax"
+          "Set-Cookie": "plc_session=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Lax"
         });
       }
 
