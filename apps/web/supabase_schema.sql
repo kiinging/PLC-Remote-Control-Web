@@ -92,6 +92,7 @@ using (true);
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   has_seen_welcome boolean default false,
+  has_seen_start_guide boolean default false,
   updated_at timestamptz default now()
 );
 

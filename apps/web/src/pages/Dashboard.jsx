@@ -120,10 +120,15 @@ export default function Dashboard() {
         if (!isAdmin) {
             try {
                 const profile = await profileService.getProfile();
-                if (profile && !profile.has_seen_welcome) {
-                    const hasActive = await bookingService.hasActiveBooking();
-                    setOnboardingType(hasActive ? 'returning' : 'new');
-                    setShowWelcome(true);
+                if (profile) {
+                    const hasBooking = await bookingService.hasActiveBooking();
+                    if (!profile.has_seen_welcome && !hasBooking) {
+                        setOnboardingType('new');
+                        setShowWelcome(true);
+                    } else if (!profile.has_seen_start_guide && hasBooking) {
+                        setOnboardingType('returning');
+                        setShowWelcome(true);
+                    }
                 }
             } catch (e) {
                 console.warn("Onboarding check failed", e);
@@ -453,7 +458,7 @@ export default function Dashboard() {
                     keyboard={false}
                     size="md"
                 >
-                    <Modal.Header closeButton className="bg-primary text-white py-2">
+                    <Modal.Header closeButton className="bg-primary text-white py-2 border-0">
                         <Modal.Title className="fs-5 fw-bold">
                             {onboardingType === 'new' ? 'Welcome to PLC Remote Lab' : 'Ready to Start Your Session?'}
                         </Modal.Title>
@@ -461,30 +466,30 @@ export default function Dashboard() {
                     <Modal.Body className="p-3">
                         {onboardingType === 'new' ? (
                             <div className="py-2">
-                                <p className="mb-3">
+                                <p className="mb-3 text-dark">
                                     Welcome student! To gain control of the lab hardware, you first need to schedule a session.
                                 </p>
-                                <div className="p-2 border rounded bg-light text-center">
+                                <Alert variant="info" className="text-center shadow-sm border-0">
                                     Click the <strong>Book Lab</strong> button in the navigation bar to find an available time slot.
-                                </div>
+                                </Alert>
                             </div>
                         ) : (
                             <div>
-                                <p className="mb-3">
+                                <p className="mb-3 text-dark">
                                     Welcome back! You have an active booking. 
                                     Currently, the <Badge bg="success">Gateway: ON</Badge> and the <Badge bg="success">Process Power ESP32: Alive</Badge>.
                                 </p>
-                                <hr className="my-3" />
-                                <p className="mb-0 text-center">
+                                <hr className="my-3 opacity-25" />
+                                <div className="p-2 text-center">
                                     Click the <Badge bg="success">Start</Badge> button in the 
                                     <strong> Process Power</strong> section to power up the 
                                     <strong> Camera</strong> and <strong>PLC systems</strong>.
-                                </p>
+                                </div>
                             </div>
                         )}
                     </Modal.Body>
-                    <Modal.Footer className="border-0 pt-0">
-                        <Button variant="primary" size="sm" className="px-4" onClick={handleCloseWelcome}>
+                    <Modal.Footer className="border-0 pt-0 pb-3 justify-content-center">
+                        <Button variant="primary" size="sm" className="px-5 shadow-sm" onClick={handleCloseWelcome}>
                             {onboardingType === 'new' ? 'Got it' : 'I\'m ready'}
                         </Button>
                     </Modal.Footer>
