@@ -356,7 +356,7 @@ export default function Dashboard() {
     useEffect(() => {
         if (tuneStatus.tune_completed && tuneStatus.tuning_active) {
             console.log("AT Tune complete detected, resetting STARTAT to False...");
-            handleStopTune();
+            api.stopTune(); // Directly call API to bypass isReadOnly
         }
     }, [tuneStatus]);
 

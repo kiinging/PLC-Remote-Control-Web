@@ -14,9 +14,9 @@ G_Mode_AT         := (G_Eff_Mode = C_MODE_TUNE);
 // First scan initialization
 IF NOT FirstScanDone THEN
     // === First Scan Initialization ===
-    G_Eff_PID_PB := G_PID_PB_Out;
-    G_Eff_PID_Ti := G_PID_Ti_Out;
-    G_Eff_PID_Td := G_PID_Td_Out;
+	G_PID_PB_Out :=  G_Eff_PID_PB;
+    G_PID_Ti_Out  :=  G_Eff_PID_Ti;
+    G_PID_Td_Out :=  G_Eff_PID_Td;
     FirstScanDone := TRUE;
 END_IF;
 
@@ -188,6 +188,7 @@ PWM_Enable := G_Eff_PLC_Enable AND NOT G_OverheatLatched;
 PWM_Out(
 	Enable:=PWM_Enable,
     Ain     := MV_Limited,     // adjust input name if different in your FB
+	
     CtlPrd := T#1s,
 	MinPlsWidth :=0.0,
 	Delay:=0.0,
