@@ -466,7 +466,7 @@ export default function Dashboard() {
                     <Modal.Body className="p-3">
                         {onboardingType === 'new' ? (
                             <div className="py-2">
-                                <p className="mb-3 text-dark">
+                                <p className="mb-3">
                                     Welcome student! To gain control of the lab hardware, you first need to schedule a session.
                                 </p>
                                 <Alert variant="info" className="text-center shadow-sm border-0">
@@ -475,7 +475,7 @@ export default function Dashboard() {
                             </div>
                         ) : (
                             <div>
-                                <p className="mb-3 text-dark">
+                                <p className="mb-3">
                                     Welcome back! You have an active booking. 
                                     Currently, the <Badge bg="success">Gateway: ON</Badge> and the <Badge bg="success">Process Power ESP32: Alive</Badge>.
                                 </p>

@@ -156,7 +156,7 @@ export default function Admin() {
                 {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
 
                 <Card className="shadow-sm">
-                    <Card.Header className="d-flex justify-content-between align-items-center bg-light">
+                    <Card.Header className="d-flex justify-content-between align-items-center bg-body-tertiary">
                         <span as="h5" className="mb-0 fw-bold">Active User Base</span>
                         <Badge bg="dark">{users.length} users</Badge>
                     </Card.Header>
