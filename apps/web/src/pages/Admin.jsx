@@ -11,7 +11,7 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 export default function Admin() {
     const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const { user, logout, isAdmin } = useAuth();

@@ -11,7 +11,7 @@ export default function EventLog() {
 
     const [loginLogs, setLoginLogs] = useState([]);
     const [tempLogs, setTempLogs] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     // Guard: non-admins should not reach this page (AdminRoute in App.jsx handles it,
