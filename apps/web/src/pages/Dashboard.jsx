@@ -352,6 +352,14 @@ export default function Dashboard() {
         if (mvPending && controlStatus.mv_ack) setMvPending(false);
     }, [controlStatus, webPending, mvPending, plcPending]);
 
+    // Auto-reset AT command when complete
+    useEffect(() => {
+        if (tuneStatus.tune_completed && tuneStatus.tuning_active) {
+            console.log("AT Tune complete detected, resetting STARTAT to False...");
+            handleStopTune();
+        }
+    }, [tuneStatus]);
+
     const handleExpand = () => setChartWindow(prev => Math.min(prev + 10, 60));
     const handleContract = () => setChartWindow(prev => Math.max(prev - 10, 10));
     const handleClearChart = () => {
