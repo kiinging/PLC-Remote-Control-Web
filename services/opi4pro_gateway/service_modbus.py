@@ -154,11 +154,16 @@ def modbus_loop():
                 db.set_state("pid_ti_at", ti_at)
                 db.set_state("pid_td_at", td_at)
 
-                # --- AUTO-RESET TUNE COMMAND ---
-                # If PLC reports DONE, we must ensure the gateway reset its command to 0.
+                # --- AUTO-RESET TUNE COMMAND & APPLY RESULTS ---
+                # If PLC reports DONE, we reset the command and save the new parameters as active.
                 if bool(tune_done) and db.get_state("tune_status", 0) == 1:
-                    logger.info("AutoTune completion detected from PLC. Resetting gateway command to 0.")
+                    logger.info("AutoTune completion detected. Applying results and resetting command.")
                     db.set_state("tune_status", 0)
+                    
+                    # Store AT results into active PID fields
+                    db.set_state("pid_pb", pb_at)
+                    db.set_state("pid_ti", ti_at)
+                    db.set_state("pid_td", td_at)
 
                 db.set_state("modbus_plc_last_seen", time.time())
                 db.set_state("modbus_last_tick_ts", time.time())
