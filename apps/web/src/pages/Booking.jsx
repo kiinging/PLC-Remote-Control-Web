@@ -3,6 +3,7 @@ import { Container, Row, Col, Card, Button, Table, Alert, Badge, Navbar, Nav } f
 import { useNavigate } from 'react-router-dom';
 import { bookingService } from '../services/bookingService';
 import { useAuth } from '../contexts/AuthContext';
+import { eventLogService } from '../services/eventLogService';
 import ThemeToggle from '../components/ThemeToggle';
 
 export default function Booking() {
@@ -79,6 +80,12 @@ export default function Booking() {
             setError(null);
             setSuccess(null);
             await bookingService.createBooking(slot.start.toISOString(), slot.end.toISOString());
+            
+            // Log the booking for admin visibility
+            if (user?.email) {
+                eventLogService.logBooking(user.email, slot.start.toISOString(), slot.end.toISOString());
+            }
+
             setSuccess("Booking confirmed!");
             fetchData(); // Refresh
         } catch (err) {

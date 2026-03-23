@@ -11,6 +11,7 @@ export default function EventLog() {
 
     const [loginLogs, setLoginLogs] = useState([]);
     const [tempLogs, setTempLogs] = useState([]);
+    const [bookingLogs, setBookingLogs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -25,12 +26,14 @@ export default function EventLog() {
     const fetchLogs = async () => {
         try {
             setError(null);
-            const [logins, temps] = await Promise.all([
+            const [logins, temps, bookings] = await Promise.all([
                 eventLogService.getEventLogs('login', 200),
-                eventLogService.getEventLogs('temp_alert', 200)
+                eventLogService.getEventLogs('temp_alert', 200),
+                eventLogService.getEventLogs('booking', 200)
             ]);
             setLoginLogs(logins);
             setTempLogs(temps);
+            setBookingLogs(bookings);
         } catch (e) {
             console.error(e);
             setError('Failed to load event logs. Make sure the event_logs table exists in Supabase (check supabase_schema.sql).');
@@ -215,6 +218,69 @@ export default function EventLog() {
                                                                 </Badge>
                                                             </td>
                                                             <td className="small">{formatTime(log.created_at)}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </Table>
+                                    </div>
+                                )}
+                            </Card.Body>
+                        </Card>
+                    </Tab>
+
+                    {/* ── Lab Booking Events Tab ── */}
+                    <Tab
+                        eventKey="booking"
+                        title={
+                            <span>
+                                📅 Lab Bookings{' '}
+                                <Badge bg="info" pill>{bookingLogs.length}</Badge>
+                            </span>
+                        }
+                    >
+                        <Card>
+                            <Card.Header className="d-flex justify-content-between align-items-center">
+                                <span className="fw-semibold">Student Booking History</span>
+                                <small className="text-muted">Last {bookingLogs.length} events</small>
+                            </Card.Header>
+                            <Card.Body className="p-0">
+                                {loading ? (
+                                    <div className="text-center py-5">
+                                        <Spinner animation="border" variant="info" />
+                                        <p className="text-muted mt-3">Loading booking events...</p>
+                                    </div>
+                                ) : bookingLogs.length === 0 ? (
+                                    <div className="text-center py-5 text-muted">
+                                        <p>No lab bookings recorded yet.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                                        <Table striped hover responsive className="mb-0">
+                                            <thead className="table-dark sticky-top">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>User Email</th>
+                                                    <th>Booked Time Slot</th>
+                                                    <th>Logged At</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {bookingLogs.map((log, idx) => {
+                                                    const start = new Date(log.details?.start).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                                                    const end = new Date(log.details?.end).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                                                    return (
+                                                        <tr key={log.id}>
+                                                            <td className="text-muted small">{idx + 1}</td>
+                                                            <td>
+                                                                <strong>{log.user_email || '—'}</strong>
+                                                            </td>
+                                                            <td>
+                                                                <Badge bg="info" className="fw-normal">
+                                                                    {start} - {end}
+                                                                </Badge>
+                                                            </td>
+                                                            <td className="small text-muted">{formatTime(log.created_at)}</td>
                                                         </tr>
                                                     );
                                                 })}

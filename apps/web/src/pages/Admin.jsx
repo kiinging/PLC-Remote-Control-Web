@@ -29,11 +29,16 @@ export default function Admin() {
         setLoading(true);
         setError('');
         try {
-            // Fetch Supabase Login History
-            const loginLogs = await eventLogService.getEventLogs('login', 500);
+            // Fetch Supabase Event History
+            const [loginLogs, bookingLogs] = await Promise.all([
+                eventLogService.getEventLogs('login', 1000),
+                eventLogService.getEventLogs('booking', 1000)
+            ]);
             
-            // Aggregation logic (only Supabase)
+            // Aggregation logic
             const map = {};
+            
+            // Process Logins
             for (const row of loginLogs) {
                 const email = row.user_email;
                 if (!email) continue;
@@ -41,16 +46,40 @@ export default function Admin() {
                     map[email] = { 
                         email, 
                         lastLogin: row.created_at, 
-                        loginCount: 0 
+                        loginCount: 0,
+                        bookingCount: 0,
+                        lastBooking: null
                     };
                 }
                 map[email].loginCount += 1;
             }
 
+            // Process Bookings
+            for (const row of bookingLogs) {
+                const email = row.user_email;
+                if (!email) continue;
+                if (!map[email]) {
+                    map[email] = { 
+                        email, 
+                        lastLogin: null, 
+                        loginCount: 0,
+                        bookingCount: 0,
+                        lastBooking: row.details?.start
+                    };
+                }
+                map[email].bookingCount += 1;
+                // Track most recent booking start time
+                if (!map[email].lastBooking || new Date(row.details?.start) > new Date(map[email].lastBooking)) {
+                    map[email].lastBooking = row.details?.start;
+                }
+            }
+
             const list = Object.values(map).sort((a, b) => {
                 if (a.email === ADMIN_EMAIL) return -1;
                 if (b.email === ADMIN_EMAIL) return 1;
-                return new Date(b.lastLogin) - new Date(a.lastLogin);
+                const dateA = a.lastLogin ? new Date(a.lastLogin) : new Date(0);
+                const dateB = b.lastLogin ? new Date(b.lastLogin) : new Date(0);
+                return dateB - dateA;
             });
 
             setUsers(list);
@@ -151,6 +180,7 @@ export default function Admin() {
                                         <th>Email</th>
                                         <th>Role</th>
                                         <th>Login Count</th>
+                                        <th>Bookings</th>
                                         <th>Last Seen</th>
                                         <th>Actions</th>
                                     </tr>
@@ -170,6 +200,18 @@ export default function Admin() {
                                             </td>
                                             <td>
                                                 <Badge bg="secondary">{u.loginCount}</Badge>
+                                            </td>
+                                            <td>
+                                                {u.bookingCount > 0 ? (
+                                                    <div className="d-flex flex-column">
+                                                        <Badge bg="info" className="w-fit">{u.bookingCount}</Badge>
+                                                        <small className="text-muted mt-1" style={{ fontSize: '0.75em' }}>
+                                                            Next/Last: {new Date(u.lastBooking).toLocaleDateString()}
+                                                        </small>
+                                                    </div>
+                                                ) : (
+                                                    <small className="text-muted">None</small>
+                                                )}
                                             </td>
                                             <td>
                                                 <small className="text-muted">{formatDate(u.lastLogin)}</small>

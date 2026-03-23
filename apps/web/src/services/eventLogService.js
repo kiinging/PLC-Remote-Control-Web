@@ -18,6 +18,24 @@ export const eventLogService = {
     },
 
     /**
+     * Log a booking event.
+     * @param {string} email - User email
+     * @param {string} start - ISO start time
+     * @param {string} end - ISO end time
+     */
+    async logBooking(email, start, end) {
+        try {
+            await supabase.from('event_logs').insert([{
+                event_type: 'booking',
+                user_email: email,
+                details: { start, end }
+            }]);
+        } catch (e) {
+            console.warn('Failed to log booking event:', e);
+        }
+    },
+
+    /**
      * Log a temperature alert (temperature exceeded 100°C).
      * @param {string} email - User email currently logged in
      * @param {number} temperature - The temperature value that triggered the alert
