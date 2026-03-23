@@ -85,3 +85,52 @@ create policy "Authenticated reads logs"
 on public.event_logs for select
 to authenticated
 using (true);
+
+-- ============================================================
+-- Profiles Table (Tracks onboarding & user preferences)
+-- ============================================================
+create table if not exists public.profiles (
+  id uuid references auth.users on delete cascade primary key,
+  has_seen_welcome boolean default false,
+  updated_at timestamptz default now()
+);
+
+alter table public.profiles enable row level security;
+
+-- Policies for Profiles
+drop policy if exists "Users can view own profile" on public.profiles;
+drop policy if exists "Users can update own profile" on public.profiles;
+
+create policy "Users can view own profile"
+on public.profiles for select
+to authenticated
+using (auth.uid() = id);
+
+create policy "Users can update own profile"
+on public.profiles for update
+to authenticated
+using (auth.uid() = id);
+
+-- Function to handle new user profiles
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id)
+  values (new.id);
+  return new;
+end;
+$$;
+
+-- Trigger to create profile on signup
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- Create profiles for existing users who don't have one
+insert into public.profiles (id)
+select id from auth.users
+on conflict (id) do nothing;

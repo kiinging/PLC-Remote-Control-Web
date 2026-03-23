@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Container, Row, Col, Card, Button, Form, Badge, Alert, InputGroup, Navbar, Nav } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Badge, Alert, InputGroup, Navbar, Nav, Modal } from 'react-bootstrap';
 import TrendChart from '../components/TrendChart';
 import ThemeToggle from '../components/ThemeToggle';
 import { bookingService } from '../services/bookingService';
+import { profileService } from '../services/profileService';
 import * as api from '../services/api';
 import { eventLogService } from '../services/eventLogService';
 
@@ -56,6 +57,10 @@ export default function Dashboard() {
     const [rating, setRating] = useState(5);
     const [recentReviews, setRecentReviews] = useState([]);
     const [reviewMsg, setReviewMsg] = useState({ type: '', text: '' });
+    
+    // Onboarding States
+    const [showWelcome, setShowWelcome] = useState(false);
+    const [onboardingType, setOnboardingType] = useState('new'); // 'new' | 'returning'
 
     // Video
     const [videoSrc, setVideoSrc] = useState('/api/video_feed');
@@ -109,6 +114,20 @@ export default function Dashboard() {
             setRecentReviews(reviews);
         } catch (e) {
             console.warn("Reviews unavailable", e);
+        }
+
+        // Onboarding Check (Only for students)
+        if (!isAdmin) {
+            try {
+                const profile = await profileService.getProfile();
+                if (profile && !profile.has_seen_welcome) {
+                    const hasActive = await bookingService.hasActiveBooking();
+                    setOnboardingType(hasActive ? 'returning' : 'new');
+                    setShowWelcome(true);
+                }
+            } catch (e) {
+                console.warn("Onboarding check failed", e);
+            }
         }
     };
 
@@ -374,6 +393,11 @@ export default function Dashboard() {
         return () => clearInterval(interval);
     }, [user]);
 
+    const handleCloseWelcome = async () => {
+        setShowWelcome(false);
+        await profileService.markWelcomeSeen();
+    };
+
     return (
         <>
             <Navbar bg="dark" variant="dark" expand="lg" className="mb-4">
@@ -419,6 +443,71 @@ export default function Dashboard() {
                         <Button variant="outline-dark" size="sm" onClick={() => navigate('/booking')}>Book Now</Button>
                     </Alert>
                 )}
+
+                {/* Onboarding Welcome Modal */}
+                <Modal 
+                    show={showWelcome} 
+                    onHide={() => setShowWelcome(false)} 
+                    centered 
+                    backdrop="static" 
+                    keyboard={false}
+                    size="lg"
+                >
+                    <Modal.Header closeButton className="bg-primary text-white border-0">
+                        <Modal.Title className="fw-bold">
+                            {onboardingType === 'new' ? '👋 Welcome to PLC Remote Lab' : '🏭 Ready to Start Your Session?'}
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body className="p-4">
+                        {onboardingType === 'new' ? (
+                            <div className="text-center py-3">
+                                <div className="display-4 mb-3">📅</div>
+                                <h4 className="fw-bold">First Step: Book Your Lab Slot</h4>
+                                <p className="text-muted fs-5">
+                                    Welcome student! To gain full control of the PLC and hardware, you first need to schedule a session.
+                                </p>
+                                <Alert variant="info" className="mt-4">
+                                    Click the <strong>Book Lab</strong> button in the navigation bar to find an available time slot.
+                                </Alert>
+                            </div>
+                        ) : (
+                            <div>
+                                <div className="text-center mb-4">
+                                    <div className="display-4 mb-3">🛠️</div>
+                                    <h4 className="fw-bold">System Status Check</h4>
+                                    <p className="text-muted">You have an active booking! Let's get the hardware ready.</p>
+                                </div>
+                                <Row className="g-3 mb-4">
+                                    <Col sm={6}>
+                                        <div className="p-3 border rounded bg-light text-center h-100">
+                                            <Badge bg="success" className="mb-2">ON</Badge>
+                                            <div className="fw-bold">Gateway</div>
+                                            <small className="text-muted d-block">The main controller is online and ready.</small>
+                                        </div>
+                                    </Col>
+                                    <Col sm={6}>
+                                        <div className="p-3 border rounded bg-light text-center h-100">
+                                            <Badge bg="success" className="mb-2">ALIVE</Badge>
+                                            <div className="fw-bold">Process Power (ESP32)</div>
+                                            <small className="text-muted d-block">Communication established with devices.</small>
+                                        </div>
+                                    </Col>
+                                </Row>
+                                <Alert variant="warning" className="text-center border-2">
+                                    <p className="mb-2 fw-bold">🚀 Next Step:</p>
+                                    Click the <strong className="text-success">Start</strong> button in the 
+                                    <strong> Process Power</strong> section to power up the remaining Two devices: 
+                                    <br /><strong>Camera</strong> and <strong>PLC systems</strong>.
+                                </Alert>
+                            </div>
+                        )}
+                    </Modal.Body>
+                    <Modal.Footer className="border-0 justify-content-center pb-4">
+                        <Button variant="primary" size="lg" className="px-5 fw-bold" onClick={handleCloseWelcome}>
+                            {onboardingType === 'new' ? 'Got it, let\'s book!' : 'I\'m ready to Start!'}
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
 
                 <Row className="g-4">
                     <Col lg={6}>
