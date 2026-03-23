@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../services/supabase';
 import { api } from '../services/api';
+import { eventLogService } from '../services/eventLogService';
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -13,50 +14,82 @@ export default function Admin() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const { user } = useAuth();
+    const { user, isAdmin } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
+        if (!isAdmin) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
         fetchUsers();
-    }, [user]);
+    }, [user, isAdmin, navigate]);
 
     const fetchUsers = async () => {
         setLoading(true);
         setError('');
+        console.log("Admin: Fetching users from multiple sources...");
         try {
-            // Derive user list from event_logs: get distinct emails + last login + login count
-            const { data, error } = await supabase
-                .from('event_logs')
-                .select('user_email, event_type, created_at')
-                .eq('event_type', 'login')
-                .order('created_at', { ascending: false });
+            // Source 1: Supabase Login History (from event_logs)
+            const loginLogs = await eventLogService.getEventLogs('login', 500);
+            
+            // Source 2: Legacy KV Users (from Backend Worker)
+            let legacyUsers = [];
+            try {
+                const legacyData = await api.getUsers();
+                legacyUsers = legacyData.users || [];
+            } catch (err) {
+                console.warn("Could not fetch legacy users:", err);
+            }
 
-            if (error) throw error;
-
-            // Aggregate per email: last login, login count
-            const map = {};
-            for (const row of data || []) {
+            // --- Process Supabase Logs ---
+            const supabaseMap = {};
+            for (const row of loginLogs) {
                 const email = row.user_email;
                 if (!email) continue;
-                if (!map[email]) {
-                    map[email] = { email, lastLogin: row.created_at, loginCount: 0 };
+                if (!supabaseMap[email]) {
+                    supabaseMap[email] = { 
+                        email, 
+                        lastLogin: row.created_at, 
+                        loginCount: 0,
+                        source: 'Supabase'
+                    };
                 }
-                map[email].loginCount += 1;
-                // Since sorted desc, first occurrence = most recent
-                if (row.created_at > map[email].lastLogin) {
-                    map[email].lastLogin = row.created_at;
+                supabaseMap[email].loginCount += 1;
+            }
+
+            // --- Process Legacy Users ---
+            const legacyMap = {};
+            for (const username of legacyUsers) {
+                const email = `${username}@student.local`;
+                if (!supabaseMap[email]) {
+                    legacyMap[email] = {
+                        email,
+                        lastLogin: null,
+                        loginCount: 0,
+                        source: 'Legacy KV (Not yet logged in via Supabase)'
+                    };
+                } else {
+                    supabaseMap[email].source = 'Supabase + Legacy KV';
                 }
             }
 
+            // Combine
+            const combined = [...Object.values(supabaseMap), ...Object.values(legacyMap)];
+
             // Sort: admin first, then by last login desc
-            const list = Object.values(map).sort((a, b) => {
+            combined.sort((a, b) => {
                 if (a.email === ADMIN_EMAIL) return -1;
                 if (b.email === ADMIN_EMAIL) return 1;
+                if (!a.lastLogin && b.lastLogin) return 1;
+                if (a.lastLogin && !b.lastLogin) return -1;
                 return new Date(b.lastLogin) - new Date(a.lastLogin);
             });
 
-            setUsers(list);
+            console.log(`Admin: Found ${combined.length} total unique users`);
+            setUsers(combined);
         } catch (err) {
+            console.error("Admin fetch error:", err);
             setError('Failed to fetch users: ' + (err.message || err));
         } finally {
             setLoading(false);
@@ -65,18 +98,40 @@ export default function Admin() {
 
     const handleDelete = async (email) => {
         if (email === ADMIN_EMAIL) return;
-        if (!window.confirm(`Delete user "${email}" from Supabase? This cannot be undone.`)) return;
+        const isLegacy = email.endsWith('@student.local');
+        const username = isLegacy ? email.split('@')[0] : email;
+
+        if (!window.confirm(`Delete user "${email}"? This will remove them from Supabase (if exists) and the Legacy KV store.`)) return;
+
         try {
-            await api.post('/api/admin/delete-user', { email });
-            setSuccess(`User ${email} deleted.`);
-            setUsers(prev => prev.filter(u => u.email !== email));
+            setLoading(true);
+            // 1. Always attempt Supabase delete via backend
+            try {
+                await api.deleteSupabaseUser(email);
+            } catch (err) {
+                console.warn("Supabase delete skipped or failed:", err.message);
+            }
+
+            // 2. If it's a legacy style email, also delete from KV
+            if (isLegacy) {
+                try {
+                    await api.deleteUser(username);
+                } catch (err) {
+                    console.warn("Legacy KV delete failed:", err.message);
+                }
+            }
+
+            setSuccess(`User ${email} and associated records removed.`);
+            fetchUsers(); // Refresh list
         } catch (err) {
             setError('Failed to delete user: ' + (err.response?.data || err.message));
+        } finally {
+            setLoading(false);
         }
     };
 
     const formatDate = (iso) => {
-        if (!iso) return '—';
+        if (!iso) return 'NEVER';
         return new Date(iso).toLocaleString();
     };
 
@@ -86,16 +141,16 @@ export default function Admin() {
     };
 
     return (
-        <Container className="mt-4">
+        <Container className="mt-4 pb-5">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <div>
                     <h2 className="mb-0">Admin Dashboard</h2>
-                    <small className="text-muted">Supabase registered users (via login history)</small>
+                    <small className="text-muted">User Management (Supabase Auth + Legacy KV Store)</small>
                 </div>
                 <div className="d-flex gap-2">
                     <ThemeToggle />
                     <Button variant="outline-secondary" size="sm" onClick={fetchUsers} disabled={loading}>
-                        {loading ? <Spinner size="sm" /> : '↻ Refresh'}
+                        {loading ? <Spinner animation="border" size="sm" /> : '↻ Refresh'}
                     </Button>
                     <Button variant="secondary" onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
                 </div>
@@ -104,28 +159,29 @@ export default function Admin() {
             {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
             {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
 
-            <Card>
-                <Card.Header className="d-flex justify-content-between align-items-center">
-                    <span as="h5" className="mb-0 fw-semibold">User Management</span>
-                    <Badge bg="secondary">{users.length} users</Badge>
+            <Card className="shadow-sm">
+                <Card.Header className="d-flex justify-content-between align-items-center bg-light">
+                    <span as="h5" className="mb-0 fw-bold">Active User Base</span>
+                    <Badge bg="dark">{users.length} users</Badge>
                 </Card.Header>
                 <Card.Body className="p-0">
-                    {loading ? (
+                    {loading && users.length === 0 ? (
                         <div className="text-center py-5">
-                            <Spinner animation="border" />
-                            <p className="mt-2 text-muted">Loading users...</p>
+                            <Spinner animation="grow" variant="primary" />
+                            <p className="mt-2 text-muted">Synchronizing user data...</p>
                         </div>
                     ) : users.length === 0 ? (
                         <div className="text-center py-5 text-muted">
-                            <p>No users have logged in yet.</p>
+                            <p>No registered users found.</p>
                         </div>
                     ) : (
-                        <Table striped bordered hover responsive className="mb-0">
+                        <Table striped bordered hover responsive className="mb-0 align-middle">
                             <thead className="table-dark">
                                 <tr>
                                     <th>#</th>
                                     <th>Email</th>
                                     <th>Role</th>
+                                    <th>Source</th>
                                     <th>Login Count</th>
                                     <th>Last Seen</th>
                                     <th>Actions</th>
@@ -143,6 +199,9 @@ export default function Admin() {
                                                 ? <Badge bg="danger">Admin</Badge>
                                                 : <Badge bg="primary">Student</Badge>
                                             }
+                                        </td>
+                                        <td>
+                                            <small className="text-muted" style={{ fontSize: '0.8em' }}>{u.source || 'Supabase'}</small>
                                         </td>
                                         <td>
                                             <Badge bg="secondary">{u.loginCount}</Badge>
@@ -173,8 +232,8 @@ export default function Admin() {
             </Card>
 
             <Alert variant="info" className="mt-3 small">
-                <strong>Note:</strong> This list shows all users who have logged in at least once.
-                Deleting a user removes them from Supabase authentication and their login history from this view.
+                <strong>Management Note:</strong> This dashboard synchronizes users from both the legacy KV store and Supabase login history.
+                Deleting a user removes them from ALL identity providers. This action is permanent.
             </Alert>
         </Container>
     );
