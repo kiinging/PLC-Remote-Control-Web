@@ -509,8 +509,8 @@ export default function Dashboard() {
                                     </div>
                                     <div className="d-flex gap-3 align-items-center mt-1">
                                         {gatewayTimestamp && gatewayTimestamp !== '--' && <small className="text-muted" style={{ fontSize: '0.7em' }}>GW Last: {new Date(gatewayTimestamp * 1000).toLocaleTimeString()}</small>}
-                                        {cameraTimestamp && cameraTimestamp !== '--' && <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {new Date(cameraTimestamp * 1000).toLocaleTimeString()}</small>}
-                                        {controlStatus.plc_last_seen && <small className="text-muted" style={{ fontSize: '0.7em' }}>PLC Last: {new Date(controlStatus.plc_last_seen * 1000).toLocaleTimeString()}</small>}
+                                        {cameraStatus === 'alive' && cameraTimestamp && cameraTimestamp !== '--' && <small className="text-muted" style={{ fontSize: '0.7em' }}>Cam Last: {new Date(cameraTimestamp * 1000).toLocaleTimeString()}</small>}
+                                        {controlStatus.plc_alive && controlStatus.plc_last_seen && <small className="text-muted" style={{ fontSize: '0.7em' }}>PLC Last: {new Date(controlStatus.plc_last_seen * 1000).toLocaleTimeString()}</small>}
                                     </div>
                                     <div className="mt-3 mb-2">
                                         <div className="d-flex justify-content-between align-items-center">
