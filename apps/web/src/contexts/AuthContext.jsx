@@ -17,40 +17,42 @@ export const AuthProvider = ({ children }) => {
         // 1. Check initial Supabase session
         supabase.auth.getSession().then(async ({ data: { session } }) => {
             if (session?.access_token && session?.user?.email) {
+                console.log("Auth: Initial session found, syncing with backend...");
                 try {
-                    // Force sync on reload to ensure cookie is present before app renders
-                    await exchangeAuth(session.access_token, session.user.email);
-                    console.log("Initial session synced");
+                    // Timeout sync after 5 seconds so app isn't stuck on white screen
+                    await Promise.race([
+                        exchangeAuth(session.access_token, session.user.email),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Sync timeout')), 5000))
+                    ]);
+                    console.log("Auth: Initial session synced");
                 } catch (e) {
-                    console.error("Initial session sync failed", e);
+                    console.warn("Auth: Initial session sync failed or timed out:", e.message);
                 }
             }
             setUser(session?.user ?? null);
             setLoading(false);
         });
 
-        // 2. Listen for auth changes (Login, Logout, Auto-refresh)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        // 2. Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             console.log("Supabase Auth Event:", event, session?.user?.email);
+            
+            // Immediately update user to keep UI responsive
             setUser(session?.user ?? null);
             setLoading(false);
 
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                // Sync Supabase session with Backend Worker (sets HTTP-only cookie)
                 if (session?.access_token && session?.user?.email) {
-                    try {
-                        await exchangeAuth(session.access_token, session.user.email);
-                        console.log("Backend session synced for", session.user.email);
-                    } catch (e) {
-                        console.error("Failed to sync backend session", e);
+                    // RUN IN BACKGROUND: Don't await here to keep the listener fast
+                    exchangeAuth(session.access_token, session.user.email)
+                        .then(() => console.log("Auth: Background session synced for", session.user.email))
+                        .catch(e => console.error("Auth: Background sync failed", e.message));
+
+                    // Log login event (also in background)
+                    if (event === 'SIGNED_IN') {
+                        eventLogService.logLogin(session.user.email);
                     }
                 }
-                // Log login event to event_logs table
-                if (event === 'SIGNED_IN' && session?.user?.email) {
-                    await eventLogService.logLogin(session.user.email);
-                }
-            } else if (event === 'SIGNED_OUT') {
-                setUser(null);
             }
         });
 

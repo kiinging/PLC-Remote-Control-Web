@@ -135,11 +135,13 @@ export default function Admin() {
                         {loading && users.length === 0 ? (
                             <div className="text-center py-5">
                                 <Spinner animation="grow" variant="primary" />
-                                <p className="mt-2 text-muted">Synchronizing user data...</p>
+                                <p className="mt-2 text-muted">Refreshing user activity...</p>
                             </div>
                         ) : users.length === 0 ? (
                             <div className="text-center py-5 text-muted">
-                                <p>No registered users found.</p>
+                                <i className="bi bi-people fs-1 d-block mb-3"></i>
+                                <p className="mb-1">No active users discovered yet.</p>
+                                <small>Users will appear here after they log in to the system at least once.</small>
                             </div>
                         ) : (
                             <Table striped bordered hover responsive className="mb-0 align-middle">
