@@ -58,6 +58,11 @@ export default function Dashboard() {
     const [recentReviews, setRecentReviews] = useState([]);
     const [reviewMsg, setReviewMsg] = useState({ type: '', text: '' });
     
+    // Booking States
+    const [isReadOnly, setIsReadOnly] = useState(true);
+    const [bookingChecked, setBookingChecked] = useState(false);
+    const [activeBooking, setActiveBooking] = useState(null);
+
     // Onboarding States
     const [showWelcome, setShowWelcome] = useState(false);
     const [onboardingType, setOnboardingType] = useState('new'); // 'new' | 'returning'
@@ -121,7 +126,10 @@ export default function Dashboard() {
             try {
                 const profile = await profileService.getProfile();
                 if (profile) {
-                    const hasBooking = await bookingService.hasActiveBooking();
+                    const booking = await bookingService.getActiveBooking();
+                    setActiveBooking(booking);
+                    const hasBooking = !!booking;
+                    
                     if (!profile.has_seen_welcome && !hasBooking) {
                         setOnboardingType('new');
                         setShowWelcome(true);
@@ -372,9 +380,6 @@ export default function Dashboard() {
     const getModeName = (m) => ['Manual', 'Auto', 'Tune'][m] || 'Unknown';
     const getModeColor = (m) => ['danger', 'success', 'warning'][m] || 'secondary';
 
-    const [isReadOnly, setIsReadOnly] = useState(true);
-    const [bookingChecked, setBookingChecked] = useState(false);
-
     const checkAccess = async () => {
         // Admin always has full access — no booking required
         if (isAdmin) {
@@ -383,14 +388,46 @@ export default function Dashboard() {
             return;
         }
         try {
-            const hasBooking = await bookingService.hasActiveBooking();
-            setIsReadOnly(!hasBooking);
+            const booking = await bookingService.getActiveBooking();
+            setActiveBooking(booking);
+            
+            if (!booking) {
+                setIsReadOnly(true);
+            } else {
+                // If within 5 minutes of end, move to Read-Only
+                const now = new Date();
+                const end = new Date(booking.end_time);
+                const fiveMinutesBefore = new Date(end.getTime() - 5 * 60 * 1000);
+                
+                setIsReadOnly(now >= fiveMinutesBefore);
+            }
         } catch (e) {
             setIsReadOnly(true);
         } finally {
             setBookingChecked(true);
         }
     };
+
+    // Auto-shutdown 5 minutes before booking ends
+    useEffect(() => {
+        if (isAdmin || !activeBooking || !relay) return;
+
+        const interval = setInterval(() => {
+            const now = new Date();
+            const end = new Date(activeBooking.end_time);
+            const fiveMinutesBefore = new Date(end.getTime() - 5 * 60 * 1000);
+
+            if (now >= fiveMinutesBefore) {
+                console.log("Auto-shutdown triggered: 5 minutes before booking ends.");
+                handleRelayToggle(false);
+                // Also trigger a checkAccess to immediately update Read-Only state
+                checkAccess();
+                clearInterval(interval);
+            }
+        }, 10000); // Check every 10 seconds
+
+        return () => clearInterval(interval);
+    }, [activeBooking, relay, isAdmin]);
 
     useEffect(() => {
         checkAccess();
@@ -477,7 +514,13 @@ export default function Dashboard() {
                             <div>
                                 <p className="mb-3">
                                     Welcome back! You have an active booking. 
-                                    Currently, the <Badge bg="success">Gateway: ON</Badge> and the <Badge bg="success">Process Power ESP32: Alive</Badge>.
+                                    Currently, the <Badge bg="success">Gateway: ON</Badge> and the <Badge bg="success">ESP32: Alive</Badge>.
+                                </p>
+                                <Alert variant="warning" className="py-2 small border-0 shadow-sm">
+                                    <strong>Note:</strong> The Power will shutdown automatically 5 minutes before the end of the booking time.
+                                </Alert>
+                                <p className="mb-3">
+                                    If you finish early, please click <strong>Stop</strong> in the <strong>Process Power</strong> section to turn off and logout.
                                 </p>
                                 <hr className="my-3 opacity-25" />
                                 <div className="p-2 text-center">
