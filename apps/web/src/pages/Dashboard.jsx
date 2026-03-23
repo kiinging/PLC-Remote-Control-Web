@@ -451,60 +451,41 @@ export default function Dashboard() {
                     centered 
                     backdrop="static" 
                     keyboard={false}
-                    size="lg"
+                    size="md"
                 >
-                    <Modal.Header closeButton className="bg-primary text-white border-0">
-                        <Modal.Title className="fw-bold">
-                            {onboardingType === 'new' ? '👋 Welcome to PLC Remote Lab' : '🏭 Ready to Start Your Session?'}
+                    <Modal.Header closeButton className="bg-primary text-white py-2">
+                        <Modal.Title className="fs-5 fw-bold">
+                            {onboardingType === 'new' ? 'Welcome to PLC Remote Lab' : 'Ready to Start Your Session?'}
                         </Modal.Title>
                     </Modal.Header>
-                    <Modal.Body className="p-4">
+                    <Modal.Body className="p-3">
                         {onboardingType === 'new' ? (
-                            <div className="text-center py-3">
-                                <div className="display-4 mb-3">📅</div>
-                                <h4 className="fw-bold">First Step: Book Your Lab Slot</h4>
-                                <p className="text-muted fs-5">
-                                    Welcome student! To gain full control of the PLC and hardware, you first need to schedule a session.
+                            <div className="py-2">
+                                <p className="mb-3">
+                                    Welcome student! To gain control of the lab hardware, you first need to schedule a session.
                                 </p>
-                                <Alert variant="info" className="mt-4">
+                                <div className="p-2 border rounded bg-light text-center">
                                     Click the <strong>Book Lab</strong> button in the navigation bar to find an available time slot.
-                                </Alert>
+                                </div>
                             </div>
                         ) : (
                             <div>
-                                <div className="text-center mb-4">
-                                    <div className="display-4 mb-3">🛠️</div>
-                                    <h4 className="fw-bold">System Status Check</h4>
-                                    <p className="text-muted">You have an active booking! Let's get the hardware ready.</p>
-                                </div>
-                                <Row className="g-3 mb-4">
-                                    <Col sm={6}>
-                                        <div className="p-3 border rounded bg-light text-center h-100">
-                                            <Badge bg="success" className="mb-2">ON</Badge>
-                                            <div className="fw-bold">Gateway</div>
-                                            <small className="text-muted d-block">The main controller is online and ready.</small>
-                                        </div>
-                                    </Col>
-                                    <Col sm={6}>
-                                        <div className="p-3 border rounded bg-light text-center h-100">
-                                            <Badge bg="success" className="mb-2">ALIVE</Badge>
-                                            <div className="fw-bold">Process Power (ESP32)</div>
-                                            <small className="text-muted d-block">Communication established with devices.</small>
-                                        </div>
-                                    </Col>
-                                </Row>
-                                <Alert variant="warning" className="text-center border-2">
-                                    <p className="mb-2 fw-bold">🚀 Next Step:</p>
-                                    Click the <strong className="text-success">Start</strong> button in the 
-                                    <strong> Process Power</strong> section to power up the remaining Two devices: 
-                                    <br /><strong>Camera</strong> and <strong>PLC systems</strong>.
-                                </Alert>
+                                <p className="mb-3">
+                                    Welcome back! You have an active booking. 
+                                    Currently, the <Badge bg="success">Gateway: ON</Badge> and the <Badge bg="success">Process Power ESP32: Alive</Badge>.
+                                </p>
+                                <hr className="my-3" />
+                                <p className="mb-0 text-center">
+                                    Click the <Badge bg="success">Start</Badge> button in the 
+                                    <strong> Process Power</strong> section to power up the 
+                                    <strong> Camera</strong> and <strong>PLC systems</strong>.
+                                </p>
                             </div>
                         )}
                     </Modal.Body>
-                    <Modal.Footer className="border-0 justify-content-center pb-4">
-                        <Button variant="primary" size="lg" className="px-5 fw-bold" onClick={handleCloseWelcome}>
-                            {onboardingType === 'new' ? 'Got it, let\'s book!' : 'I\'m ready to Start!'}
+                    <Modal.Footer className="border-0 pt-0">
+                        <Button variant="primary" size="sm" className="px-4" onClick={handleCloseWelcome}>
+                            {onboardingType === 'new' ? 'Got it' : 'I\'m ready'}
                         </Button>
                     </Modal.Footer>
                 </Modal>
