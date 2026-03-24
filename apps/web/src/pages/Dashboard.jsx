@@ -70,6 +70,10 @@ export default function Dashboard() {
     // Video
     const [videoSrc, setVideoSrc] = useState('/api/video_feed');
 
+    // Power-On Message State
+    const [showPowerOnModal, setShowPowerOnModal] = useState(false);
+    const [hasRequestedPowerOn, setHasRequestedPowerOn] = useState(false);
+
     // Auto-reload video when camera comes online
     useEffect(() => {
         if (cameraStatus === 'alive') {
@@ -265,6 +269,7 @@ export default function Dashboard() {
 
     const handleRelayToggle = async (state) => {
         setRelay(state);
+        if (state) setHasRequestedPowerOn(true); // Track that we've requested power on
         try {
             await api.setRelay(state);
         } catch (e) {
@@ -359,6 +364,14 @@ export default function Dashboard() {
             api.stopTune(); // Directly call API to bypass isReadOnly
         }
     }, [tuneStatus]);
+
+    // Show Power-On Modal when relay turns ON after user request
+    useEffect(() => {
+        if (relay && hasRequestedPowerOn) {
+            setShowPowerOnModal(true);
+            setHasRequestedPowerOn(false);
+        }
+    }, [relay, hasRequestedPowerOn]);
 
     const handleExpand = () => setChartWindow(prev => Math.min(prev + 10, 60));
     const handleContract = () => setChartWindow(prev => Math.max(prev - 10, 10));
@@ -542,6 +555,39 @@ export default function Dashboard() {
                     <Modal.Footer className="border-0 pt-0 pb-3 justify-content-center">
                         <Button variant="primary" size="sm" className="px-5 shadow-sm" onClick={handleCloseWelcome}>
                             {onboardingType === 'new' ? 'Got it' : 'I\'m ready'}
+                        </Button>
+                    </Modal.Footer>
+                </Modal>
+
+                {/* Power-On Instructions Modal */}
+                <Modal 
+                    show={showPowerOnModal} 
+                    onHide={() => setShowPowerOnModal(false)} 
+                    centered 
+                    size="md"
+                >
+                    <Modal.Header closeButton className="bg-success text-white py-2 border-0">
+                        <Modal.Title className="fs-5 fw-bold">System Powering Up</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body className="p-4">
+                        <p className="mb-3">
+                            The system is powering up. Please wait for <strong>about 1 minute or less</strong> for the live video streaming to initialize.
+                        </p>
+                        <div className="bg-light p-3 rounded border mb-0">
+                            <p className="small mb-2"><strong>Next Steps:</strong></p>
+                            <ol className="small mb-0 ps-3">
+                                <li className="mb-2">Wait for the live video feed to appear on the right.</li>
+                                <li className="mb-2">Click <strong>Start</strong> and <strong>Stop</strong> on the <strong>Light Control</strong> button.</li>
+                                <li>Observe the LED light in the video to confirm real-time response.</li>
+                            </ol>
+                        </div>
+                        <p className="mt-3 mb-0 text-center small text-muted">
+                            Once confirmed, you can proceed with your experiment.
+                        </p>
+                    </Modal.Body>
+                    <Modal.Footer className="border-0 pt-0 pb-3 justify-content-center">
+                        <Button variant="success" size="sm" className="px-5 shadow-sm" onClick={() => setShowPowerOnModal(false)}>
+                            Understood
                         </Button>
                     </Modal.Footer>
                 </Modal>
