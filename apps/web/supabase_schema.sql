@@ -135,3 +135,33 @@ create trigger on_auth_user_created
 insert into public.profiles (id)
 select id from auth.users
 on conflict (id) do nothing;
+
+-- ============================================================
+-- Reviews Table (Student lab experience feedback)
+-- ============================================================
+create table if not exists public.reviews (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  rating integer not null check (rating >= 1 and rating <= 5),
+  conn_rating integer not null default 5 check (conn_rating >= 1 and conn_rating <= 5),
+  resp_rating integer not null default 5 check (resp_rating >= 1 and resp_rating <= 5),
+  comment text not null,
+  created_at timestamptz default now()
+);
+
+alter table public.reviews enable row level security;
+
+-- Drop existing policies to allow re-running this script
+drop policy if exists "Anyone can read reviews" on public.reviews;
+drop policy if exists "Authenticated users can submit reviews" on public.reviews;
+
+-- Public read: everyone (including logged in users) can see reviews
+create policy "Anyone can read reviews"
+on public.reviews for select
+using (true);
+
+-- Insert: only authenticated users can submit
+create policy "Authenticated users can submit reviews"
+on public.reviews for insert
+to authenticated
+with check (true);

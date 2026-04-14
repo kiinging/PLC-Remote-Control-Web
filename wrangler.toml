@@ -2,7 +2,7 @@ name = "cloud-worker"
 main = "services/worker/src/worker.js"
 compatibility_date = "2025-03-23"
 workers_dev = true
-route = "plc-web.online/*"
+route = "pidlab2026.shop/*"
 
 [[kv_namespaces]]
 binding = "USERS"
