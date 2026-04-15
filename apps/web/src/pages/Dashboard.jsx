@@ -149,27 +149,6 @@ export default function Dashboard() {
         }
     };
 
-    // --- Control Scaling Utilities ---
-    // Logarithmic scaling for human-ear-like (dB) perception
-    // Maps Slider (0-100) to MV % (0-100) using an exponential curve
-    const scaleToMV = (sliderVal) => {
-        const val = parseFloat(sliderVal);
-        if (val <= 0) return 0;
-        if (val >= 100) return 100;
-        // Exponential curve: Output = (10^(Slider/50) - 1) / 99 * 100
-        // This spreads the low range and provides more precision.
-        const mv = (Math.pow(10, val / 50) - 1) * 1.0101;
-        return parseFloat(mv.toFixed(1));
-    };
-
-    // Inverse: Maps MV % (0-100) back to Slider (0-100)
-    const scaleFromMV = (mvVal) => {
-        const val = parseFloat(mvVal);
-        if (val <= 0) return 0;
-        if (val >= 100) return 100;
-        const slider = 50 * Math.log10((val / 1.0101) + 1);
-        return parseFloat(slider.toFixed(1));
-    };
 
     const pollGatewayHeartbeat = async () => {
         try {
@@ -739,17 +718,6 @@ export default function Dashboard() {
                                 {controlStatus.mode === 0 && (
                                         <div className="border p-2 rounded bg-body-secondary">
                                             <h6>Manual Control</h6>
-                                            <Form.Group className="mb-2">
-                                                <div className="d-flex justify-content-between align-items-center mb-1">
-                                                    <Form.Label className="small mb-0 fw-bold">Manual Slider (Log Scaling)</Form.Label>
-                                                    <Badge bg="primary">{Number(manualMV).toFixed(1)} %</Badge>
-                                                </div>
-                                                <Form.Range 
-                                                    value={scaleFromMV(manualMV)} 
-                                                    onChange={e => setManualMV(scaleToMV(e.target.value))} 
-                                                    disabled={isReadOnly || mvPending}
-                                                />
-                                            </Form.Group>
                                             <InputGroup size="sm">
                                                 <InputGroup.Text>MV (%)</InputGroup.Text>
                                                 <Form.Control type="number" value={manualMV} onChange={e => setManualMV(e.target.value)} disabled={isReadOnly || mvPending} />

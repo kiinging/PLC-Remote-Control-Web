@@ -15,7 +15,7 @@ export default defineConfig({
         configure: (proxy, _options) => {
           proxy.on('proxyReq', (proxyReq, req, _res) => {
             // Spoof the Origin to match production, so the Worker accepts it
-            proxyReq.setHeader('Origin', 'https://plc-web.online');
+            proxyReq.setHeader('Origin', 'https://pidlab2026.shop');
           });
         }
       }

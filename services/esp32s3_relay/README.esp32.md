@@ -6,7 +6,7 @@ The system moves from a **Polling Architecture** (ESP32 asks Cloud "Should I tur
 ### Data Flow
 1.  **User Dashboard**: User clicks "Relay ON".
 2.  **Request**: `POST /relay` sent to Cloudflare Worker.
-3.  **Proxy**: Worker proxies request to Orange Pi Gateway (`https://orangepi.plc-web.online/relay`).
+3.  **Proxy**: Worker proxies request to Orange Pi Gateway (`https://orangepi.pidlab2026.shop/relay`).
 4.  **Local Control**: Orange Pi receives request, validates it, and makes a local LAN HTTP request to the ESP32 (`http://ESP32_IP/relay`).
 5.  **Action**: ESP32 validates API Key, turns GPIO 18 LOW (Active Low), and returns success.
 
