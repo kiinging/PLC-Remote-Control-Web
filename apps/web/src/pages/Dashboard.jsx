@@ -356,7 +356,11 @@ export default function Dashboard() {
             setRecentReviews(updated);
             setTimeout(() => setReviewMsg({ type: '', text: '' }), 5000);
         } catch (e) {
-            setReviewMsg({ type: 'danger', text: 'Failed to submit review. Try again later.' });
+            console.error("Review submission error:", e);
+            setReviewMsg({ 
+                type: 'danger', 
+                text: `Submission failed: ${e.message || 'Please ensure you have run the updated SQL in Supabase.'}` 
+            });
         }
     };
 
