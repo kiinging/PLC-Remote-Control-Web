@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from './supabase';
 
 // Use the LIVE backend URL as requested by the user
 // Use relative path so requests go through Vite Proxy
@@ -65,8 +66,25 @@ export const startTune = async () => (await api.post('/api/tune_start')).data;
 export const stopTune = async () => (await api.post('/api/tune_stop')).data;
 export const getTuneStatus = async () => (await api.get('/api/tune_status')).data;
 
-// Reviews API
-export const submitReview = async (data) => (await api.post('/api/reviews', data)).data;
-export const getReviews = async (limit = 15) => (await api.get(`/api/reviews?limit=${limit}`)).data;
+// Reviews API — uses Supabase directly (no worker handler needed)
+export const submitReview = async (data) => {
+    const { error } = await supabase.from('reviews').insert([{
+        name: data.name,
+        rating: data.rating,
+        comment: data.comment,
+    }]);
+    if (error) throw error;
+    return { ok: true };
+};
+
+export const getReviews = async (limit = 15) => {
+    const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+    if (error) throw error;
+    return data || [];
+};
 
 export default api;
