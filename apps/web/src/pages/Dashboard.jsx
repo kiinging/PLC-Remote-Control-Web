@@ -57,7 +57,6 @@ export default function Dashboard() {
     const [rating, setRating] = useState(5);
     const [connRating, setConnRating] = useState(5);
     const [respRating, setRespRating] = useState(5);
-    const [videoRating, setVideoRating] = useState(5);
     const [recentReviews, setRecentReviews] = useState([]);
     const [reviewMsg, setReviewMsg] = useState({ type: '', text: '' });
     
@@ -342,7 +341,6 @@ export default function Dashboard() {
                 rating: rating,
                 conn_rating: connRating,
                 resp_rating: respRating,
-                video_rating: videoRating,
                 comment: review
             });
             setReviewMsg({ type: 'success', text: 'Review submitted successfully!' });
@@ -350,7 +348,6 @@ export default function Dashboard() {
             setRating(5);
             setConnRating(5);
             setRespRating(5);
-            setVideoRating(5);
             // Refresh list
             const updated = await api.getReviews();
             setRecentReviews(updated);
@@ -896,17 +893,6 @@ export default function Dashboard() {
                                                         {[1, 2, 3, 4, 5].map((s) => (
                                                             <span key={s} onClick={() => setRespRating(s)} style={{ cursor: 'pointer' }}>
                                                                 {s <= respRating ? '⭐' : '☆'}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                <div className="mb-2">
-                                                    <label className="fw-bold small d-block mb-0 text-muted">Clarity of Live Video Feed?</label>
-                                                    <div className="fs-4 text-warning cursor-pointer">
-                                                        {[1, 2, 3, 4, 5].map((s) => (
-                                                            <span key={s} onClick={() => setVideoRating(s)} style={{ cursor: 'pointer' }}>
-                                                                {s <= videoRating ? '⭐' : '☆'}
                                                             </span>
                                                         ))}
                                                     </div>

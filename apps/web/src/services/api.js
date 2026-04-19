@@ -73,7 +73,6 @@ export const submitReview = async (data) => {
         rating: data.rating,
         conn_rating: data.conn_rating,
         resp_rating: data.resp_rating,
-        video_rating: data.video_rating,
         comment: data.comment,
     }]);
     if (error) throw error;
