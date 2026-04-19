@@ -55,6 +55,9 @@ export default function Dashboard() {
     // Review States
     const [review, setReview] = useState("");
     const [rating, setRating] = useState(5);
+    const [connRating, setConnRating] = useState(5);
+    const [respRating, setRespRating] = useState(5);
+    const [videoRating, setVideoRating] = useState(5);
     const [recentReviews, setRecentReviews] = useState([]);
     const [reviewMsg, setReviewMsg] = useState({ type: '', text: '' });
     
@@ -337,11 +340,17 @@ export default function Dashboard() {
             await api.submitReview({
                 name: user?.username || user?.email?.split('@')[0] || 'User',
                 rating: rating,
+                conn_rating: connRating,
+                resp_rating: respRating,
+                video_rating: videoRating,
                 comment: review
             });
             setReviewMsg({ type: 'success', text: 'Review submitted successfully!' });
             setReview("");
             setRating(5);
+            setConnRating(5);
+            setRespRating(5);
+            setVideoRating(5);
             // Refresh list
             const updated = await api.getReviews();
             setRecentReviews(updated);
@@ -518,7 +527,11 @@ export default function Dashboard() {
                 >
                     <Modal.Header closeButton className="bg-primary text-white py-2 border-0">
                         <Modal.Title className="fs-5 fw-bold">
-                            {onboardingType === 'new' ? 'Welcome to PLC Remote Lab' : 'Ready to Start Your Session?'}
+                            {onboardingType === 'new' 
+                                ? 'Welcome to PLC Remote Lab' 
+                                : (gatewayStatus !== 'alive' || !esp32Alive)
+                                    ? 'System Currently Unavailable'
+                                    : 'Ready to Start Your Session?'}
                         </Modal.Title>
                     </Modal.Header>
                     <Modal.Body className="p-3">
@@ -533,28 +546,45 @@ export default function Dashboard() {
                             </div>
                         ) : (
                             <div>
-                                <p className="mb-3">
-                                    Welcome back! You have an active booking. 
-                                    Currently, the <Badge bg="success">Gateway: ON</Badge> and the <Badge bg="success">ESP32: Alive</Badge>.
-                                </p>
-                                <Alert variant="warning" className="py-2 small border-0 shadow-sm">
-                                    <strong>Note:</strong> The Power will shutdown automatically 5 minutes before the end of the booking time.
-                                </Alert>
-                                <p className="mb-3">
-                                    If you finish early, please click <strong>Stop</strong> in the <strong>Process Power</strong> section to turn off and logout.
-                                </p>
-                                <hr className="my-3 opacity-25" />
-                                <div className="p-2 text-center">
-                                    Click the <Badge bg="success">Start</Badge> button in the 
-                                    <strong> Process Power</strong> section to power up the 
-                                    <strong> Camera</strong> and <strong>PLC systems</strong>.
-                                </div>
+                                {(gatewayStatus !== 'alive' || !esp32Alive) ? (
+                                    <div className="py-2 text-center">
+                                        <p className="text-danger fw-bold mb-3">We apologize, the lab system is currently down.</p>
+                                        <p>The Gateway or ESP32 is offline, meaning the hardware cannot be powered on at this time.</p>
+                                        <hr className="my-3 opacity-25" />
+                                        <p className="mb-2">Please contact the teacher of Industrial Automated System:</p>
+                                        <div className="bg-light p-3 rounded border text-start">
+                                            <ul className="list-unstyled mb-0 small">
+                                                <li className="mb-2">📧 Email: <a href="mailto:wong.kiing.ing@curtin.edu.my">wong.kiing.ing@curtin.edu.my</a></li>
+                                                <li>📱 WhatsApp: <strong>0128789001</strong></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p className="mb-3">
+                                            Welcome back! You have an active booking. 
+                                            Currently, the <Badge bg={gatewayStatus === 'alive' ? 'success' : 'danger'}>Gateway: {gatewayStatus === 'alive' ? 'ON' : 'OFFLINE'}</Badge> and the <Badge bg={esp32Alive ? 'success' : 'danger'}>ESP32: {esp32Alive ? 'ALIVE' : 'OFFLINE'}</Badge>.
+                                        </p>
+                                        <Alert variant="warning" className="py-2 small border-0 shadow-sm">
+                                            <strong>Note:</strong> The Power will shutdown automatically 5 minutes before the end of the booking time.
+                                        </Alert>
+                                        <p className="mb-3">
+                                            If you finish early, please click <strong>Stop</strong> in the <strong>Process Power</strong> section to turn off and logout.
+                                        </p>
+                                        <hr className="my-3 opacity-25" />
+                                        <div className="p-2 text-center">
+                                            Click the <Badge bg="success">Start</Badge> button in the 
+                                            <strong> Process Power</strong> section to power up the 
+                                            <strong> Camera</strong> and <strong>PLC systems</strong>.
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
                     </Modal.Body>
                     <Modal.Footer className="border-0 pt-0 pb-3 justify-content-center">
                         <Button variant="primary" size="sm" className="px-5 shadow-sm" onClick={handleCloseWelcome}>
-                            {onboardingType === 'new' ? 'Got it' : 'I\'m ready'}
+                            {onboardingType === 'new' ? 'Got it' : (gatewayStatus !== 'alive' || !esp32Alive ? 'Close' : 'I\'m ready')}
                         </Button>
                     </Modal.Footer>
                 </Modal>
@@ -833,21 +863,49 @@ export default function Dashboard() {
                                     <Col md={5} className="border-end">
                                         {reviewMsg.text && <Alert variant={reviewMsg.type} className="py-2 small">{reviewMsg.text}</Alert>}
                                         <Form onSubmit={handleReviewSubmit}>
-                                            <div className="mb-3">
-                                                <label className="fw-bold small d-block mb-1">Your Rating:</label>
-                                                <div className="fs-3 text-warning cursor-pointer" style={{ letterSpacing: '2px' }}>
-                                                    {[1, 2, 3, 4, 5].map((s) => (
-                                                        <span 
-                                                            key={s} 
-                                                            onClick={() => setRating(s)}
-                                                            style={{ cursor: 'pointer', transition: 'transform 0.1s' }}
-                                                            onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'}
-                                                            onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
-                                                        >
-                                                            {s <= rating ? '⭐' : '☆'}
-                                                        </span>
-                                                    ))}
-                                                    <small className="text-muted fs-6 ms-2">(Click to rate 1-5)</small>
+                                            <div className="mb-4">
+                                                <div className="mb-3">
+                                                    <label className="fw-bold small d-block mb-1 text-primary">⭐ Overall Experience:</label>
+                                                    <div className="fs-3 text-warning cursor-pointer" style={{ letterSpacing: '2px' }}>
+                                                        {[1, 2, 3, 4, 5].map((s) => (
+                                                            <span key={s} onClick={() => setRating(s)} style={{ cursor: 'pointer' }}>
+                                                                {s <= rating ? '⭐' : '☆'}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-2">
+                                                    <label className="fw-bold small d-block mb-0 text-muted">Ease of connection to the Lab?</label>
+                                                    <div className="fs-4 text-warning cursor-pointer">
+                                                        {[1, 2, 3, 4, 5].map((s) => (
+                                                            <span key={s} onClick={() => setConnRating(s)} style={{ cursor: 'pointer' }}>
+                                                                {s <= connRating ? '⭐' : '☆'}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-2">
+                                                    <label className="fw-bold small d-block mb-0 text-muted">Responsiveness of Control?</label>
+                                                    <div className="fs-4 text-warning cursor-pointer">
+                                                        {[1, 2, 3, 4, 5].map((s) => (
+                                                            <span key={s} onClick={() => setRespRating(s)} style={{ cursor: 'pointer' }}>
+                                                                {s <= respRating ? '⭐' : '☆'}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-2">
+                                                    <label className="fw-bold small d-block mb-0 text-muted">Clarity of Live Video Feed?</label>
+                                                    <div className="fs-4 text-warning cursor-pointer">
+                                                        {[1, 2, 3, 4, 5].map((s) => (
+                                                            <span key={s} onClick={() => setVideoRating(s)} style={{ cursor: 'pointer' }}>
+                                                                {s <= videoRating ? '⭐' : '☆'}
+                                                            </span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <Form.Group className="mb-3">

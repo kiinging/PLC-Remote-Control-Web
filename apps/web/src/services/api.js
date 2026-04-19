@@ -71,6 +71,9 @@ export const submitReview = async (data) => {
     const { error } = await supabase.from('reviews').insert([{
         name: data.name,
         rating: data.rating,
+        conn_rating: data.conn_rating,
+        resp_rating: data.resp_rating,
+        video_rating: data.video_rating,
         comment: data.comment,
     }]);
     if (error) throw error;

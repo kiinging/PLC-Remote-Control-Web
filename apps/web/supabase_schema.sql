@@ -143,6 +143,9 @@ create table if not exists public.reviews (
   id uuid default gen_random_uuid() primary key,
   name text not null,
   rating integer not null check (rating >= 1 and rating <= 5),
+  conn_rating integer not null default 5 check (conn_rating >= 1 and conn_rating <= 5),
+  resp_rating integer not null default 5 check (resp_rating >= 1 and resp_rating <= 5),
+  video_rating integer not null default 5 check (video_rating >= 1 and video_rating <= 5),
   comment text not null,
   created_at timestamptz default now()
 );
