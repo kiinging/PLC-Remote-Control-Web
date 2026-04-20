@@ -110,31 +110,6 @@ export default function Dashboard() {
         } catch (e) {
             console.warn("Relay status unavailable", e);
         }
-    };
-
-    // --- Control Scaling Utilities ---
-    // Logarithmic scaling for human-ear-like (dB) perception
-    // Maps Slider (0-100) to MV % (0-100) using an exponential curve
-    const scaleToMV = (sliderVal) => {
-        const val = parseFloat(sliderVal);
-        if (val <= 0) return 0;
-        if (val >= 100) return 100;
-        // Exponential curve: Output = (10^(Slider/50) - 1) / 99 * 100
-        // This spreads the low range and provides more precision.
-        const mv = (Math.pow(10, val / 50) - 1) * 1.0101;
-        return parseFloat(mv.toFixed(1));
-    };
-
-    // Inverse: Maps MV % (0-100) back to Slider (0-100)
-    const scaleFromMV = (mvVal) => {
-        const val = parseFloat(mvVal);
-        if (val <= 0) return 0;
-        if (val >= 100) return 100;
-        const slider = 50 * Math.log10((val / 1.0101) + 1);
-        return parseFloat(slider.toFixed(1));
-    };
-
-    const pollGatewayHeartbeat = async () => {
         try {
             const history = await api.api.get('/api/trend?limit=3600').then(r => r.data);
             if (Array.isArray(history)) {
@@ -172,6 +147,28 @@ export default function Dashboard() {
                 console.warn("Onboarding check failed", e);
             }
         }
+    };
+
+    // --- Control Scaling Utilities ---
+    // Logarithmic scaling for human-ear-like (dB) perception
+    // Maps Slider (0-100) to MV % (0-100) using an exponential curve
+    const scaleToMV = (sliderVal) => {
+        const val = parseFloat(sliderVal);
+        if (val <= 0) return 0;
+        if (val >= 100) return 100;
+        // Exponential curve: Output = (10^(Slider/50) - 1) / 99 * 100
+        // This spreads the low range and provides more precision.
+        const mv = (Math.pow(10, val / 50) - 1) * 1.0101;
+        return parseFloat(mv.toFixed(1));
+    };
+
+    // Inverse: Maps MV % (0-100) back to Slider (0-100)
+    const scaleFromMV = (mvVal) => {
+        const val = parseFloat(mvVal);
+        if (val <= 0) return 0;
+        if (val >= 100) return 100;
+        const slider = 50 * Math.log10((val / 1.0101) + 1);
+        return parseFloat(slider.toFixed(1));
     };
 
     const pollGatewayHeartbeat = async () => {
