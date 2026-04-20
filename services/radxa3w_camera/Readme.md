@@ -177,7 +177,7 @@ tunnel: 09457b11-3125-47e2-bd6b-8cc7a67d37de
 credentials-file: /home/pizza/.cloudflared/09457b11-3125-47e2-bd6b-8cc7a67d37de.json
 
 ingress:
-  - hostname: cam.plc-web.online
+  - hostname: cam.pidlab2026.shop
     service: http://localhost:5000
   - service: http_status:404
 ```
@@ -185,7 +185,7 @@ ingress:
 4. **Route the hostname**:
 
 ```bash
-cloudflared tunnel route dns radxa3w-camera cam.plc-web.online
+cloudflared tunnel route dns radxa3w-camera cam.pidlab2026.shop
 ```
 
 5. **Start the tunnel**:
@@ -197,7 +197,7 @@ cloudflared tunnel run radxa3w-camera
 Your camera is now live at:
 
 ```
-https://cam.plc-web.online
+https://cam.pidlab2026.shop
 ```
 
 ---

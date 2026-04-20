@@ -625,7 +625,7 @@ export default function Dashboard() {
                         <p className="mb-3">
                             The system is powering up. Please wait for <strong>about 1 minute or less</strong> for the live video streaming to initialize.
                         </p>
-                        <div className="bg-light p-3 rounded border mb-0">
+                        <div className="bg-secondary text-white p-3 rounded border mb-0">
                             <p className="small mb-2"><strong>Next Steps:</strong></p>
                             <ol className="small mb-0 ps-3">
                                 <li className="mb-2">Wait for the live video feed to appear on the right.</li>
