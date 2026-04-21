@@ -80,10 +80,12 @@ const Login = () => {
             <Row className="w-100 justify-content-center">
                 <Col md={6} lg={4}>
                     <Card className="shadow-lg border-0 rounded-4">
-                        <Card.Body className="p-4 p-sm-5">
-                            <div className="text-center mb-4">
-                                <h2 className="fw-bold mb-2">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
-                                <p className="text-muted">{isSignUp ? 'Sign up to access your lab' : 'Sign in to access your lab'}</p>
+                        <Card.Body className="p-4">
+                            <div className="text-center mb-3">
+                                <h3 className="fw-bold mb-1">{isSignUp ? 'Sign Up' : 'Sign In'}</h3>
+                                <p className="text-muted small mb-0">
+                                    {isSignUp ? 'Create your student account' : 'Welcome back to the PID lab'}
+                                </p>
                             </div>
 
                             {error && <Alert variant={error.includes("Account created") ? "success" : "danger"}>{error}</Alert>}
