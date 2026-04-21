@@ -47,8 +47,8 @@ export default function Signup() {
     };
 
     return (
-        <Container className="d-flex align-items-center justify-content-center vh-100 bg-light">
-            <Card className="shadow p-4" style={{ maxWidth: '400px', width: '100%' }}>
+        <Container className="d-flex align-items-center justify-content-center min-vh-100 py-5">
+            <Card className="shadow p-4 p-sm-5" style={{ maxWidth: '450px', width: '100%', borderRadius: '1rem', border: 'none' }}>
                 <Card.Body>
                     <h3 className="text-center mb-4">Create Account</h3>
 

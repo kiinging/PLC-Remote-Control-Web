@@ -76,11 +76,11 @@ const Login = () => {
     const { theme } = useTheme();
 
     return (
-        <Container className="vh-100 d-flex align-items-center justify-content-center">
+        <Container className="min-vh-100 d-flex align-items-center justify-content-center py-5">
             <Row className="w-100 justify-content-center">
                 <Col md={6} lg={4}>
                     <Card className="shadow-lg border-0 rounded-4">
-                        <Card.Body className="p-5">
+                        <Card.Body className="p-4 p-sm-5">
                             <div className="text-center mb-4">
                                 <h2 className="fw-bold mb-2">{isSignUp ? 'Create Account' : 'Welcome Back'}</h2>
                                 <p className="text-muted">{isSignUp ? 'Sign up to access your lab' : 'Sign in to access your lab'}</p>
