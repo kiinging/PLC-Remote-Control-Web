@@ -480,6 +480,9 @@ export default function Dashboard() {
                             {!isAdmin && (
                                 <Nav.Link onClick={() => navigate('/booking')}>Book Lab</Nav.Link>
                             )}
+                            <Nav.Link onClick={() => navigate('/lab-sheet?lab=4', { state: { from: '/dashboard' } })}>
+                                📖 Lab Manual
+                            </Nav.Link>
                             {/* Admin sees Event Log */}
                             {isAdmin && (
                                 <Nav.Link onClick={() => navigate('/event-log')}>📋 Event Log</Nav.Link>

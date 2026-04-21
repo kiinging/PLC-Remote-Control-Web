@@ -165,6 +165,32 @@ const Login = () => {
                             </Button>
                         </Card.Body>
                     </Card>
+                    <div className="mt-4 text-center">
+                        <Card className="border-0 shadow-sm rounded-4 bg-light bg-opacity-50">
+                            <Card.Body className="p-3">
+                                <h6 className="fw-bold mb-2">Pre-Lab Resources</h6>
+                                <div className="d-flex flex-column gap-2">
+                                    <Button 
+                                        variant="outline-primary" 
+                                        size="sm" 
+                                        onClick={() => navigate('/lab-sheet?lab=4', { state: { from: '/login' } })}
+                                    >
+                                        📖 Read Lab 4 Procedure (Web)
+                                    </Button>
+                                    <Button 
+                                        variant="outline-secondary" 
+                                        size="sm"
+                                        onClick={() => window.open('https://pidlab2026.shop/docs/Lab_4.md', '_blank')}
+                                    >
+                                        📄 View Raw Lab 4 Markdown
+                                    </Button>
+                                </div>
+                                <p className="mt-2 mb-0 x-small text-muted" style={{ fontSize: '0.7rem' }}>
+                                    Recommended: Read the procedure before your session.
+                                </p>
+                            </Card.Body>
+                        </Card>
+                    </div>
                     <div className="text-center mt-3">
                         <small className="text-muted">Protected by Supabase Auth</small>
                     </div>
