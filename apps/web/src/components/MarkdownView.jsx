@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import { Container, Spinner, Alert, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
@@ -18,8 +19,15 @@ const MarkdownView = ({ docPath, title, backPath = "/dashboard" }) => {
             try {
                 const response = await fetch(docPath);
                 if (!response.ok) throw new Error('Document not found');
-                const text = await response.text();
-                setContent(text);
+                let text = await response.text();
+                
+                // Smart Path Resolution: 
+                // Converts local relative paths (./images/) to web absolute paths (/docs/images/)
+                // This ensures images work in BOTH local previews and the web dashboard.
+                const processed = text.replace(/src=["']\.\/images\//g, (match) => match.replace('./images/', '/docs/images/'))
+                                      .replace(/\(\.\/images\//g, '(/docs/images/');
+                
+                setContent(processed);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -68,7 +76,7 @@ const MarkdownView = ({ docPath, title, backPath = "/dashboard" }) => {
             <div className="bg-body p-4 p-md-5 rounded shadow-sm markdown-body border">
                 <ReactMarkdown 
                     remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
+                    rehypePlugins={[rehypeKatex, rehypeRaw]}
                 >
                     {content}
                 </ReactMarkdown>

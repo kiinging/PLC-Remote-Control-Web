@@ -76,15 +76,17 @@ In an open-loop test, the controller is set to **Manual Mode**. A sudden step ch
 ## 5. Post Laboratory Task (10 marks)
 
 ### 5.1 Processing the recorded data (5 Marks)
-1.  **Time Conversion**: In Excel, convert raw time data (column D) to seconds using: `=(D_current - D_start)/(1e9)`.
-2.  **Smoothing**: Create a moving average (100 samples) to smooth the temperature signal: `=AVERAGE(F23:F123)`.
-3.  **Plotting**: Plot Temperature Response and Input Current on the same graph. Use a **Secondary Axis** for temperature to clearly see both signals.
+1.  **Time Conversion**: Open your CSV in Excel. Column A contains the timestamps. To calculate elapsed time in seconds, subtract the first timestamp from the current one and multiply by 86,400 (the number of seconds in a day).
+    *   *Example Formula in Column E:* `=(A2 - $A$2) * 86400`
+2.  **Signal Smoothing**: The temperature sensor is sensitive. Use a 100-sample moving average on the **PV (Column B)** to smooth the signal for your analysis.
+    *   *Example Formula in Column F:* `=AVERAGE(B2:B101)`
+3.  **Trend Plotting**: Create a single line chart showing both the **Temperature (PV)** and the **Manipulated Variable (MV)** from Column D. 
+    *   *Pro-Tip*: Since MV is 0-100% and Temperature can reach 130°C, use a **Secondary Y-Axis** for the Temperature to ensure both curves are clearly visible.
 
 ### 5.2 Determination of PID control parameters (5 Marks)
-1.  **L and N Determination**: From your smoothed graph, draw a tangent at the inflection point to find $L$ (Dead Time) and $N$ (Reaction Rate/Slope).
-2.  **Power Step ($\Delta P$)**: Calculate the change in heating power as a percentage of the system's maximum (**11.52 W**).
-3.  **Temp Change ($\Delta C$)**: Express the temperature change as a percentage of the **103°C range**.
-4.  **Tuning**: Calculate $K_p, T_i, T_d$ for P, PI, and PID modes using the Ziegler-Nichols formulas.
+1.  **S-Curve Analysis**: Using your smoothed plot, identify the inflection point. Draw a tangent line to determine the **Dead Time ($L$)** and the **Reaction Rate ($N$)**.
+2.  **System Response**: Express the change in temperature ($\Delta PV$) and the change in power ($\Delta MV$) as percentages of their full ranges (103°C and 100% respectively).
+3.  **ZN Tuning**: Use the Ziegler-Nichols Open-Loop formulas to calculate the final values for $K_p, T_i,$ and $T_d$.
 
 ---
 
