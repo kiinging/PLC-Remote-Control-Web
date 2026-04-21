@@ -168,7 +168,7 @@ const Login = () => {
                         </Card.Body>
                     </Card>
                     <div className="mt-4 text-center">
-                        <Card className="border-0 shadow-sm rounded-4 bg-light bg-opacity-50">
+                        <Card className="border shadow-none rounded-4 bg-body-tertiary">
                             <Card.Body className="p-3">
                                 <h6 className="fw-bold mb-2">Pre-Lab Resources</h6>
                                 <div className="d-flex flex-column gap-2">
