@@ -612,7 +612,6 @@ export default function Dashboard() {
                                 Control Panel
                             </Card.Header>
                             <Card.Body>
-                                <fieldset disabled={safetyStatus === 'emergency'}>
                                 <div className="mb-3 pb-3 border-bottom">
                                     <div className="d-flex align-items-center flex-wrap gap-2">
                                         <strong className="me-2">System Status</strong>
