@@ -146,27 +146,30 @@ END_IF;
 
 
 // ---------------------------------------------------------
-// 4) Overheat latch (Trip at >100C, require Web OFF->ON to reset)
+// 4) Overheat Safety Latch (Trip at >100°C)
 // ---------------------------------------------------------
-TempOver := (G_RTD_Temp > 100.0);
-
-IF TempOver THEN
+// 1. Trip the latch if temperature is too high
+IF (G_RTD_Temp > 100.0) THEN
     G_OverheatLatched := TRUE;
 END_IF;
 
-// Rising edge detect of raw Web command (not G_WebActive)
+// 2. Detection of Web Control "Rising Edge"
 WebRise := ( (G_Web_Status <> 0) AND (NOT WebPrev) );
 WebPrev := (G_Web_Status <> 0);
 
-// Arm reset when Web is OFF
+// 3. Arm the reset (Web must be toggled or HMI pressed)
 IF (G_Web_Status = 0) THEN
     ResetArmed := TRUE;
 END_IF;
 
-// Clear latch only when Web toggles OFF then ON
-IF WebRise AND ResetArmed THEN
-    G_OverheatLatched := FALSE;
-    ResetArmed := FALSE;
+// 4. Latch Reset Logic
+// Condition: Temperature must be safe (< 100) AND a Start command is issued
+IF (G_RTD_Temp < 100.0) THEN
+    // Reset if Web toggles OFF->ON OR if HMI Start buttons are pressed
+    IF (WebRise AND ResetArmed) OR HMI_Manual_Start_Rise OR HMI_Automatic_Start_Rise THEN
+        G_OverheatLatched := FALSE;
+        ResetArmed := FALSE;
+    END_IF;
 END_IF;
 // ---------------------------------------------------------
 // 5) Final output gating + PWM (using G_Current_MV directly)
