@@ -179,13 +179,6 @@ const Login = () => {
                                     >
                                         📖 Read Lab 4 Procedure (Web)
                                     </Button>
-                                    <Button 
-                                        variant="outline-secondary" 
-                                        size="sm"
-                                        onClick={() => window.open('https://pidlab2026.shop/docs/Lab_4.md', '_blank')}
-                                    >
-                                        📄 View Raw Lab 4 Markdown
-                                    </Button>
                                 </div>
                                 <p className="mt-2 mb-0 x-small text-muted" style={{ fontSize: '0.7rem' }}>
                                     Recommended: Read the procedure before your session.
