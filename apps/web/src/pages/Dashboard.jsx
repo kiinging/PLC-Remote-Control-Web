@@ -218,6 +218,19 @@ export default function Dashboard() {
             const now = new Date().toLocaleTimeString();
             const currentTemp = tData.rtd_temp;
 
+            // --- Simple Software Safety Protection ---
+            if (typeof currentTemp === 'number' && currentTemp > 95) {
+                if (cStatus?.mode === 0) {
+                    // Manual Mode: Force MV to zero
+                    api.setManualMV(0).catch(() => {});
+                    setManualMV(0);
+                } else if (cStatus?.mode === 1) {
+                    // Auto Mode: Force SP to zero
+                    api.setSetpoint(0).catch(() => {});
+                    setSetpoint(0);
+                }
+            }
+
             // Temperature alert logging: debounced, logs once per crossing above 100°C
             if (typeof currentTemp === 'number' && currentTemp > 100) {
                 if (!tempAlertSentRef.current) {
@@ -595,8 +608,11 @@ export default function Dashboard() {
                 <Row className="g-4">
                     <Col lg={6}>
                         <Card className="mb-3">
-                            <Card.Header>Control Panel</Card.Header>
+                            <Card.Header>
+                                Control Panel
+                            </Card.Header>
                             <Card.Body>
+                                <fieldset disabled={safetyStatus === 'emergency'}>
                                 <div className="mb-3 pb-3 border-bottom">
                                     <div className="d-flex align-items-center flex-wrap gap-2">
                                         <strong className="me-2">System Status</strong>

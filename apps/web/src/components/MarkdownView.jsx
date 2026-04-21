@@ -52,8 +52,12 @@ const MarkdownView = ({ docPath, title, backPath = "/dashboard" }) => {
                 <Button variant="outline-secondary" size="sm" onClick={() => navigate(backPath)}>
                     ← Back
                 </Button>
-                {/* PDF Link Placeholder - User can update URL once uploaded to Supabase */}
-                <Button variant="outline-danger" size="sm" onClick={() => window.alert("PDF Version currently being generated. Please use the Print feature of your browser to save as PDF.")}>
+                {/* PDF Link - Updated with user's Supabase Public URL */}
+                <Button 
+                    variant="outline-danger" 
+                    size="sm" 
+                    onClick={() => window.open("https://hdngzewkkqzzrxxlunfo.supabase.co/storage/v1/object/public/lab-sheet/Lab_4.pdf", "_blank")}
+                >
                     Download PDF
                 </Button>
             </div>
