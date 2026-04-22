@@ -82,8 +82,8 @@ This experiment requires **two distinct login sessions**:
 ### 4.4 PID Controller Verification (Auto Mode)
 1.  **Parameter Entry**: Switch the system to **Auto Mode**.
 2.  **Input Tuning Values**: Enter your calculated $PB$, $T_i$, and $T_d$ values into the PID controller fields on the dashboard.
-3.  **Initial Stabilization**: Set the **Set-point (SP)** to **50°C** and wait for the PV to reach and settle at this value.
-4.  **Transient Response Test**: Once stable, change the **Set-point (SP)** to **60°C** and click **Start**.
+3.  **Initial Stabilization**: Set the **Set-point (SP)** to **50°C** and click **Start**. **IMPORTANT**: Wait for the temperature to completely stabilize at 50°C before moving to the next step.
+4.  **Transient Response Test**: Once the system is stable at 50°C, change the **Set-point (SP)** to **60°C** and click **Start**.
 5.  **Record Performance**: Observe the temperature graph. Ensure you capture the entire transition from 50°C to 60°C. Download the **CSV** once the system has stabilized at the new set-point.
 
 ---
@@ -104,7 +104,8 @@ This experiment requires **two distinct login sessions**:
 3.  **ZN Tuning**: Use the Ziegler-Nichols Open-Loop formulas to calculate the final values for $K_p, T_i,$ and $T_d$.
 
 ### 5.3 Transient Response Analysis (5 Marks)
-1.  **Plotting the Step Change**: Using the data from Task 4.4, plot the **PV (Temperature)** and **SP (Set-point)** on the same graph as the system moves from 50°C to 60°C.
+1.  **Plotting the Step Change**: Using the data from Task 4.4, plot the **PV (Temperature)** and **SP (Set-point)** on the same graph. 
+    *   **Note**: Your plot must show the initial steady-state period at 50°C, followed by the entire transition as the system moves to 60°C.
 2.  **Performance Metrics**: On your plot, identify and label the following:
     - **Overshoot**: The maximum value minus the set-point.
     - **Rise Time**: Time taken for the temperature to first reach 60°C.

@@ -314,6 +314,7 @@ export default function Admin() {
                                         <th>Td (s)</th>
                                         <th>Overshoot</th>
                                         <th>Settling</th>
+                                        <th>Report</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -328,6 +329,22 @@ export default function Admin() {
                                             <td>{s.td}</td>
                                             <td>{s.overshoot}°C</td>
                                             <td>{s.settling_time}s</td>
+                                            <td>
+                                                {s.file_url ? (
+                                                    <Button 
+                                                        variant="outline-success" 
+                                                        size="sm" 
+                                                        href={s.file_url} 
+                                                        target="_blank"
+                                                        className="py-0 px-2"
+                                                        style={{ fontSize: '0.75rem' }}
+                                                    >
+                                                        📄 View
+                                                    </Button>
+                                                ) : (
+                                                    <small className="text-muted">None</small>
+                                                )}
+                                            </td>
                                             <td>
                                                 <Button 
                                                     variant="link" 

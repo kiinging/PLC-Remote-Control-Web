@@ -165,3 +165,35 @@ create policy "Authenticated users can submit reviews"
 on public.reviews for insert
 to authenticated
 with check (true);
+
+-- ============================================================
+-- Lab Submissions Table (Student results & report files)
+-- ============================================================
+create table if not exists public.lab_submissions (
+  id uuid default gen_random_uuid() primary key,
+  student_name text not null,
+  student_id text not null,
+  pb decimal,
+  ti decimal,
+  td decimal,
+  overshoot decimal,
+  settling_time decimal,
+  file_url text,                   -- Link to the uploaded report in Supabase Storage
+  created_at timestamptz default now()
+);
+
+alter table public.lab_submissions enable row level security;
+
+-- Allow anyone to insert (since it's on the login page)
+-- In a more secure setup, you'd restrict this to authenticated users.
+drop policy if exists "Enable insert for all" on public.lab_submissions;
+create policy "Enable insert for all"
+on public.lab_submissions for insert
+with check (true);
+
+-- Admin can read all submissions
+drop policy if exists "Enable read for authenticated" on public.lab_submissions;
+create policy "Enable read for authenticated"
+on public.lab_submissions for select
+to authenticated
+using (true);

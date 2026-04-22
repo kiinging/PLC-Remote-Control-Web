@@ -203,6 +203,7 @@ const Login = () => {
 const LabSubmission = () => {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState({ type: null, message: '' });
+    const [file, setFile] = useState(null);
     const [formData, setFormData] = useState({
         student_name: '',
         student_id: '',
@@ -217,12 +218,40 @@ const LabSubmission = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setStatus({ type: null, message: '' });
 
         try {
+            let fileUrl = null;
+
+            // 1. Upload file if selected
+            if (file) {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+                const filePath = `reports/${formData.student_id}/${fileName}`;
+
+                const { error: uploadError } = await supabase.storage
+                    .from('lab-submissions')
+                    .upload(filePath, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data } = supabase.storage
+                    .from('lab-submissions')
+                    .getPublicUrl(filePath);
+                
+                fileUrl = data.publicUrl;
+            }
+
+            // 2. Insert record with file URL
             const { error } = await supabase
                 .from('lab_submissions')
                 .insert([
@@ -233,13 +262,14 @@ const LabSubmission = () => {
                         ti: parseFloat(formData.ti),
                         td: parseFloat(formData.td),
                         overshoot: parseFloat(formData.overshoot) || 0,
-                        settling_time: parseFloat(formData.settling_time) || 0
+                        settling_time: parseFloat(formData.settling_time) || 0,
+                        file_url: fileUrl
                     }
                 ]);
 
             if (error) throw error;
 
-            setStatus({ type: 'success', message: 'Results submitted successfully!' });
+            setStatus({ type: 'success', message: 'Results and report submitted successfully!' });
             setFormData({
                 student_name: '',
                 student_id: '',
@@ -249,7 +279,13 @@ const LabSubmission = () => {
                 overshoot: '',
                 settling_time: ''
             });
+            setFile(null);
+            // Reset file input manually
+            const fileInput = document.getElementById('reportFile');
+            if (fileInput) fileInput.value = '';
+
         } catch (error) {
+            console.error("Submission error:", error);
             setStatus({ type: 'danger', message: error.message });
         } finally {
             setLoading(false);
@@ -260,7 +296,7 @@ const LabSubmission = () => {
         <Card className="shadow-sm border-0 rounded-4 overflow-hidden">
             <Card.Header className="bg-primary text-white py-3 border-0">
                 <h6 className="mb-0 fw-bold">Lab 4: Results Submission</h6>
-                <small className="opacity-75">Submit your calculated PID parameters here.</small>
+                <small className="opacity-75">Submit results & attach your report.</small>
             </Card.Header>
             <Card.Body className="p-4">
                 {status.message && (
@@ -381,13 +417,27 @@ const LabSubmission = () => {
                         </Col>
                     </Row>
 
+                    <Form.Group className="mb-4">
+                        <Form.Label className="small fw-semibold">Attach Final Report (PDF/Excel)</Form.Label>
+                        <Form.Control
+                            id="reportFile"
+                            size="sm"
+                            type="file"
+                            onChange={handleFileChange}
+                            accept=".pdf,.xlsx,.xls,.csv,.doc,.docx"
+                        />
+                        <Form.Text className="text-muted x-small" style={{ fontSize: '0.7rem' }}>
+                            Optional: Attach your experimental data or report.
+                        </Form.Text>
+                    </Form.Group>
+
                     <Button
                         variant="primary"
                         type="submit"
                         className="w-100 py-2 fw-bold"
                         disabled={loading}
                     >
-                        {loading ? 'Submitting...' : 'Submit Final Results'}
+                        {loading ? 'Uploading & Submitting...' : 'Submit Final Results'}
                     </Button>
                 </Form>
             </Card.Body>
