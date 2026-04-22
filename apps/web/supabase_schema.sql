@@ -186,6 +186,7 @@ alter table public.lab_submissions enable row level security;
 
 -- Allow anyone to insert (since it's on the login page)
 -- In a more secure setup, you'd restrict this to authenticated users.
+-- CREATE POLICY "Allow public upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'lab-submission');
 drop policy if exists "Enable insert for all" on public.lab_submissions;
 create policy "Enable insert for all"
 on public.lab_submissions for insert

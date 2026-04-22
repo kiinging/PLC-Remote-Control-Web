@@ -309,11 +309,6 @@ export default function Admin() {
                                         <th>Date</th>
                                         <th>Student</th>
                                         <th>ID</th>
-                                        <th>PB (%)</th>
-                                        <th>Ti (s)</th>
-                                        <th>Td (s)</th>
-                                        <th>Overshoot</th>
-                                        <th>Settling</th>
                                         <th>Report</th>
                                         <th>Actions</th>
                                     </tr>
@@ -324,11 +319,6 @@ export default function Admin() {
                                             <td>{new Date(s.created_at).toLocaleDateString()}</td>
                                             <td className="fw-bold">{s.student_name}</td>
                                             <td>{s.student_id}</td>
-                                            <td className="text-primary fw-bold">{s.pb}</td>
-                                            <td>{s.ti}</td>
-                                            <td>{s.td}</td>
-                                            <td>{s.overshoot}°C</td>
-                                            <td>{s.settling_time}s</td>
                                             <td>
                                                 {s.file_url ? (
                                                     <Button 

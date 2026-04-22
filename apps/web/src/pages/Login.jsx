@@ -206,12 +206,7 @@ const LabSubmission = () => {
     const [file, setFile] = useState(null);
     const [formData, setFormData] = useState({
         student_name: '',
-        student_id: '',
-        pb: '',
-        ti: '',
-        td: '',
-        overshoot: '',
-        settling_time: ''
+        student_id: ''
     });
 
     const handleChange = (e) => {
@@ -226,61 +221,59 @@ const LabSubmission = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (!file) {
+            setStatus({ type: 'danger', message: 'Please attach your report file before submitting.' });
+            return;
+        }
+
         setLoading(true);
         setStatus({ type: null, message: '' });
 
         try {
             let fileUrl = null;
 
-            // 1. Upload file if selected
-            if (file) {
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
-                const filePath = `reports/${formData.student_id}/${fileName}`;
+            // 1. Upload file
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+            const filePath = `reports/${formData.student_id}/${fileName}`;
 
-                const { error: uploadError } = await supabase.storage
-                    .from('lab-submissions')
-                    .upload(filePath, file);
+            const { error: uploadError } = await supabase.storage
+                .from('lab-submission')
+                .upload(filePath, file);
 
-                if (uploadError) throw uploadError;
-
-                const { data } = supabase.storage
-                    .from('lab-submissions')
-                    .getPublicUrl(filePath);
-                
-                fileUrl = data.publicUrl;
+            if (uploadError) {
+                if (uploadError.message.includes('Bucket not found')) {
+                    throw new Error("Storage bucket 'lab-submission' not found. Please create it in your Supabase dashboard.");
+                }
+                throw uploadError;
             }
 
-            // 2. Insert record with file URL
+            const { data } = supabase.storage
+                .from('lab-submission')
+                .getPublicUrl(filePath);
+            
+            fileUrl = data.publicUrl;
+
+            // 2. Insert record
             const { error } = await supabase
                 .from('lab_submissions')
                 .insert([
                     {
                         student_name: formData.student_name,
                         student_id: formData.student_id,
-                        pb: parseFloat(formData.pb),
-                        ti: parseFloat(formData.ti),
-                        td: parseFloat(formData.td),
-                        overshoot: parseFloat(formData.overshoot) || 0,
-                        settling_time: parseFloat(formData.settling_time) || 0,
                         file_url: fileUrl
                     }
                 ]);
 
             if (error) throw error;
 
-            setStatus({ type: 'success', message: 'Results and report submitted successfully!' });
+            setStatus({ type: 'success', message: 'Report submitted successfully!' });
             setFormData({
                 student_name: '',
-                student_id: '',
-                pb: '',
-                ti: '',
-                td: '',
-                overshoot: '',
-                settling_time: ''
+                student_id: ''
             });
             setFile(null);
-            // Reset file input manually
             const fileInput = document.getElementById('reportFile');
             if (fileInput) fileInput.value = '';
 
@@ -295,8 +288,8 @@ const LabSubmission = () => {
     return (
         <Card className="shadow-sm border-0 rounded-4 overflow-hidden">
             <Card.Header className="bg-primary text-white py-3 border-0">
-                <h6 className="mb-0 fw-bold">Lab 4: Results Submission</h6>
-                <small className="opacity-75">Submit results & attach your report.</small>
+                <h6 className="mb-0 fw-bold">Lab 4: Final Submission</h6>
+                <small className="opacity-75">Upload your final report here.</small>
             </Card.Header>
             <Card.Body className="p-4">
                 {status.message && (
@@ -305,129 +298,44 @@ const LabSubmission = () => {
                     </Alert>
                 )}
                 <Form onSubmit={handleSubmit}>
-                    <Row className="g-2">
-                        <Col md={6}>
-                            <Form.Group className="mb-2">
-                                <Form.Label className="small fw-semibold">Name</Form.Label>
-                                <Form.Control
-                                    size="sm"
-                                    type="text"
-                                    name="student_name"
-                                    value={formData.student_name}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="e.g. John Doe"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col md={6}>
-                            <Form.Group className="mb-2">
-                                <Form.Label className="small fw-semibold">Student ID</Form.Label>
-                                <Form.Control
-                                    size="sm"
-                                    type="text"
-                                    name="student_id"
-                                    value={formData.student_id}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="12345678"
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+                    <Form.Group className="mb-3">
+                        <Form.Label className="small fw-semibold">Student Name</Form.Label>
+                        <Form.Control
+                            size="sm"
+                            type="text"
+                            name="student_name"
+                            value={formData.student_name}
+                            onChange={handleChange}
+                            required
+                            placeholder="Full Name"
+                        />
+                    </Form.Group>
 
-                    <hr className="my-3 opacity-10" />
-
-                    <Row className="g-2 mb-3">
-                        <Col xs={4}>
-                            <Form.Group>
-                                <Form.Label className="small fw-semibold text-primary">PB (%)</Form.Label>
-                                <Form.Control
-                                    size="sm"
-                                    type="number"
-                                    step="0.1"
-                                    name="pb"
-                                    value={formData.pb}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="e.g. 15.5"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col xs={4}>
-                            <Form.Group>
-                                <Form.Label className="small fw-semibold text-primary">Ti (s)</Form.Label>
-                                <Form.Control
-                                    size="sm"
-                                    type="number"
-                                    step="0.1"
-                                    name="ti"
-                                    value={formData.ti}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="e.g. 120"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col xs={4}>
-                            <Form.Group>
-                                <Form.Label className="small fw-semibold text-primary">Td (s)</Form.Label>
-                                <Form.Control
-                                    size="sm"
-                                    type="number"
-                                    step="0.1"
-                                    name="td"
-                                    value={formData.td}
-                                    onChange={handleChange}
-                                    required
-                                    placeholder="e.g. 30"
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row>
-
-                    <Row className="g-2 mb-3">
-                        <Col xs={6}>
-                            <Form.Group>
-                                <Form.Label className="small fw-semibold">Overshoot (°C)</Form.Label>
-                                <Form.Control
-                                    size="sm"
-                                    type="number"
-                                    step="0.1"
-                                    name="overshoot"
-                                    value={formData.overshoot}
-                                    onChange={handleChange}
-                                    placeholder="e.g. 2.4"
-                                />
-                            </Form.Group>
-                        </Col>
-                        <Col xs={6}>
-                            <Form.Group>
-                                <Form.Label className="small fw-semibold">Settling Time (s)</Form.Label>
-                                <Form.Control
-                                    size="sm"
-                                    type="number"
-                                    step="1"
-                                    name="settling_time"
-                                    value={formData.settling_time}
-                                    onChange={handleChange}
-                                    placeholder="e.g. 450"
-                                />
-                            </Form.Group>
-                        </Col>
-                    </Row>
+                    <Form.Group className="mb-3">
+                        <Form.Label className="small fw-semibold">Student ID</Form.Label>
+                        <Form.Control
+                            size="sm"
+                            type="text"
+                            name="student_id"
+                            value={formData.student_id}
+                            onChange={handleChange}
+                            required
+                            placeholder="Student ID Number"
+                        />
+                    </Form.Group>
 
                     <Form.Group className="mb-4">
-                        <Form.Label className="small fw-semibold">Attach Final Report (PDF/Excel)</Form.Label>
+                        <Form.Label className="small fw-semibold">Attach Final Report (PDF/Word)</Form.Label>
                         <Form.Control
                             id="reportFile"
                             size="sm"
                             type="file"
                             onChange={handleFileChange}
-                            accept=".pdf,.xlsx,.xls,.csv,.doc,.docx"
+                            required
+                            accept=".pdf,.doc,.docx,.xlsx"
                         />
                         <Form.Text className="text-muted x-small" style={{ fontSize: '0.7rem' }}>
-                            Optional: Attach your experimental data or report.
+                            Supported formats: PDF, Word, Excel.
                         </Form.Text>
                     </Form.Group>
 
@@ -437,7 +345,7 @@ const LabSubmission = () => {
                         className="w-100 py-2 fw-bold"
                         disabled={loading}
                     >
-                        {loading ? 'Uploading & Submitting...' : 'Submit Final Results'}
+                        {loading ? 'Uploading...' : 'Submit Report'}
                     </Button>
                 </Form>
             </Card.Body>
