@@ -3,6 +3,9 @@
 ## 1. Objective
 The goal of this lab is to determine the PID parameters ($K_p$, $T_i$, $T_d$) of a temperature control system using the **Open-Loop Transient Response Method** (also known as the **Process Reaction Curve Method**).
 
+> [!IMPORTANT]
+> **Individual Experiment**: This is an individual task. Each student must capture their own data and calculate their own unique parameters.
+
 ---
 
 ## 2. Pre-lab Task (10 marks)
@@ -58,6 +61,11 @@ In an open-loop test, the controller is set to **Manual Mode**. A sudden step ch
     ![Remote Dashboard](./images/dashboard1.png)
 2.  **Verify Connectivity**: Look at the **System Status** badges. Both **Gateway** and **ESP32** must be **ALIVE**.
 3.  **Troubleshooting**: Contact: `wong.kiing.ing@curtin.edu.my` or WhatsApp `0128789001`.
+
+### 4.1.1 Experimental Logistics
+This experiment requires **two distinct login sessions**:
+1.  **Session 1 (Data Capture)**: Perform the open-loop test (Section 4.3) to capture the transient response. You will then download the CSV and perform your calculations offline.
+2.  **Session 2 (Verification)**: Once you have your PID parameters, log in again to implement them in the controller (Section 4.4) and verify the system performance.
 
 ### 4.2 Powering Up
 1.  **Process Power**: Click **Start** in the Process Power section.

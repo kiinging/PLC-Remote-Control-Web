@@ -11,7 +11,9 @@ const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 export default function Admin() {
     const [users, setUsers] = useState([]);
+    const [submissions, setSubmissions] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [loadingSubmissions, setLoadingSubmissions] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const { user, logout, isAdmin } = useAuth();
@@ -23,6 +25,7 @@ export default function Admin() {
             return;
         }
         fetchUsers();
+        fetchSubmissions();
     }, [user, isAdmin, navigate]);
 
     const fetchUsers = async () => {
@@ -88,6 +91,35 @@ export default function Admin() {
             setError('Failed to fetch users. Ensure the event_logs table exists (check supabase_schema.sql). ' + (err.message || err));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchSubmissions = async () => {
+        setLoadingSubmissions(true);
+        try {
+            const { data, error } = await supabase
+                .from('lab_submissions')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            setSubmissions(data || []);
+        } catch (err) {
+            console.error("Submissions fetch error:", err);
+        } finally {
+            setLoadingSubmissions(false);
+        }
+    };
+
+    const deleteSubmission = async (id) => {
+        if (!window.confirm("Delete this submission permanently?")) return;
+        try {
+            const { error } = await supabase.from('lab_submissions').delete().eq('id', id);
+            if (error) throw error;
+            setSubmissions(submissions.filter(s => s.id !== id));
+            setSuccess("Submission deleted.");
+        } catch (err) {
+            setError("Failed to delete submission: " + err.message);
         }
     };
 
@@ -242,6 +274,76 @@ export default function Admin() {
                     <strong>Note:</strong> This dashboard shows users who have logged in via the Supabase Auth system. 
                     Deleting a user here removes their account from Supabase and clears their session history.
                 </Alert>
+
+                <hr className="my-5" />
+
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 className="mb-0 fw-bold">📝 Lab 4 Submissions</h3>
+                        <small className="text-muted">Student results submitted from the login page</small>
+                    </div>
+                    <Button variant="outline-primary" size="sm" onClick={fetchSubmissions} disabled={loadingSubmissions}>
+                        {loadingSubmissions ? <Spinner animation="border" size="sm" /> : '↻ Refresh Submissions'}
+                    </Button>
+                </div>
+
+                <Card className="shadow-sm border-primary">
+                    <Card.Header className="bg-primary text-white d-flex justify-content-between align-items-center">
+                        <span className="mb-0 fw-bold">Recent Submissions</span>
+                        <Badge bg="light" text="dark">{submissions.length} reports</Badge>
+                    </Card.Header>
+                    <Card.Body className="p-0">
+                        {loadingSubmissions && submissions.length === 0 ? (
+                            <div className="text-center py-5">
+                                <Spinner animation="border" variant="primary" />
+                                <p className="mt-2 text-muted">Loading submissions...</p>
+                            </div>
+                        ) : submissions.length === 0 ? (
+                            <div className="text-center py-5 text-muted">
+                                <p className="mb-0">No submissions found yet.</p>
+                            </div>
+                        ) : (
+                            <Table striped bordered hover responsive className="mb-0 align-middle small">
+                                <thead className="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Student</th>
+                                        <th>ID</th>
+                                        <th>PB (%)</th>
+                                        <th>Ti (s)</th>
+                                        <th>Td (s)</th>
+                                        <th>Overshoot</th>
+                                        <th>Settling</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {submissions.map((s) => (
+                                        <tr key={s.id}>
+                                            <td>{new Date(s.created_at).toLocaleDateString()}</td>
+                                            <td className="fw-bold">{s.student_name}</td>
+                                            <td>{s.student_id}</td>
+                                            <td className="text-primary fw-bold">{s.pb}</td>
+                                            <td>{s.ti}</td>
+                                            <td>{s.td}</td>
+                                            <td>{s.overshoot}°C</td>
+                                            <td>{s.settling_time}s</td>
+                                            <td>
+                                                <Button 
+                                                    variant="link" 
+                                                    className="text-danger p-0"
+                                                    onClick={() => deleteSubmission(s.id)}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        )}
+                    </Card.Body>
+                </Card>
             </Container>
         </>
     );
