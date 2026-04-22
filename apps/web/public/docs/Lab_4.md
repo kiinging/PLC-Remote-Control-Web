@@ -3,6 +3,9 @@
 ## 1. Objective
 The goal of this lab is to determine the PID parameters ($K_p$, $T_i$, $T_d$) of a temperature control system using the **Open-Loop Transient Response Method** (also known as the **Process Reaction Curve Method**).
 
+> [!IMPORTANT]
+> **Individual Experiment**: This is an individual task. Each student must capture their own data and calculate their own unique parameters.
+
 ---
 
 ## 2. Pre-lab Task (10 marks)
@@ -59,6 +62,11 @@ In an open-loop test, the controller is set to **Manual Mode**. A sudden step ch
 2.  **Verify Connectivity**: Look at the **System Status** badges. Both **Gateway** and **ESP32** must be **ALIVE**.
 3.  **Troubleshooting**: Contact: `wong.kiing.ing@curtin.edu.my` or WhatsApp `0128789001`.
 
+### 4.1.1 Experimental Logistics
+This experiment requires **two distinct login sessions**:
+1.  **Session 1 (Data Capture)**: Perform the open-loop test (Section 4.3) to capture the transient response. You will then download the CSV and perform your calculations offline.
+2.  **Session 2 (Verification)**: Once you have your PID parameters, log in again to implement them in the controller (Section 4.4) and verify the system performance.
+
 ### 4.2 Powering Up
 1.  **Process Power**: Click **Start** in the Process Power section.
 2.  **Camera**: It takes ~1 minute for the camera to come online.
@@ -70,6 +78,13 @@ In an open-loop test, the controller is set to **Manual Mode**. A sudden step ch
 3.  **Steady State**: Wait for the temperature to stabilize at 40% MV.
 4.  **The Step Change**: Change MV to **45%** (a 5% step) and click **Start**.
 5.  **Data Export**: Wait for stabilization at 45% MV, then click **CSV** to download the data.
+
+### 4.4 PID Controller Verification (Auto Mode)
+1.  **Parameter Entry**: Switch the system to **Auto Mode**.
+2.  **Input Tuning Values**: Enter your calculated $PB$, $T_i$, and $T_d$ values into the PID controller fields on the dashboard.
+3.  **Initial Stabilization**: Set the **Set-point (SP)** to **50°C** and wait for the PV to reach and settle at this value.
+4.  **Transient Response Test**: Once stable, change the **Set-point (SP)** to **60°C** and click **Start**.
+5.  **Record Performance**: Observe the temperature graph. Ensure you capture the entire transition from 50°C to 60°C. Download the **CSV** once the system has stabilized at the new set-point.
 
 ---
 
@@ -88,6 +103,14 @@ In an open-loop test, the controller is set to **Manual Mode**. A sudden step ch
 2.  **System Response**: Express the change in temperature ($\Delta PV$) and the change in power ($\Delta MV$) as percentages of their full ranges (103°C and 100% respectively).
 3.  **ZN Tuning**: Use the Ziegler-Nichols Open-Loop formulas to calculate the final values for $K_p, T_i,$ and $T_d$.
 
+### 5.3 Transient Response Analysis (5 Marks)
+1.  **Plotting the Step Change**: Using the data from Task 4.4, plot the **PV (Temperature)** and **SP (Set-point)** on the same graph as the system moves from 50°C to 60°C.
+2.  **Performance Metrics**: On your plot, identify and label the following:
+    - **Overshoot**: The maximum value minus the set-point.
+    - **Rise Time**: Time taken for the temperature to first reach 60°C.
+    - **Settling Time**: Time taken for the response to stay within ±2% of the final value.
+3.  **Discussion**: Compare the observed response with what you expected from your ZN parameters. Is the system stable? Is the overshoot acceptable?
+
 ---
 
 ## 6. Omron NJ301 PLC Implementation
@@ -98,6 +121,7 @@ $$PB = \frac{100}{K_p}$$
 
 ### 6.2 Summary Checklist
 1. [ ] Reach steady state at 40% MV.
-2. [ ] Step to 45% MV.
-3. [ ] Calculate $K_p, T_i, T_d$ from the captured S-curve.
-4. [ ] Test your PID values in **Auto Mode**.
+2. [ ] Step to 45% MV and capture S-curve data.
+3. [ ] Calculate $K_p, T_i, T_d$ and convert to $PB, T_i, T_d$.
+4. [ ] In **Auto Mode**, stabilize at 50°C SP.
+5. [ ] Perform SP step change to 60°C and record transient response.

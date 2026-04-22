@@ -168,16 +168,33 @@ def plc_off():
 # =========================================================
 @app.route('/mode/manual', methods=['POST'])
 def mode_manual():
+    # Transitioning to Manual always stops control for safety
+    db.set_state("web", 0)
+    db.set_state("tune_status", 0)
     db.set_state("mode", 0)
     return jsonify({"mode": 0}), 200
 
 @app.route('/mode/auto', methods=['POST'])
 def mode_auto():
+    old_mode = db.get_state("mode", 0)
+    # If coming from Manual (0), reset control state
+    if old_mode == 0:
+        db.set_state("web", 0)
+        db.set_state("tune_status", 0)
+    
+    # If coming from Tune (2), we preserve 'web' state
     db.set_state("mode", 1)
     return jsonify({"mode": 1}), 200
 
 @app.route('/mode/tune', methods=['POST'])
 def mode_tune():
+    old_mode = db.get_state("mode", 0)
+    # If coming from Manual (0), reset control state
+    if old_mode == 0:
+        db.set_state("web", 0)
+        db.set_state("tune_status", 0)
+        
+    # If coming from Auto (1), we preserve 'web' state
     db.set_state("mode", 2)
     return jsonify({"mode": 2}), 200
 
@@ -520,6 +537,7 @@ def relay_control():
              db.set_state("setpoint", 0.0)
              db.set_state("web", 0)
              db.set_state("tune_status", 0)
+             db.set_state("mode", 0)  # Revert to Manual Mode
              
              # Soft Shutdown
              print("Initiating Soft Shutdown Sequence...")
