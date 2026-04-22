@@ -538,6 +538,9 @@ def relay_control():
              db.set_state("web", 0)
              db.set_state("tune_status", 0)
              db.set_state("mode", 0)  # Revert to Manual Mode
+             db.set_state("light", 0) # Turn off light
+             if GPIO_AVAILABLE:
+                 wiringpi.digitalWrite(config.LIGHT_PIN, 0)
              
              # Soft Shutdown
              print("Initiating Soft Shutdown Sequence...")
