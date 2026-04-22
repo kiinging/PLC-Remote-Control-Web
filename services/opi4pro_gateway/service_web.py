@@ -34,6 +34,7 @@ def apply_boot_defaults(db):
     db.set_state("tune_status", 0)
     db.set_state("tune_done", False)
     db.set_state("mv_manual", 0.0)   # optional safety
+    db.set_state("setpoint", 0.0)    # ensure safe start
 
 app = Flask(__name__)
 
@@ -514,6 +515,12 @@ def relay_control():
         # IF Turning ON -> Immediate Action
         
         if target_state is False:
+             # Safety Reset
+             db.set_state("mv_manual", 0.0)
+             db.set_state("setpoint", 0.0)
+             db.set_state("web", 0)
+             db.set_state("tune_status", 0)
+             
              # Soft Shutdown
              print("Initiating Soft Shutdown Sequence...")
              threading.Thread(target=soft_shutdown_sequence, kwargs={"restart": False}, daemon=True).start()
