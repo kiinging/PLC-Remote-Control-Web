@@ -19,3 +19,6 @@ Thumbs.db
 # Runtime logs
 logs/
 *.log
+
+# Private research paper notes (not for GitHub)
+paper/
