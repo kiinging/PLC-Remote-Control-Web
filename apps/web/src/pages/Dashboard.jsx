@@ -8,6 +8,7 @@ import { bookingService } from '../services/bookingService';
 import { profileService } from '../services/profileService';
 import * as api from '../services/api';
 import { eventLogService } from '../services/eventLogService';
+import SystemAnnouncement from '../components/SystemAnnouncement';
 
 export default function Dashboard() {
     const { user, userDisplay, logout, isAdmin } = useAuth();
@@ -520,6 +521,7 @@ export default function Dashboard() {
             </Navbar>
 
             <Container>
+                <SystemAnnouncement />
                 {bookingChecked && isReadOnly && (
                     <Alert variant="warning" className="d-flex justify-content-between align-items-center">
                         <div>

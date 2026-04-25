@@ -4,6 +4,7 @@ import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useEffect, useState } from 'react';
+import SystemAnnouncement from '../components/SystemAnnouncement';
 
 const Login = () => {
     const { user } = useAuth();
@@ -76,8 +77,9 @@ const Login = () => {
     const { theme } = useTheme();
 
     return (
-        <Container className="min-vh-100 d-flex align-items-center justify-content-center py-5">
-            <Row className="w-100 justify-content-center">
+        <Container className="min-vh-100 d-flex flex-column align-items-center justify-content-center py-5">
+            <SystemAnnouncement />
+            <Row className="w-100 justify-content-center mt-3">
                 <Col md={6} lg={4}>
                     <Card className="shadow-lg border-0 rounded-4">
                         <Card.Body className="p-4">

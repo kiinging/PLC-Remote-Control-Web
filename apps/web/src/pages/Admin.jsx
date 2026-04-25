@@ -16,6 +16,12 @@ export default function Admin() {
     const [loadingSubmissions, setLoadingSubmissions] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    
+    // Announcement States
+    const [announcementMsg, setAnnouncementMsg] = useState('');
+    const [announcementType, setAnnouncementType] = useState('info');
+    const [isAnnouncementActive, setIsAnnouncementActive] = useState(false);
+
     const { user, logout, isAdmin } = useAuth();
     const navigate = useNavigate();
 
@@ -26,7 +32,62 @@ export default function Admin() {
         }
         fetchUsers();
         fetchSubmissions();
+        fetchCurrentAnnouncement();
     }, [user, isAdmin, navigate]);
+
+    const fetchCurrentAnnouncement = async () => {
+        try {
+            const { data } = await supabase
+                .from('announcements')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+            if (data) {
+                setAnnouncementMsg(data.content);
+                setAnnouncementType(data.type);
+                setIsAnnouncementActive(data.active);
+            }
+        } catch (e) {
+            console.error("Failed to fetch current announcement:", e);
+        }
+    };
+
+    const handlePublishAnnouncement = async () => {
+        if (!announcementMsg.trim()) return;
+        try {
+            setLoading(true);
+            // Deactivate old ones first
+            await supabase.from('announcements').update({ active: false }).eq('active', true);
+            
+            const { error } = await supabase.from('announcements').insert([{
+                content: announcementMsg,
+                type: announcementType,
+                active: true
+            }]);
+            if (error) throw error;
+            setIsAnnouncementActive(true);
+            setSuccess("Announcement published live!");
+        } catch (err) {
+            setError("Failed to publish: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleClearAnnouncement = async () => {
+        try {
+            setLoading(true);
+            const { error } = await supabase.from('announcements').update({ active: false }).eq('active', true);
+            if (error) throw error;
+            setIsAnnouncementActive(false);
+            setSuccess("Announcement cleared.");
+        } catch (err) {
+            setError("Failed to clear: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -186,6 +247,59 @@ export default function Admin() {
 
                 {error && <Alert variant="danger" dismissible onClose={() => setError('')}>{error}</Alert>}
                 {success && <Alert variant="success" dismissible onClose={() => setSuccess('')}>{success}</Alert>}
+
+                {/* System Announcement Manager */}
+                <Card className="shadow-sm mb-5 border-warning">
+                    <Card.Header className="bg-warning bg-opacity-10 fw-bold d-flex justify-content-between align-items-center">
+                        <span>📢 Live System Announcement</span>
+                        {isAnnouncementActive && <Badge bg="success">LIVE NOW</Badge>}
+                    </Card.Header>
+                    <Card.Body>
+                        <div className="mb-3">
+                            <label className="form-label small fw-bold">Message Content</label>
+                            <textarea 
+                                className="form-control" 
+                                rows="2" 
+                                placeholder="Enter urgent message for all users..."
+                                value={announcementMsg}
+                                onChange={(e) => setAnnouncementMsg(e.target.value)}
+                            ></textarea>
+                        </div>
+                        <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div className="d-flex align-items-center gap-2">
+                                <label className="small fw-bold mb-0">Type:</label>
+                                <select 
+                                    className="form-select form-select-sm w-auto"
+                                    value={announcementType}
+                                    onChange={(e) => setAnnouncementType(e.target.value)}
+                                >
+                                    <option value="info">Info (Blue)</option>
+                                    <option value="warning">Warning (Yellow)</option>
+                                    <option value="danger">Urgent/Down (Red)</option>
+                                    <option value="success">Fixed/Up (Green)</option>
+                                </select>
+                            </div>
+                            <div className="d-flex gap-2">
+                                <Button 
+                                    variant="warning" 
+                                    size="sm" 
+                                    onClick={handlePublishAnnouncement}
+                                    disabled={loading || !announcementMsg.trim()}
+                                >
+                                    🚀 Publish Live
+                                </Button>
+                                <Button 
+                                    variant="outline-secondary" 
+                                    size="sm" 
+                                    onClick={handleClearAnnouncement}
+                                    disabled={loading || !isAnnouncementActive}
+                                >
+                                    🛑 Clear Message
+                                </Button>
+                            </div>
+                        </div>
+                    </Card.Body>
+                </Card>
 
                 <Card className="shadow-sm">
                     <Card.Header className="d-flex justify-content-between align-items-center bg-body-tertiary">
