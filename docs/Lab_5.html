@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Lab_5.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> or <div class="page"></div> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="lab-5-pid-tuning---autotuning-and-fine-tuning-method">Lab 5: PID Tuning - Autotuning and Fine-Tuning Method</h1>
+<h2 id="1-objective">1. Objective</h2>
+<p>The goal of this lab is to implement the <strong>Omron NJ301 Autotuning (AT)</strong> function to automatically determine PID parameters and then evaluate the system's performance during a larger temperature step change. Students will compare these &quot;machine-calculated&quot; values with their previous manual calculations from Lab 4.</p>
+<hr>
+<h2 id="2-background">2. Background</h2>
+<h3 id="21-how-autotuning-works-the-limit-cycle-method">2.1 How Autotuning Works (The Limit Cycle Method)</h3>
+<p>Industrial controllers like the Omron NJ301 use a technique called the <strong>Limit Cycle Method</strong> for autotuning. Instead of relying on manual calculations, the controller &quot;tests&quot; the system by forcing the temperature to oscillate.</p>
+<p>When you click <strong>Start Tune</strong>, the controller follows this logic:</p>
+<ol>
+<li><strong>Forcing a Response</strong>: If your Setpoint (SP) is higher than the current Temperature (PV), the controller immediately sets the power (MV) to <strong>100%</strong>.</li>
+<li><strong>The Turning Point</strong>: Once the temperature reaches the setpoint, the controller switches the power to <strong>0%</strong>.</li>
+<li><strong>The Cycle</strong>: As the temperature drops back down below the setpoint (after a small buffer called hysteresis), the controller turns the power back to <strong>100%</strong>.</li>
+<li><strong>Calculation</strong>: The controller repeats this cycle <strong>twice</strong>. By measuring the time between these peaks and the size of the temperature waves, it can mathematically determine the perfect PID constants for your specific setup.</li>
+</ol>
+<p><img src="./images/omron_tune_theory.png" alt="Omron Tuning Theory"></p>
+<h3 id="22-why-we-stabilize-at-60c-first">2.2 Why we stabilize at 60°C first?</h3>
+<p>Autotuning requires a clear &quot;starting line.&quot; By stabilizing at 60°C and then moving the Setpoint to 65°C before clicking <strong>Start Tune</strong>, we ensure two things:</p>
+<ul>
+<li>The system is in a known, steady state.</li>
+<li>There is a sufficient <strong>error</strong> (the 5°C difference) for the controller to begin the 100% power &quot;push&quot; required for the Limit Cycle Method.</li>
+</ul>
+<hr>
+<h2 id="3-measurement-tasks">3. Measurement Tasks</h2>
+<h3 id="31-powering-up-and-initialization">3.1 Powering Up and Initialization</h3>
+<ol>
+<li><strong>Process Power</strong>: Click <strong>Start</strong> in the Process Power section.</li>
+<li><strong>Verify Status</strong>: Ensure <strong>Gateway</strong>, <strong>Camera</strong>, and <strong>ESP32</strong> are all <strong>ALIVE</strong>.</li>
+<li><strong>Web Control</strong>: Click <strong>Start</strong> to enable communication with the PLC.</li>
+</ol>
+<h3 id="32-system-setup-using-lab-4-parameters">3.2 System Setup (Using Lab 4 Parameters)</h3>
+<ol>
+<li><strong>Mode</strong>: Switch the system to <strong>Tune Mode</strong>.</li>
+<li><strong>Initial Values</strong>: Input your final $PB$, $T_i$, and $T_d$ values calculated from <strong>Lab 4</strong> and click <strong>Send</strong>.</li>
+<li><strong>Base Stabilization</strong>: Set the <strong>Setpoint (SP)</strong> to <strong>60°C</strong> and click <strong>Start</strong>. Wait until the temperature is completely stable.</li>
+</ol>
+<h3 id="33-the-autotuning-process">3.3 The Autotuning Process</h3>
+<ol>
+<li><strong>Prepare for Tune</strong>: Increase the <strong>Setpoint (SP)</strong> to <strong>65°C</strong>.</li>
+<li><strong>Activate AT</strong>: Click the <strong>Start Tune</strong> button on the dashboard.
+<ul>
+<li>The system will enter a specialized tuning mode.</li>
+<li>Observe the &quot;Autotuning...&quot; status message on the dashboard.
+<img src="./images/tuning_started.png" alt="Tuning Started" width="70%" /></li>
+</ul>
+</li>
+<li><strong>Wait for Completion</strong>: Do not change any settings while the tune is active.
+<ul>
+<li><strong>Note</strong>: If you need to cancel the process, click <strong>Stop Tune</strong>. The tuning process will stop, and the controller will return to its previous feedback control state.</li>
+<li>The process is complete when the &quot;Tune Complete&quot; alert appears and the status resets.</li>
+</ul>
+</li>
+<li><strong>Review Results</strong>: Once complete, the controller will automatically stop the oscillation and output the final <strong>Results</strong> (PB, Ti, Td).
+<ul>
+<li><strong>Important</strong>: You must manually enter these new values into the dashboard PID fields and click <strong>Send</strong> to update the controller.</li>
+<li><strong>Action</strong>: Note these values down manually for your report.</li>
+<li><strong>Note</strong>: You do <strong>not</strong> need to download a CSV file for the autotuning oscillation phase.</li>
+</ul>
+</li>
+</ol>
+<h3 id="34-implementation-and-performance-verification">3.4 Implementation and Performance Verification</h3>
+<ol>
+<li><strong>Update Controller</strong>: Input the autotuned $PB$, $T_i$, and $T_d$ results into the PID input fields on the dashboard.</li>
+<li><strong>Apply</strong>: Click <strong>Send</strong> to transmit these new values to the PLC.</li>
+<li><strong>Reset Temperature</strong>: Set the <strong>Setpoint (SP)</strong> back to <strong>60°C</strong> and click <strong>Start</strong>. Wait for full stabilization.</li>
+<li><strong>The Stress Test</strong>: Once stable at 60°C, change the <strong>Setpoint (SP)</strong> to <strong>70°C</strong> and click <strong>Start</strong>.
+<img src="./images/60_70_stepResponse.png" alt="Step Response Result"></li>
+<li><strong>Data Capture</strong>: Observe the transient response on the chart.</li>
+<li><strong>Export</strong>: Once the temperature has stabilized at 70°C, click <strong>CSV</strong> to download the data for your report.</li>
+</ol>
+<hr>
+<h2 id="4-post-laboratory-task">4. Post-Laboratory Task</h2>
+<h3 id="41-response-comparison">4.1 Response Comparison</h3>
+<ol>
+<li><strong>Plotting</strong>: Create a chart showing the transition from 60°C to 70°C using the autotuned parameters.</li>
+<li><strong>Metric Analysis</strong>: Calculate the following for the 70°C step:
+<ul>
+<li><strong>Overshoot (%)</strong></li>
+<li><strong>Rise Time (s)</strong></li>
+<li><strong>Settling Time (s)</strong></li>
+</ul>
+</li>
+<li><strong>Discussion</strong>:
+<ul>
+<li><strong>Comparison</strong>: Compare these metrics with your Lab 4 results. You may notice that both ZN (manual) and Autotune (automated) often produce aggressive responses with some overshoot.</li>
+<li><strong>Performance</strong>: Which method reached the setpoint faster (Rise Time)? Which one reached stability sooner (Settling Time)?</li>
+<li><strong>Reducing Overshoot</strong>: If the overshoot observed in this experiment is too high for a sensitive industrial process, how would you manually adjust the $PB$ and $T_i$ parameters to achieve a smoother response?</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="5-summary-checklist">5. Summary Checklist</h2>
+<ol>
+<li><input type="checkbox" id="checkbox0"><label for="checkbox0">Stabilize at 60°C using Lab 4 PID parameters.</label></li>
+<li><input type="checkbox" id="checkbox1"><label for="checkbox1">Step to 65°C and run <strong>Start Tune</strong>.</label></li>
+<li><input type="checkbox" id="checkbox2"><label for="checkbox2">Record the Autotune results and <strong>Send</strong> them to the PLC.</label></li>
+<li><input type="checkbox" id="checkbox3"><label for="checkbox3">Stabilize back at 60°C.</label></li>
+<li><input type="checkbox" id="checkbox4"><label for="checkbox4">Perform a step change to 70°C and download the <strong>CSV</strong> data.</label></li>
+<li><input type="checkbox" id="checkbox5"><label for="checkbox5">Compare Lab 4 (Manual) vs Lab 5 (Autotune) performance.</label></li>
+</ol>
+
+</body>
+</html>

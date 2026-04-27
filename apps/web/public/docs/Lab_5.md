@@ -42,7 +42,7 @@ Autotuning requires a clear "starting line." By stabilizing at 60°C and then mo
 2.  **Activate AT**: Click the **Start Tune** button on the dashboard.
     *   The system will enter a specialized tuning mode.
     *   Observe the "Autotuning..." status message on the dashboard.
-    ![Tuning Started](./images/tuning_started.png)
+    <img src="./images/tuning_started.png" alt="Tuning Started" width="70%" />
 3.  **Wait for Completion**: Do not change any settings while the tune is active. 
     *   **Note**: If you need to cancel the process, click **Stop Tune**. The system will revert to your previous PID parameters.
     *   The process is complete when the "Tune Complete" alert appears and the status resets.
@@ -58,6 +58,7 @@ Autotuning requires a clear "starting line." By stabilizing at 60°C and then mo
 ### 3.5 Final Performance Verification
 1.  **Reset Temperature**: Set the **Setpoint (SP)** back to **60°C** and click **Start**. Wait for full stabilization.
 2.  **The Stress Test**: Once stable at 60°C, change the **Setpoint (SP)** to **70°C** and click **Start**.
+    ![Step Response Result](./images/60_70_stepResponse.png)
 3.  **Data Capture**: Observe the transient response on the chart. 
 4.  **Export**: Once the temperature has stabilized at 70°C, click **CSV** to download the data for your report.
 
@@ -72,9 +73,9 @@ Autotuning requires a clear "starting line." By stabilizing at 60°C and then mo
     - **Rise Time (s)**
     - **Settling Time (s)**
 3.  **Discussion**: 
-    - Compare these metrics with your Lab 4 results (which used ZN parameters). 
-    - Which method provided a smoother response? 
-    - Why do you think the autotune might be more (or less) effective than the manual S-curve method?
+    - **Comparison**: Compare these metrics with your Lab 4 results. You may notice that both ZN (manual) and Autotune (automated) often produce aggressive responses with some overshoot.
+    - **Performance**: Which method reached the setpoint faster (Rise Time)? Which one reached stability sooner (Settling Time)?
+    - **Reducing Overshoot**: If the overshoot observed in this experiment is too high for a sensitive industrial process, how would you manually adjust the $PB$ and $T_i$ parameters to achieve a smoother response?
 
 ---
 
