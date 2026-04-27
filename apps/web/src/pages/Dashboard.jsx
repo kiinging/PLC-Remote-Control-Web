@@ -521,7 +521,7 @@ export default function Dashboard() {
             </Navbar>
 
             <Container>
-                <SystemAnnouncement />
+                <SystemAnnouncement page="dashboard" />
                 {bookingChecked && isReadOnly && (
                     <Alert variant="warning" className="d-flex justify-content-between align-items-center">
                         <div>

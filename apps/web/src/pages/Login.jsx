@@ -78,7 +78,7 @@ const Login = () => {
 
     return (
         <Container className="min-vh-100 d-flex flex-column align-items-center justify-content-center py-5">
-            <SystemAnnouncement />
+            <SystemAnnouncement page="login" />
             <Row className="w-100 justify-content-center mt-3">
                 <Col md={6} lg={4}>
                     <Card className="shadow-lg border-0 rounded-4">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Alert, Container } from 'react-bootstrap';
 import { supabase } from '../services/supabase';
 
-export default function SystemAnnouncement() {
+export default function SystemAnnouncement({ page = 'login' }) {
     const [announcement, setAnnouncement] = useState(null);
 
     useEffect(() => {
@@ -39,6 +39,17 @@ export default function SystemAnnouncement() {
 
     if (!announcement || !announcement.content) return null;
 
+    const type = announcement.type || 'info';
+    
+    // Logic: 
+    // - Info (info) and Fixed/Up (success) appear on login page only.
+    // - Warning (warning) and Urgent (danger) appear on both.
+    if (page === 'dashboard') {
+        if (type !== 'warning' && type !== 'danger') {
+            return null;
+        }
+    }
+
     const getIcon = (type) => {
         switch (type) {
             case 'danger': return '🚨';
@@ -50,8 +61,8 @@ export default function SystemAnnouncement() {
 
     return (
         <Container className="mt-3">
-            <Alert variant={announcement.type || 'info'} className="shadow-sm border-0 d-flex align-items-center">
-                <span className="fs-3 me-3">{getIcon(announcement.type)}</span>
+            <Alert variant={type} className="shadow-sm border-0 d-flex align-items-center">
+                <span className="fs-3 me-3">{getIcon(type)}</span>
                 <div>
                     <strong className="d-block">System Announcement</strong>
                     {announcement.content}
