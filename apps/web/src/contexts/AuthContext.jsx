@@ -64,7 +64,11 @@ export const AuthProvider = ({ children }) => {
         try {
             // 0. Log logout event
             if (user?.email) {
-                eventLogService.logLogout(user.email).catch(() => {});
+                // Await logging, but with a timeout so we don't get stuck if Supabase is slow
+                await Promise.race([
+                    eventLogService.logLogout(user.email),
+                    new Promise(resolve => setTimeout(resolve, 2000))
+                ]).catch(() => {});
             }
 
             // 1. Fire and forget backend logout

@@ -25,13 +25,16 @@ export default function EventLog() {
     const fetchLogs = async () => {
         try {
             setError(null);
-            const [logins, logouts, temps, bookings] = await Promise.all([
-                eventLogService.getEventLogs('login', 300),
-                eventLogService.getEventLogs('logout', 300),
+            const [allLoginEvents, temps, bookings] = await Promise.all([
+                eventLogService.getEventLogs(['login', 'logout'], 600),
                 eventLogService.getEventLogs('temp_alert', 200),
                 eventLogService.getEventLogs('booking', 200)
             ]);
             
+            // Separate them for processSessions
+            const logins = allLoginEvents.filter(e => e.event_type === 'login');
+            const logouts = allLoginEvents.filter(e => e.event_type === 'logout');
+
             // Process sessions: pair login with logout
             const sessions = processSessions(logins, logouts);
             setLoginLogs(sessions);

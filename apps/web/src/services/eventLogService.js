@@ -82,7 +82,11 @@ export const eventLogService = {
             .limit(limit);
 
         if (eventType) {
-            query = query.eq('event_type', eventType);
+            if (Array.isArray(eventType)) {
+                query = query.in('event_type', eventType);
+            } else {
+                query = query.eq('event_type', eventType);
+            }
         }
 
         const { data, error } = await query;
