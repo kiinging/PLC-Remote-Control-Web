@@ -181,6 +181,13 @@ const Login = () => {
                                     >
                                         📖 Read Lab 4 Procedure (Web)
                                     </Button>
+                                    <Button 
+                                        variant="outline-info" 
+                                        size="sm" 
+                                        onClick={() => navigate('/lab-sheet?lab=5', { state: { from: '/login' } })}
+                                    >
+                                        📖 Read Lab 5 Procedure (Web)
+                                    </Button>
                                 </div>
                                 <p className="mt-2 mb-0 x-small text-muted" style={{ fontSize: '0.7rem' }}>
                                     Recommended: Read the procedure before your session.

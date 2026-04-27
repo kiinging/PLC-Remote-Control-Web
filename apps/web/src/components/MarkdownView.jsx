@@ -63,11 +63,15 @@ const MarkdownView = ({ docPath, title, backPath = "/dashboard" }) => {
                 <Button variant="outline-secondary" size="sm" onClick={() => navigate(backPath)}>
                     ← Back
                 </Button>
-                {/* PDF Link - Updated with user's Supabase Public URL */}
+                {/* PDF Link - Dynamically generated based on docPath */}
                 <Button 
                     variant="outline-danger" 
                     size="sm" 
-                    onClick={() => window.open("https://hdngzewkkqzzrxxlunfo.supabase.co/storage/v1/object/public/lab-sheet/Lab_4.pdf", "_blank")}
+                    onClick={() => {
+                        const labMatch = docPath.match(/Lab_(\d+)/);
+                        const labNum = labMatch ? labMatch[1] : '4';
+                        window.open(`https://hdngzewkkqzzrxxlunfo.supabase.co/storage/v1/object/public/lab-sheet/Lab_${labNum}.pdf`, "_blank");
+                    }}
                 >
                     Download PDF
                 </Button>

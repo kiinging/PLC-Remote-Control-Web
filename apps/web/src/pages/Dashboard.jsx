@@ -311,9 +311,31 @@ export default function Dashboard() {
         }
     };
 
+    const [tuneResultsReady, setTuneResultsReady] = useState(false);
+
     const changeMode = async (mode) => {
+        if (mode === 'tune') {
+            setTuneResultsReady(false);
+        }
         await api.setMode(mode);
     };
+
+    // Auto-Stop Tuning: When results change from 0 to values, stop the tune
+    useEffect(() => {
+        // Only trigger if we are in Tune Mode and waiting for results
+        if (controlStatus.mode === 2 && !tuneResultsReady) {
+            const pb = Number(controlStatus.pid_pb_at || 0);
+            const ti = Number(controlStatus.pid_ti_at || 0);
+            const td = Number(controlStatus.pid_td_at || 0);
+
+            if (pb > 0 || ti > 0 || td > 0) {
+                console.log("Tune: New results detected. Auto-stopping tune process...");
+                setTuneResultsReady(true);
+                // Send stop tune to PLC to prevent repeated tuning
+                api.stopTune().catch(() => {});
+            }
+        }
+    }, [controlStatus.pid_pb_at, controlStatus.pid_ti_at, controlStatus.pid_td_at, controlStatus.mode, tuneResultsReady]);
 
     const sendPid = async () => {
         await api.setPidParams(pidParams);
@@ -332,6 +354,7 @@ export default function Dashboard() {
 
     const handleStartTune = async () => {
         if (isReadOnly) return;
+        setTuneResultsReady(false);
         await api.startTune();
     };
 
@@ -495,7 +518,10 @@ export default function Dashboard() {
                                 <Nav.Link onClick={() => navigate('/booking')}>Book Lab</Nav.Link>
                             )}
                             <Nav.Link onClick={() => navigate('/lab-sheet?lab=4', { state: { from: '/dashboard' } })}>
-                                📖 Lab Manual
+                                📖 Lab 4
+                            </Nav.Link>
+                            <Nav.Link onClick={() => navigate('/lab-sheet?lab=5', { state: { from: '/dashboard' } })}>
+                                📖 Lab 5
                             </Nav.Link>
                             {/* Admin sees Event Log */}
                             {isAdmin && (
@@ -760,7 +786,7 @@ export default function Dashboard() {
                                             <strong>Active:</strong> PB: {Number(controlStatus.pid_pb_out || 0).toFixed(1)}, Ti: {Number(controlStatus.pid_ti_out || 0).toFixed(1)}, Td: {Number(controlStatus.pid_td_out || 0).toFixed(1)}
                                         </div>
                                         <div className="small">
-                                            <strong>Results:</strong> PB: {Number(controlStatus.pid_pb_at || 0).toFixed(1)}, Ti: {Number(controlStatus.pid_ti_at || 0).toFixed(1)}, Td: {Number(controlStatus.pid_td_at || 0).toFixed(1)}
+                                            <strong>Results:</strong> PB: {tuneResultsReady ? Number(controlStatus.pid_pb_at || 0).toFixed(1) : '0.0'}, Ti: {tuneResultsReady ? Number(controlStatus.pid_ti_at || 0).toFixed(1) : '0.0'}, Td: {tuneResultsReady ? Number(controlStatus.pid_td_at || 0).toFixed(1) : '0.0'}
                                         </div>
                                     </div>
                                 )}
