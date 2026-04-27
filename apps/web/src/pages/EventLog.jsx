@@ -15,8 +15,7 @@ export default function EventLog() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Guard: non-admins should not reach this page (AdminRoute in App.jsx handles it,
-    // but double-check here for safety)
+    // Guard: non-admins should not reach this page
     useEffect(() => {
         if (!isAdmin) {
             navigate('/dashboard', { replace: true });
@@ -26,20 +25,71 @@ export default function EventLog() {
     const fetchLogs = async () => {
         try {
             setError(null);
-            const [logins, temps, bookings] = await Promise.all([
-                eventLogService.getEventLogs('login', 200),
+            const [logins, logouts, temps, bookings] = await Promise.all([
+                eventLogService.getEventLogs('login', 300),
+                eventLogService.getEventLogs('logout', 300),
                 eventLogService.getEventLogs('temp_alert', 200),
                 eventLogService.getEventLogs('booking', 200)
             ]);
-            setLoginLogs(logins);
+            
+            // Process sessions: pair login with logout
+            const sessions = processSessions(logins, logouts);
+            setLoginLogs(sessions);
             setTempLogs(temps);
             setBookingLogs(bookings);
         } catch (e) {
             console.error(e);
-            setError('Failed to load event logs. Make sure the event_logs table exists in Supabase (check supabase_schema.sql).');
+            setError('Failed to load event logs.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const processSessions = (logins, logouts) => {
+        // Sort all chronologically
+        const all = [...logins, ...logouts].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const activeSessions = {}; // email -> login record
+        const results = [];
+
+        all.forEach(log => {
+            if (log.event_type === 'login') {
+                activeSessions[log.user_email] = log;
+            } else if (log.event_type === 'logout') {
+                const startLog = activeSessions[log.user_email];
+                if (startLog) {
+                    const durationMs = new Date(log.created_at) - new Date(startLog.created_at);
+                    results.push({
+                        ...startLog,
+                        logout_at: log.created_at,
+                        duration: formatDuration(durationMs)
+                    });
+                    delete activeSessions[log.user_email];
+                }
+            }
+        });
+
+        // Add remaining logins as "Active Now" or "Closed Tab"
+        Object.values(activeSessions).forEach(log => {
+            results.push({
+                ...log,
+                logout_at: null,
+                duration: 'Still Active'
+            });
+        });
+
+        // Sort descending by login time
+        return results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    };
+
+    const formatDuration = (ms) => {
+        const totalSec = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSec / 3600);
+        const minutes = Math.floor((totalSec % 3600) / 60);
+        const seconds = totalSec % 60;
+        
+        if (hours > 0) return `${hours}h ${minutes}m`;
+        if (minutes > 0) return `${minutes}m ${seconds}s`;
+        return `${seconds}s`;
     };
 
     useEffect(() => {
@@ -53,7 +103,7 @@ export default function EventLog() {
     const formatTime = (ts) => {
         if (!ts) return '--';
         return new Date(ts).toLocaleString('en-GB', {
-            day: '2-digit', month: 'short', year: 'numeric',
+            day: '2-digit', month: 'short', 
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
     };
@@ -110,51 +160,53 @@ export default function EventLog() {
                         eventKey="login"
                         title={
                             <span>
-                                🔑 Login Events{' '}
+                                🔑 Session History{' '}
                                 <Badge bg="secondary" pill>{loginLogs.length}</Badge>
                             </span>
                         }
                     >
                         <Card>
                             <Card.Header className="d-flex justify-content-between align-items-center">
-                                <span className="fw-semibold">Student Login History</span>
-                                <small className="text-muted">Last {loginLogs.length} events</small>
+                                <span className="fw-semibold">Student Session History</span>
+                                <small className="text-muted">Paired Login/Logout Events</small>
                             </Card.Header>
                             <Card.Body className="p-0">
                                 {loading ? (
                                     <div className="text-center py-5">
                                         <Spinner animation="border" variant="primary" />
-                                        <p className="text-muted mt-3">Loading login events...</p>
+                                        <p className="text-muted mt-3">Loading sessions...</p>
                                     </div>
                                 ) : loginLogs.length === 0 ? (
                                     <div className="text-center py-5 text-muted">
-                                        <p>No login events recorded yet.</p>
+                                        <p>No session events recorded yet.</p>
                                     </div>
                                 ) : (
-                                    <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                                    <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                                         <Table striped hover responsive className="mb-0">
                                             <thead className="table-dark sticky-top">
                                                 <tr>
-                                                    <th>#</th>
                                                     <th>User Email</th>
-                                                    <th>Role</th>
                                                     <th>Login Time</th>
+                                                    <th>Logout Time</th>
+                                                    <th>Duration</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {loginLogs.map((log, idx) => (
+                                                {loginLogs.map((log) => (
                                                     <tr key={log.id}>
-                                                        <td className="text-muted small">{idx + 1}</td>
                                                         <td>
                                                             <strong>{log.user_email || '—'}</strong>
-                                                        </td>
-                                                        <td>
-                                                            {log.user_email === import.meta.env.VITE_ADMIN_EMAIL
-                                                                ? <Badge bg="danger">Admin</Badge>
-                                                                : <Badge bg="primary">Student</Badge>
+                                                            {log.user_email === import.meta.env.VITE_ADMIN_EMAIL && 
+                                                                <Badge bg="danger" className="ms-2" style={{fontSize: '0.6em'}}>Admin</Badge>
                                                             }
                                                         </td>
                                                         <td className="small">{formatTime(log.created_at)}</td>
+                                                        <td className="small">{formatTime(log.logout_at)}</td>
+                                                        <td>
+                                                            <Badge bg={log.duration === 'Still Active' ? 'success' : 'secondary'}>
+                                                                {log.duration}
+                                                            </Badge>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

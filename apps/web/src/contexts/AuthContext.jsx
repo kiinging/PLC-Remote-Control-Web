@@ -62,6 +62,11 @@ export const AuthProvider = ({ children }) => {
     const logout = async () => {
         console.log("Auth: Initiating logout...");
         try {
+            // 0. Log logout event
+            if (user?.email) {
+                eventLogService.logLogout(user.email).catch(() => {});
+            }
+
             // 1. Fire and forget backend logout
             apiLogout().catch(e => console.warn("Auth: Backend logout skipped/failed", e.message));
 

@@ -18,6 +18,23 @@ export const eventLogService = {
     },
 
     /**
+     * Log a user logout event.
+     * @param {string} email - User email address
+     */
+    async logLogout(email) {
+        if (!email) return;
+        try {
+            await supabase.from('event_logs').insert([{
+                event_type: 'logout',
+                user_email: email,
+                details: {}
+            }]);
+        } catch (e) {
+            console.warn('Failed to log logout event:', e);
+        }
+    },
+
+    /**
      * Log a booking event.
      * @param {string} email - User email
      * @param {string} start - ISO start time
