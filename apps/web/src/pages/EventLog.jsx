@@ -120,6 +120,7 @@ export default function EventLog() {
                     <Navbar.Collapse id="eventlog-navbar-nav" className="justify-content-end">
                         <Nav className="me-auto">
                             <Nav.Link onClick={() => navigate('/dashboard')}>Dashboard</Nav.Link>
+                            <Nav.Link onClick={() => navigate('/admin')}>Admin Panel</Nav.Link>
                             <Nav.Link active>Event Log</Nav.Link>
                         </Nav>
                         <ThemeToggle className="me-3" />
