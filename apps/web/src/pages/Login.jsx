@@ -296,9 +296,8 @@ const LabSubmission = () => {
 
     return (
         <Card className="shadow-sm border-0 rounded-4 overflow-hidden">
-            <Card.Header className="bg-primary text-white py-3 border-0">
-                <h6 className="mb-0 fw-bold">Lab 4: Final Submission</h6>
-                <small className="opacity-75">Upload your final report here.</small>
+            <Card.Header className="bg-primary text-white py-3 border-0 text-center">
+                <h6 className="mb-0 fw-bold">Upload your final report here.</h6>
             </Card.Header>
             <Card.Body className="p-4">
                 {status.message && (

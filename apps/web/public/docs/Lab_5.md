@@ -23,13 +23,6 @@ Autotuning requires a clear "starting line." By stabilizing at 60°C and then mo
 -   The system is in a known, steady state.
 -   There is a sufficient **error** (the 5°C difference) for the controller to begin the 100% power "push" required for the Limit Cycle Method.
 
-### 2.3 Dashboard Controls
-On your dashboard, you only need to interact with two buttons:
--   **Start Tune**: Begins the automated calculation. You will see the "Autotuning..." status appear.
--   **Stop Tune**: Use this if you need to cancel the process. The system will revert to your previous PID parameters.
-
-Once the process is complete, the controller will automatically stop the oscillation and output the final **Results** for you to review.
-
 ---
 
 ## 3. Measurement Tasks
@@ -49,8 +42,14 @@ Once the process is complete, the controller will automatically stop the oscilla
 2.  **Activate AT**: Click the **Start Tune** button on the dashboard.
     *   The system will enter a specialized tuning mode.
     *   Observe the "Autotuning..." status message on the dashboard.
-3.  **Wait for Completion**: Do not change any settings while the tune is active. The process is complete when the "Tune Complete" alert appears and the status resets.
-4.  **Review Results**: The new calculated parameters will appear in the **Results** section (PB, Ti, Td).
+    ![Tuning Started](./images/tuning_started.png)
+3.  **Wait for Completion**: Do not change any settings while the tune is active. 
+    *   **Note**: If you need to cancel the process, click **Stop Tune**. The system will revert to your previous PID parameters.
+    *   The process is complete when the "Tune Complete" alert appears and the status resets.
+4.  **Review Results**: Once complete, the controller will automatically stop the oscillation and output the final **Results** (PB, Ti, Td).
+    *   **Important**: You must manually enter these new values into the dashboard PID fields and click **Send** to update the controller.
+    *   **Action**: Note these values down manually for your report. 
+    *   **Note**: You do **not** need to download a CSV file for the autotuning oscillation phase.
 
 ### 3.4 Implementation
 1.  **Update Controller**: Input the autotuned $PB$, $T_i$, and $T_d$ results into the PID input fields.
