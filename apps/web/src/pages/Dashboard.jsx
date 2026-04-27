@@ -799,11 +799,11 @@ export default function Dashboard() {
                                     </div>
                                     <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
                                         <small className="text-muted" style={{ fontSize: '0.72em' }}>Current</small>
-                                        <span className="fw-bold fs-5">{(1.2 * (realMV / 100)).toFixed(2)} A</span>
+                                        <span className="fw-bold fs-5">{(0.48 * (realMV / 100)).toFixed(2)} A</span>
                                     </div>
                                     <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
                                         <small className="text-muted" style={{ fontSize: '0.72em' }}>Power</small>
-                                        <span className="fw-bold fs-5 text-warning">{(Math.pow(1.2 * (realMV / 100), 2) * 20).toFixed(2)} W</span>
+                                        <span className="fw-bold fs-5 text-warning">{(Math.pow(0.48 * (realMV / 100), 2) * 50).toFixed(2)} W</span>
                                     </div>
                                     {controlStatus.mode !== 0 && (
                                         <div className="d-flex flex-column p-2 rounded" style={{ background: 'rgba(0,0,0,0.06)' }}>
