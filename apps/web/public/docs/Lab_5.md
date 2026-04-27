@@ -44,23 +44,21 @@ Autotuning requires a clear "starting line." By stabilizing at 60°C and then mo
     *   Observe the "Autotuning..." status message on the dashboard.
     <img src="./images/tuning_started.png" alt="Tuning Started" width="70%" />
 3.  **Wait for Completion**: Do not change any settings while the tune is active. 
-    *   **Note**: If you need to cancel the process, click **Stop Tune**. The system will revert to your previous PID parameters.
+    *   **Note**: If you need to cancel the process, click **Stop Tune**. The tuning process will stop, and the controller will return to its previous feedback control state.
     *   The process is complete when the "Tune Complete" alert appears and the status resets.
 4.  **Review Results**: Once complete, the controller will automatically stop the oscillation and output the final **Results** (PB, Ti, Td).
     *   **Important**: You must manually enter these new values into the dashboard PID fields and click **Send** to update the controller.
     *   **Action**: Note these values down manually for your report. 
     *   **Note**: You do **not** need to download a CSV file for the autotuning oscillation phase.
 
-### 3.4 Implementation
-1.  **Update Controller**: Input the autotuned $PB$, $T_i$, and $T_d$ results into the PID input fields.
+### 3.4 Implementation and Performance Verification
+1.  **Update Controller**: Input the autotuned $PB$, $T_i$, and $T_d$ results into the PID input fields on the dashboard.
 2.  **Apply**: Click **Send** to transmit these new values to the PLC.
-
-### 3.5 Final Performance Verification
-1.  **Reset Temperature**: Set the **Setpoint (SP)** back to **60°C** and click **Start**. Wait for full stabilization.
-2.  **The Stress Test**: Once stable at 60°C, change the **Setpoint (SP)** to **70°C** and click **Start**.
+3.  **Reset Temperature**: Set the **Setpoint (SP)** back to **60°C** and click **Start**. Wait for full stabilization.
+4.  **The Stress Test**: Once stable at 60°C, change the **Setpoint (SP)** to **70°C** and click **Start**.
     ![Step Response Result](./images/60_70_stepResponse.png)
-3.  **Data Capture**: Observe the transient response on the chart. 
-4.  **Export**: Once the temperature has stabilized at 70°C, click **CSV** to download the data for your report.
+5.  **Data Capture**: Observe the transient response on the chart. 
+6.  **Export**: Once the temperature has stabilized at 70°C, click **CSV** to download the data for your report.
 
 ---
 
