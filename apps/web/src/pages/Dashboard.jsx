@@ -281,6 +281,10 @@ export default function Dashboard() {
 
     const handleRelayToggle = async (state) => {
         setRelay(state);
+        // Reset tuning results when starting fresh power
+        if (state === true) {
+            setTuneResultsReady(false);
+        }
         try {
             await api.setRelay(state);
         } catch (e) {
