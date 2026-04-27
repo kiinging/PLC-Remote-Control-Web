@@ -42,7 +42,7 @@ Autotuning requires a clear "starting line." By stabilizing at 60°C and then mo
 2.  **Activate AT**: Click the **Start Tune** button on the dashboard.
     *   The system will enter a specialized tuning mode.
     *   Observe the "Autotuning..." status message on the dashboard.
-    <img src="./images/tuning_started.png" alt="Tuning Started" width="70%" />
+    <img src="./images/tuning_started.png" alt="Tuning Started" width="40%" />
 3.  **Wait for Completion**: Do not change any settings while the tune is active. 
     *   **Note**: If you need to cancel the process, click **Stop Tune**. The tuning process will stop, and the controller will return to its previous feedback control state.
     *   The process is complete when the "Tune Complete" alert appears and the status resets.
