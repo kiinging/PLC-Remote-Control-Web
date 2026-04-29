@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import AutoLogout from './components/AutoLogout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Admin from './pages/Admin';
@@ -28,16 +29,17 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ThemeProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/lab-sheet" element={<LabSheet />} />
-            <Route path="/admin" element={
-              <AdminRoute>
-                <Admin />
-              </AdminRoute>
-            } />
+        <AutoLogout>
+          <ThemeProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/lab-sheet" element={<LabSheet />} />
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
+              } />
             <Route
               path="/dashboard"
               element={
@@ -65,6 +67,7 @@ function App() {
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </ThemeProvider>
+        </AutoLogout>
       </AuthProvider>
     </Router>
   );
