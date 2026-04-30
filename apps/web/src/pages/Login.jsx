@@ -28,11 +28,31 @@ const Login = () => {
         setLoading(true);
         setError(null);
 
+        // Strict Admin Check
+        if (identifier.toLowerCase() === 'admin') {
+            if (password !== '123456789') {
+                setError("Invalid admin credentials.");
+                setLoading(false);
+                return;
+            }
+        }
+
         // Map identifier (username) to email if it's not already an email
-        const email = identifier.includes('@') ? identifier : `${identifier}@student.local`;
+        const email = identifier.toLowerCase() === 'admin' ? 'admin@student.local' : (identifier.includes('@') ? identifier : `${identifier}@student.local`);
 
         try {
-            if (isSignUp) {
+            if (identifier.toLowerCase() === 'admin') {
+                // Auto-signup logic just for admin to make it seamless
+                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                if (error && error.message.includes('Invalid login credentials')) {
+                    const { error: signUpError } = await supabase.auth.signUp({ email, password });
+                    if (signUpError && !signUpError.message.includes('User already registered')) {
+                        throw signUpError;
+                    }
+                } else if (error) {
+                    throw error;
+                }
+            } else if (isSignUp) {
                 if (password !== confirmPassword) {
                     throw new Error("Passwords do not match");
                 }
@@ -45,7 +65,7 @@ const Login = () => {
                 });
                 if (error) throw error;
                 setError("Account created! Logging you in...");
-                
+
                 // If "Confirm Email" is OFF in dashboard, this will log them in immediately.
                 // If it's ON, they will see a success message but need to verify.
                 setIsSignUp(false);
@@ -174,16 +194,16 @@ const Login = () => {
                             <Card.Body className="p-3">
                                 <h6 className="fw-bold mb-2">Pre-Lab Resources</h6>
                                 <div className="d-flex flex-column gap-2">
-                                    <Button 
-                                        variant="outline-primary" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline-primary"
+                                        size="sm"
                                         onClick={() => navigate('/lab-sheet?lab=4', { state: { from: '/login' } })}
                                     >
                                         📖 Read Lab 4 Procedure (Web)
                                     </Button>
-                                    <Button 
-                                        variant="outline-info" 
-                                        size="sm" 
+                                    <Button
+                                        variant="outline-info"
+                                        size="sm"
                                         onClick={() => navigate('/lab-sheet?lab=5', { state: { from: '/login' } })}
                                     >
                                         📖 Read Lab 5 Procedure (Web)
@@ -230,7 +250,7 @@ const LabSubmission = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!file) {
             setStatus({ type: 'danger', message: 'Please attach your report file before submitting.' });
             return;
@@ -261,7 +281,7 @@ const LabSubmission = () => {
             const { data } = supabase.storage
                 .from('lab-submission')
                 .getPublicUrl(filePath);
-            
+
             fileUrl = data.publicUrl;
 
             // 2. Insert record

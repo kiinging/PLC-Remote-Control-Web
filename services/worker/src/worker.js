@@ -139,8 +139,7 @@ export default {
         if (!email) return withCors(request, "Missing email", 400);
 
         // Protect the admin account from self-deletion
-        const adminEmail = env.ADMIN_EMAIL || "wongkiinging@gmail.com";
-        if (email === adminEmail) {
+        if (email === 'admin@student.local') {
           return withCors(request, "Cannot delete admin account", 403);
         }
 

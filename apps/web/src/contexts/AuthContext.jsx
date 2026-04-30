@@ -5,14 +5,11 @@ import { eventLogService } from '../services/eventLogService';
 
 const AuthContext = createContext(null);
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const isAdmin = user?.email === ADMIN_EMAIL;
-
+    const isAdmin = user?.email === 'admin@student.local' || user?.email === 'wongkiinging@gmail.com';
     useEffect(() => {
         // 1. Check initial Supabase session
         supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -36,7 +33,7 @@ export const AuthProvider = ({ children }) => {
         // 2. Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             console.log("Supabase Auth Event:", event, session?.user?.email);
-            
+
             // Immediately update user to keep UI responsive
             setUser(session?.user ?? null);
             setLoading(false);
@@ -68,7 +65,7 @@ export const AuthProvider = ({ children }) => {
                 await Promise.race([
                     eventLogService.logLogout(user.email),
                     new Promise(resolve => setTimeout(resolve, 2000))
-                ]).catch(() => {});
+                ]).catch(() => { });
             }
 
             // 1. Fire and forget backend logout

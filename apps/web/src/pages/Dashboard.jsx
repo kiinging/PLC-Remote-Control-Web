@@ -397,6 +397,19 @@ export default function Dashboard() {
         }
     };
 
+    const handleDeleteReview = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this review?")) return;
+        try {
+            await api.deleteReview(id);
+            // Refresh list
+            const updated = await api.getReviews();
+            setRecentReviews(updated);
+        } catch (e) {
+            console.error("Failed to delete review:", e);
+            alert("Failed to delete review.");
+        }
+    };
+
     useEffect(() => {
         if (webPending && controlStatus.web_ack) setWebPending(false);
         if (plcPending && controlStatus.plc_ack) setPlcPending(false);
@@ -945,9 +958,16 @@ export default function Dashboard() {
                                                                 <span className="text-warning small me-2">{'⭐'.repeat(Math.max(0, Math.min(5, parseInt(r.rating) || 0)))}{'☆'.repeat(5 - Math.max(0, Math.min(5, parseInt(r.rating) || 0)))}</span>
                                                                 <strong className="small">{r.name}</strong>
                                                             </div>
-                                                            <small className="text-muted" style={{ fontSize: '0.75em' }}>
-                                                                {new Date(r.ts * 1000).toLocaleString()}
-                                                            </small>
+                                                            <div className="text-end">
+                                                                <small className="text-muted d-block" style={{ fontSize: '0.75em' }}>
+                                                                    {new Date(r.created_at).toLocaleString()}
+                                                                </small>
+                                                                {isAdmin && (
+                                                                    <Button variant="link" size="sm" className="p-0 text-danger" style={{ fontSize: '0.75em' }} onClick={() => handleDeleteReview(r.id)}>
+                                                                        Delete
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <p className="mb-0 small" style={{ fontStyle: 'italic', color: 'var(--bs-emphasis-color)' }}>"{r.comment}"</p>
                                                     </div>
