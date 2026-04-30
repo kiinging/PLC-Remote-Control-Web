@@ -7,8 +7,7 @@ import { supabase } from '../services/supabase';
 import { api } from '../services/api';
 import { eventLogService } from '../services/eventLogService';
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-
+const ADMIN_EMAIL = 'admin@student.local';
 export default function Admin() {
     const [users, setUsers] = useState([]);
     const [submissions, setSubmissions] = useState([]);
@@ -16,7 +15,7 @@ export default function Admin() {
     const [loadingSubmissions, setLoadingSubmissions] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    
+
     // Announcement States
     const [announcementMsg, setAnnouncementMsg] = useState('');
     const [announcementType, setAnnouncementType] = useState('info');
@@ -59,7 +58,7 @@ export default function Admin() {
             setLoading(true);
             // Deactivate old ones first
             await supabase.from('announcements').update({ active: false }).eq('active', true);
-            
+
             const { error } = await supabase.from('announcements').insert([{
                 content: announcementMsg,
                 type: announcementType,
@@ -98,18 +97,18 @@ export default function Admin() {
                 eventLogService.getEventLogs('login', 1000),
                 eventLogService.getEventLogs('booking', 1000)
             ]);
-            
+
             // Aggregation logic
             const map = {};
-            
+
             // Process Logins
             for (const row of loginLogs) {
                 const email = row.user_email;
                 if (!email) continue;
                 if (!map[email]) {
-                    map[email] = { 
-                        email, 
-                        lastLogin: row.created_at, 
+                    map[email] = {
+                        email,
+                        lastLogin: row.created_at,
                         loginCount: 0,
                         bookingCount: 0,
                         lastBooking: null
@@ -123,9 +122,9 @@ export default function Admin() {
                 const email = row.user_email;
                 if (!email) continue;
                 if (!map[email]) {
-                    map[email] = { 
-                        email, 
-                        lastLogin: null, 
+                    map[email] = {
+                        email,
+                        lastLogin: null,
                         loginCount: 0,
                         bookingCount: 0,
                         lastBooking: row.details?.start
@@ -162,7 +161,7 @@ export default function Admin() {
                 .from('lab_submissions')
                 .select('*')
                 .order('created_at', { ascending: false });
-            
+
             if (error) throw error;
             setSubmissions(data || []);
         } catch (err) {
@@ -257,9 +256,9 @@ export default function Admin() {
                     <Card.Body>
                         <div className="mb-3">
                             <label className="form-label small fw-bold">Message Content</label>
-                            <textarea 
-                                className="form-control" 
-                                rows="2" 
+                            <textarea
+                                className="form-control"
+                                rows="2"
                                 placeholder="Enter urgent message for all users..."
                                 value={announcementMsg}
                                 onChange={(e) => setAnnouncementMsg(e.target.value)}
@@ -268,7 +267,7 @@ export default function Admin() {
                         <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
                             <div className="d-flex align-items-center gap-2">
                                 <label className="small fw-bold mb-0">Type:</label>
-                                <select 
+                                <select
                                     className="form-select form-select-sm w-auto"
                                     value={announcementType}
                                     onChange={(e) => setAnnouncementType(e.target.value)}
@@ -280,17 +279,17 @@ export default function Admin() {
                                 </select>
                             </div>
                             <div className="d-flex gap-2">
-                                <Button 
-                                    variant="warning" 
-                                    size="sm" 
+                                <Button
+                                    variant="warning"
+                                    size="sm"
                                     onClick={handlePublishAnnouncement}
                                     disabled={loading || !announcementMsg.trim()}
                                 >
                                     🚀 Publish Live
                                 </Button>
-                                <Button 
-                                    variant="outline-secondary" 
-                                    size="sm" 
+                                <Button
+                                    variant="outline-secondary"
+                                    size="sm"
                                     onClick={handleClearAnnouncement}
                                     disabled={loading || !isAnnouncementActive}
                                 >
@@ -385,7 +384,7 @@ export default function Admin() {
                 </Card>
 
                 <Alert variant="info" className="mt-3 small">
-                    <strong>Note:</strong> This dashboard shows users who have logged in via the Supabase Auth system. 
+                    <strong>Note:</strong> This dashboard shows users who have logged in via the Supabase Auth system.
                     Deleting a user here removes their account from Supabase and clears their session history.
                 </Alert>
 
@@ -435,10 +434,10 @@ export default function Admin() {
                                             <td>{s.student_id}</td>
                                             <td>
                                                 {s.file_url ? (
-                                                    <Button 
-                                                        variant="outline-success" 
-                                                        size="sm" 
-                                                        href={s.file_url} 
+                                                    <Button
+                                                        variant="outline-success"
+                                                        size="sm"
+                                                        href={s.file_url}
                                                         target="_blank"
                                                         className="py-0 px-2"
                                                         style={{ fontSize: '0.75rem' }}
@@ -450,8 +449,8 @@ export default function Admin() {
                                                 )}
                                             </td>
                                             <td>
-                                                <Button 
-                                                    variant="link" 
+                                                <Button
+                                                    variant="link"
                                                     className="text-danger p-0"
                                                     onClick={() => deleteSubmission(s.id)}
                                                 >

@@ -30,7 +30,7 @@ export default function EventLog() {
                 eventLogService.getEventLogs('temp_alert', 200),
                 eventLogService.getEventLogs('booking', 200)
             ]);
-            
+
             // Separate them for processSessions
             const logins = allLoginEvents.filter(e => e.event_type === 'login');
             const logouts = allLoginEvents.filter(e => e.event_type === 'logout');
@@ -89,7 +89,7 @@ export default function EventLog() {
         const hours = Math.floor(totalSec / 3600);
         const minutes = Math.floor((totalSec % 3600) / 60);
         const seconds = totalSec % 60;
-        
+
         if (hours > 0) return `${hours}h ${minutes}m`;
         if (minutes > 0) return `${minutes}m ${seconds}s`;
         return `${seconds}s`;
@@ -106,7 +106,7 @@ export default function EventLog() {
     const formatTime = (ts) => {
         if (!ts) return '--';
         return new Date(ts).toLocaleString('en-GB', {
-            day: '2-digit', month: 'short', 
+            day: '2-digit', month: 'short',
             hour: '2-digit', minute: '2-digit', second: '2-digit'
         });
     };
@@ -200,8 +200,8 @@ export default function EventLog() {
                                                     <tr key={log.id}>
                                                         <td>
                                                             <strong>{log.user_email || '—'}</strong>
-                                                            {log.user_email === import.meta.env.VITE_ADMIN_EMAIL && 
-                                                                <Badge bg="danger" className="ms-2" style={{fontSize: '0.6em'}}>Admin</Badge>
+                                                            {log.user_email === 'admin@student.local' &&
+                                                                <Badge bg="danger" className="ms-2" style={{ fontSize: '0.6em' }}>Admin</Badge>
                                                             }
                                                         </td>
                                                         <td className="small">{formatTime(log.created_at)}</td>
