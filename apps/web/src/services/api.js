@@ -89,4 +89,13 @@ export const getReviews = async (limit = 15) => {
     return data || [];
 };
 
+export const deleteReview = async (id) => {
+    const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', id);
+    if (error) throw error;
+    return { ok: true };
+};
+
 export default api;
