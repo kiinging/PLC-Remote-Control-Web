@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Container, Navbar, Nav, Button, Card, Table, Badge, Tabs, Tab, Spinner, Alert } from 'react-bootstrap';
+import { Container, Navbar, Nav, Button, Card, Table, Badge, Tabs, Tab, Spinner, Alert, Dropdown, ButtonGroup } from 'react-bootstrap';
 import { useAuth } from '../contexts/AuthContext';
 import ThemeToggle from '../components/ThemeToggle';
 import { eventLogService } from '../services/eventLogService';
@@ -48,6 +48,28 @@ export default function EventLog() {
         }
     };
 
+    const handleClearLogs = async (type) => {
+        if (!window.confirm(`Are you sure you want to clear ${type === 'all' ? 'all event logs' : `the ${type} logs`}? This cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            if (type === 'all') {
+                await eventLogService.clearLogs();
+            } else if (type === 'sessions') {
+                await eventLogService.clearLogs(['login', 'logout']);
+            } else {
+                await eventLogService.clearLogs(type);
+            }
+            await fetchLogs();
+        } catch (e) {
+            console.error('Failed to clear logs:', e);
+            setError(`Failed to clear logs: ${e.message}`);
+            setLoading(false);
+        }
+    };
+
     const processSessions = (logins, logouts) => {
         // Sort all chronologically
         const all = [...logins, ...logouts].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -71,12 +93,16 @@ export default function EventLog() {
             }
         });
 
-        // Add remaining logins as "Active Now" or "Closed Tab"
+        // Add remaining logins as "Active Now" or "Closed Tab/Expired"
+        const NOW = new Date();
         Object.values(activeSessions).forEach(log => {
+            const timeSinceLogin = NOW - new Date(log.created_at);
+            const isStale = timeSinceLogin > 4 * 60 * 60 * 1000; // 4 hours
+
             results.push({
                 ...log,
                 logout_at: null,
-                duration: 'Still Active'
+                duration: isStale ? 'Closed Tab / Expired' : 'Still Active'
             });
         });
 
@@ -142,14 +168,28 @@ export default function EventLog() {
                         <h3 className="mb-0 fw-bold">📋 Event Log</h3>
                         <small className="text-muted">Auto-refreshes every 30 seconds</small>
                     </div>
-                    <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => { setLoading(true); fetchLogs(); }}
-                        disabled={loading}
-                    >
-                        {loading ? <Spinner size="sm" animation="border" /> : '↻ Refresh'}
-                    </Button>
+                    <div className="d-flex gap-2">
+                        <Dropdown as={ButtonGroup}>
+                            <Button variant="outline-danger" size="sm" onClick={() => handleClearLogs('all')} disabled={loading}>
+                                🗑️ Clear All Logs
+                            </Button>
+                            <Dropdown.Toggle split variant="outline-danger" size="sm" id="dropdown-clear-logs" disabled={loading} />
+                            <Dropdown.Menu>
+                                <Dropdown.Item onClick={() => handleClearLogs('sessions')}>Clear Session Logs</Dropdown.Item>
+                                <Dropdown.Item onClick={() => handleClearLogs('temp_alert')}>Clear Temp Alerts</Dropdown.Item>
+                                <Dropdown.Item onClick={() => handleClearLogs('booking')}>Clear Bookings</Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
+
+                        <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            onClick={() => { setLoading(true); fetchLogs(); }}
+                            disabled={loading}
+                        >
+                            {loading ? <Spinner size="sm" animation="border" /> : '↻ Refresh'}
+                        </Button>
+                    </div>
                 </div>
 
                 {error && (
@@ -207,7 +247,7 @@ export default function EventLog() {
                                                         <td className="small">{formatTime(log.created_at)}</td>
                                                         <td className="small">{formatTime(log.logout_at)}</td>
                                                         <td>
-                                                            <Badge bg={log.duration === 'Still Active' ? 'success' : 'secondary'}>
+                                                            <Badge bg={log.duration === 'Still Active' ? 'success' : (log.duration.includes('Expired') ? 'warning' : 'secondary')}>
                                                                 {log.duration}
                                                             </Badge>
                                                         </td>

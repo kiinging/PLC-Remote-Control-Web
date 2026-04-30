@@ -92,5 +92,27 @@ export const eventLogService = {
         const { data, error } = await query;
         if (error) throw error;
         return data || [];
+    },
+
+    /**
+     * Clear event logs for a specific type or all.
+     * @param {string|null} eventType - 'login', 'temp_alert', 'booking', or null for all
+     */
+    async clearLogs(eventType = null) {
+        let query = supabase.from('event_logs').delete();
+        
+        if (eventType) {
+            if (Array.isArray(eventType)) {
+                query = query.in('event_type', eventType);
+            } else {
+                query = query.eq('event_type', eventType);
+            }
+        } else {
+            // Delete all, we need a condition to delete multiple rows in Supabase without warning
+            query = query.neq('id', '00000000-0000-0000-0000-000000000000');
+        }
+
+        const { error } = await query;
+        if (error) throw error;
     }
 };
