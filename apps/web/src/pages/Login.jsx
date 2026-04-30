@@ -29,7 +29,7 @@ const Login = () => {
         setError(null);
 
         // Strict Admin Check
-        if (identifier === 'admin') {
+        if (identifier.toLowerCase() === 'admin') {
             if (password !== '123456789') {
                 setError("Invalid admin credentials.");
                 setLoading(false);
@@ -38,10 +38,10 @@ const Login = () => {
         }
 
         // Map identifier (username) to email if it's not already an email
-        const email = identifier === 'admin' ? 'admin@student.local' : (identifier.includes('@') ? identifier : `${identifier}@student.local`);
+        const email = identifier.toLowerCase() === 'admin' ? 'admin@student.local' : (identifier.includes('@') ? identifier : `${identifier}@student.local`);
 
         try {
-            if (identifier === 'admin') {
+            if (identifier.toLowerCase() === 'admin') {
                 // Auto-signup logic just for admin to make it seamless
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if (error && error.message.includes('Invalid login credentials')) {
