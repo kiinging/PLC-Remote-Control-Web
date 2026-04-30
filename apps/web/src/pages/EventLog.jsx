@@ -240,7 +240,7 @@ export default function EventLog() {
                                                     <tr key={log.id}>
                                                         <td>
                                                             <strong>{log.user_email || '—'}</strong>
-                                                            {log.user_email === 'admin@student.local' &&
+                                                            {(log.user_email === 'admin@student.local' || log.user_email === 'wongkiinging@gmail.com') &&
                                                                 <Badge bg="danger" className="ms-2" style={{ fontSize: '0.6em' }}>Admin</Badge>
                                                             }
                                                         </td>

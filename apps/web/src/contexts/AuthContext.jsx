@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const isAdmin = user?.email === 'admin@student.local';
+    const isAdmin = user?.email === 'admin@student.local' || user?.email === 'wongkiinging@gmail.com';
     useEffect(() => {
         // 1. Check initial Supabase session
         supabase.auth.getSession().then(async ({ data: { session } }) => {

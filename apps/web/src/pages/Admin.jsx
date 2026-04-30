@@ -7,7 +7,7 @@ import { supabase } from '../services/supabase';
 import { api } from '../services/api';
 import { eventLogService } from '../services/eventLogService';
 
-const ADMIN_EMAIL = 'admin@student.local';
+const ADMIN_EMAILS = ['admin@student.local', 'wongkiinging@gmail.com'];
 export default function Admin() {
     const [users, setUsers] = useState([]);
     const [submissions, setSubmissions] = useState([]);
@@ -138,8 +138,8 @@ export default function Admin() {
             }
 
             const list = Object.values(map).sort((a, b) => {
-                if (a.email === ADMIN_EMAIL) return -1;
-                if (b.email === ADMIN_EMAIL) return 1;
+                if (ADMIN_EMAILS.includes(a.email)) return -1;
+                if (ADMIN_EMAILS.includes(b.email)) return 1;
                 const dateA = a.lastLogin ? new Date(a.lastLogin) : new Date(0);
                 const dateB = b.lastLogin ? new Date(b.lastLogin) : new Date(0);
                 return dateB - dateA;
@@ -184,7 +184,7 @@ export default function Admin() {
     };
 
     const handleDelete = async (email) => {
-        if (email === ADMIN_EMAIL) return;
+        if (ADMIN_EMAILS.includes(email)) return;
         if (!window.confirm(`Delete user "${email}" from Supabase? This will remove their login history.`)) return;
 
         try {
@@ -338,7 +338,7 @@ export default function Admin() {
                                                 <span className="fw-semibold">{formatEmail(u.email)}</span>
                                             </td>
                                             <td>
-                                                {u.email === ADMIN_EMAIL
+                                                {ADMIN_EMAILS.includes(u.email)
                                                     ? <Badge bg="danger">Admin</Badge>
                                                     : <Badge bg="primary">Student</Badge>
                                                 }
@@ -362,7 +362,7 @@ export default function Admin() {
                                                 <small className="text-muted">{formatDate(u.lastLogin)}</small>
                                             </td>
                                             <td>
-                                                {u.email !== ADMIN_EMAIL && u.email !== user?.email && (
+                                                {!ADMIN_EMAILS.includes(u.email) && u.email !== user?.email && (
                                                     <Button
                                                         variant="outline-danger"
                                                         size="sm"
@@ -371,7 +371,7 @@ export default function Admin() {
                                                         Delete
                                                     </Button>
                                                 )}
-                                                {u.email === ADMIN_EMAIL && (
+                                                {ADMIN_EMAILS.includes(u.email) && (
                                                     <small className="text-muted">Protected</small>
                                                 )}
                                             </td>
