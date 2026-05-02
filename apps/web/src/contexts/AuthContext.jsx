@@ -8,6 +8,7 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const isAdmin = user?.email === 'admin@student.local' || user?.email === 'wongkiinging@gmail.com';
     useEffect(() => {
@@ -26,7 +27,9 @@ export const AuthProvider = ({ children }) => {
                     console.warn("Auth: Initial session sync failed or timed out:", e.message);
                 }
             }
-            setUser(session?.user ?? null);
+            if (!isLoggingOut) {
+                setUser(session?.user ?? null);
+            }
             setLoading(false);
         });
 
@@ -35,7 +38,9 @@ export const AuthProvider = ({ children }) => {
             console.log("Supabase Auth Event:", event, session?.user?.email);
 
             // Immediately update user to keep UI responsive
-            setUser(session?.user ?? null);
+            if (!isLoggingOut) {
+                setUser(session?.user ?? null);
+            }
             setLoading(false);
 
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
@@ -57,33 +62,45 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const logout = async () => {
+        if (isLoggingOut) return;
+        
         console.log("Auth: Initiating logout...");
+        setIsLoggingOut(true);
+        
+        // 1. Clear state IMMEDIATELY so UI reacts and stops polling
+        const currentUserEmail = user?.email;
+        setUser(null);
+
         try {
-            // 0. Log logout event
-            if (user?.email) {
-                // Await logging, but with a timeout so we don't get stuck if Supabase is slow
-                await Promise.race([
-                    eventLogService.logLogout(user.email),
-                    new Promise(resolve => setTimeout(resolve, 2000))
-                ]).catch(() => { });
+            // 0. Log logout event (fire and forget with timeout)
+            if (currentUserEmail) {
+                eventLogService.logLogout(currentUserEmail).catch(() => {});
             }
 
             // 1. Fire and forget backend logout
             apiLogout().catch(e => console.warn("Auth: Backend logout skipped/failed", e.message));
 
-            // 2. Clear Supabase Session (with a timeout to prevent hanging)
+            // 2. Supabase Signout (with timeout to prevent hanging)
             await Promise.race([
                 supabase.auth.signOut(),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('Signout timeout')), 3000))
+                new Promise(resolve => setTimeout(resolve, 2000))
             ]).catch(e => console.warn("Auth: Supabase signout warning", e.message));
+
+            // 3. Force clear any remaining Supabase session from localStorage
+            // This is a safety measure if signOut() didn't clear everything
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('supabase.auth.token') || key.includes('-auth-token'))) {
+                    localStorage.removeItem(key);
+                }
+            }
 
         } catch (e) {
             console.error("Auth: Logout process error", e.message);
         } finally {
-            // 3. Clear local state and hard redirect to login
-            setUser(null);
             console.log("Auth: Redirecting to login");
-            window.location.href = '/login';
+            // Use replace to avoid back button issues and force a clean state
+            window.location.replace('/login');
         }
     };
 

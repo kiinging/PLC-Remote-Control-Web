@@ -83,7 +83,7 @@ export default function Dashboard() {
     // Load Initial Data
     useEffect(() => {
         fetchInitialData();
-        const interval = setInterval(optionsPoll, 1000); // 1s polling
+        const interval = setInterval(optionsPoll, 2000); // 2s polling for better stability
         return () => clearInterval(interval);
     }, []);
 
