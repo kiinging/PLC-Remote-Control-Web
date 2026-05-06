@@ -33,15 +33,15 @@ export default function Booking() {
             const date = new Date(today);
             date.setDate(date.getDate() + d);
 
-            // Create 2-hour slots from current hour (if today) until 23:00 - Allow booking current slot for immediate access
+            // Create 3-hour slots from current hour (if today) until 23:00 - Allow booking current slot for immediate access
             let startHour = (d === 0) ? today.getHours() : 0;
 
-            for (let h = startHour; h < 24; h += 2) {
+            for (let h = startHour; h < 24; h += 3) {
                 const slotStart = new Date(date);
                 slotStart.setHours(h, 0, 0, 0);
 
                 const slotEnd = new Date(slotStart);
-                slotEnd.setHours(h + 2);
+                slotEnd.setHours(h + 3);
 
                 generated.push({
                     start: slotStart,
