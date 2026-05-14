@@ -93,13 +93,11 @@ This experiment requires **two distinct login sessions**:
 ### 5.1 Processing the recorded data (5 Marks)
 1.  **Time Conversion**: Open your CSV in Excel. Column A contains the timestamps. To calculate elapsed time in seconds, subtract the first timestamp from the current one and multiply by 86,400 (the number of seconds in a day).
     *   *Example Formula in Column E:* `=(A2 - $A$2) * 86400`
-2.  **Signal Smoothing**: The temperature sensor is sensitive. Use a 100-sample moving average on the **PV (Column B)** to smooth the signal for your analysis.
-    *   *Example Formula in Column F:* `=AVERAGE(B2:B101)`
-3.  **Trend Plotting**: Create a single line chart showing both the **Temperature (PV)** and the **Manipulated Variable (MV)** from Column D. 
+2.  **Trend Plotting**: Create a single line chart showing both the **Temperature (PV)** and the **Manipulated Variable (MV)** from Column D. 
     *   *Pro-Tip*: Since MV is 0-100% and Temperature can reach 130°C, use a **Secondary Y-Axis** for the Temperature to ensure both curves are clearly visible.
 
 ### 5.2 Determination of PID control parameters (5 Marks)
-1.  **S-Curve Analysis**: Using your smoothed plot, identify the inflection point. Draw a tangent line to determine the **Dead Time ($L$)** and the **Reaction Rate ($N$)**.
+1.  **S-Curve Analysis**: Using your plot, identify the inflection point. Draw a tangent line to determine the **Dead Time ($L$)** and the **Reaction Rate ($N$)**.
 2.  **System Response**: Express the change in temperature ($\Delta PV$) and the change in power ($\Delta MV$) as percentages of their full ranges (103°C and 100% respectively).
 3.  **ZN Tuning**: Use the Ziegler-Nichols Open-Loop formulas to calculate the final values for $K_p, T_i,$ and $T_d$.
 
