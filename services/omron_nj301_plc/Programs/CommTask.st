@@ -96,8 +96,6 @@ R2W_Td_Out(InReal := G_PID_Td_Out);
 G_Modbus_WriteBuf[11] := R2W_Td_Out.W_High;    // HR111
 G_Modbus_WriteBuf[12] := R2W_Td_Out.W_Low;     // HR112
 
-
-
 // ===== Current Setpoint =====
 R2W_Setpoint(InReal := G_Eff_Setpoint);
 G_Modbus_WriteBuf[13] := R2W_Setpoint.W_High;        // HR113
