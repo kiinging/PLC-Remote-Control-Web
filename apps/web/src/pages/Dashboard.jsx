@@ -303,6 +303,11 @@ export default function Dashboard() {
     };
 
     const toggleProcess = async (type, action) => {
+        if (type !== 'web' && type !== 'light' && !controlStatus.web) {
+            alert("⚠️ Please Start 'Web Control' first before operating the PLC.");
+            return;
+        }
+        
         if (type === 'web') {
             setWebPending(true);
             try {
@@ -328,6 +333,10 @@ export default function Dashboard() {
     const [tuneResultsReady, setTuneResultsReady] = useState(false);
 
     const changeMode = async (mode) => {
+        if (!controlStatus.web) {
+            alert("⚠️ Please Start 'Web Control' first before changing modes.");
+            return;
+        }
         if (mode === 'tune') {
             setTuneResultsReady(false);
         }
@@ -352,28 +361,34 @@ export default function Dashboard() {
     }, [controlStatus.pid_pb_at, controlStatus.pid_ti_at, controlStatus.pid_td_at, controlStatus.mode, tuneResultsReady]);
 
     const sendPid = async () => {
+        if (isReadOnly) return;
+        if (!controlStatus.web) { alert("⚠️ Please Start 'Web Control' first."); return; }
         await api.setPidParams(pidParams);
     };
 
     const sendSetpoint = async () => {
         if (isReadOnly) return;
+        if (!controlStatus.web) { alert("⚠️ Please Start 'Web Control' first."); return; }
         await api.setSetpoint(setpoint);
     };
 
     const sendManualMV = async () => {
         if (isReadOnly) return;
+        if (!controlStatus.web) { alert("⚠️ Please Start 'Web Control' first."); return; }
         setMvPending(true);
         await api.setManualMV(manualMV);
     };
 
     const handleStartTune = async () => {
         if (isReadOnly) return;
+        if (!controlStatus.web) { alert("⚠️ Please Start 'Web Control' first."); return; }
         setTuneResultsReady(false);
         await api.startTune();
     };
 
     const handleStopTune = async () => {
         if (isReadOnly) return;
+        if (!controlStatus.web) { alert("⚠️ Please Start 'Web Control' first."); return; }
         await api.stopTune();
     };
 
