@@ -91,6 +91,16 @@ export default function Dashboard() {
         try {
             const cStatus = await api.getControlStatus();
             setControlStatus(cStatus);
+            // Pre-fill PID input boxes with PLC's confirmed running values
+            // so the operator sees current values instead of 0 on page load.
+            // (Only works after CommTask.st HR107-112 gap is fixed on the PLC)
+            if (cStatus.pid_pb_out > 0 || cStatus.pid_ti_out > 0) {
+                setPidParams({
+                    pb: cStatus.pid_pb_out,
+                    ti: cStatus.pid_ti_out,
+                    td: cStatus.pid_td_out
+                });
+            }
         } catch (e) {
             console.warn("Control status unavailable", e);
         }
@@ -802,9 +812,28 @@ export default function Dashboard() {
                                         <div className="small mt-2">
                                             <strong>Active:</strong> PB: {Number(controlStatus.pid_pb_out || 0).toFixed(1)}, Ti: {Number(controlStatus.pid_ti_out || 0).toFixed(1)}, Td: {Number(controlStatus.pid_td_out || 0).toFixed(1)}
                                         </div>
-                                        <div className="small">
-                                            <strong>Results:</strong> PB: {tuneResultsReady ? Number(controlStatus.pid_pb_at || 0).toFixed(1) : '0.0'}, Ti: {tuneResultsReady ? Number(controlStatus.pid_ti_at || 0).toFixed(1) : '0.0'}, Td: {tuneResultsReady ? Number(controlStatus.pid_td_at || 0).toFixed(1) : '0.0'}
+                                        <div className="small d-flex align-items-center gap-2 mt-1">
+                                            <span>
+                                                <strong>Results:</strong> PB: {tuneResultsReady ? Number(controlStatus.pid_pb_at || 0).toFixed(1) : '0.0'}, Ti: {tuneResultsReady ? Number(controlStatus.pid_ti_at || 0).toFixed(1) : '0.0'}, Td: {tuneResultsReady ? Number(controlStatus.pid_td_at || 0).toFixed(1) : '0.0'}
+                                            </span>
+                                            {tuneResultsReady && (
+                                                <Button
+                                                    variant="outline-success"
+                                                    size="sm"
+                                                    style={{ fontSize: '0.75em', padding: '1px 6px' }}
+                                                    title="Copy AT results into PID input boxes above, then click Send to apply to PLC"
+                                                    onClick={() => setPidParams({
+                                                        pb: Number(controlStatus.pid_pb_at || 0),
+                                                        ti: Number(controlStatus.pid_ti_at || 0),
+                                                        td: Number(controlStatus.pid_td_at || 0)
+                                                    })}
+                                                    disabled={isReadOnly}
+                                                >
+                                                    Apply to PID ↑
+                                                </Button>
+                                            )}
                                         </div>
+
                                     </div>
                                 )}
                             </Card.Body>

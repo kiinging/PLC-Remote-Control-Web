@@ -1,0 +1,21 @@
+[Unit]
+Description=RTSP Camera Bridge (WiFi IP Camera → MJPEG)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/repo/services/rtsp_camera
+ExecStart=/root/repo/services/opi4pro_gateway/venv/bin/python service_rtsp_bridge.py
+Restart=always
+RestartSec=5
+
+# Environment variables
+Environment="PYTHONUNBUFFERED=1"
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

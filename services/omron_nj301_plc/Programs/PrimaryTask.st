@@ -106,6 +106,13 @@ ELSIF HMI_PID_Update_Rise THEN
 END_IF;
 // If neither: EFF_PID_* retains its last value → built-in latch!
 
+// Mirror effective PID → Output variables for Modbus readback (HR107-112).
+// This runs every scan so CommTask always reflects the CURRENT running PID.
+G_PID_PB_Out := G_Eff_PID_PB;
+G_PID_Ti_Out := G_Eff_PID_Ti;
+G_PID_Td_Out := G_Eff_PID_Td;
+
+
 // Clear feedback next scan
 IF NOT HMI_PID_Update_Rise THEN
     HMI_PID_Update_Feedback := FALSE;

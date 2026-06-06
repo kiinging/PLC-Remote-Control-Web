@@ -41,16 +41,38 @@ function withCors(request, body, status = 200, extraHeaders = {}) {
   });
 }
 
-// EMERGENCY: KV Write limit exceeded.
-// Switch to stateless/insecure session (trust cookie) and hardcoded user.
+// Verify the session cookie contains a valid Supabase JWT.
+// The cookie value is the raw Supabase access_token set during /api/auth/exchange.
 async function validateSession(request, env) {
   const cookie = request.headers.get("Cookie") || "";
   const match = cookie.match(/plc_session=([^;]+)/);
   if (!match) return null;
 
-  const username = match[1];
-  // verify user exists (optional, or just trust it for now to save reads)
-  return { user: username };
+  const token = match[1];
+
+  // Verify the token is genuine by calling Supabase /auth/v1/user
+  try {
+    const res = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+      headers: {
+        "apikey": env.SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${token}`
+      }
+    });
+    if (!res.ok) return null; // Token invalid or expired
+    const data = await res.json();
+    return { user: data.email || data.id };
+  } catch {
+    return null; // Network error — deny access
+  }
+}
+
+// Helper: build gateway headers, always including the shared secret
+function gatewayHeaders(env, extra = {}) {
+  return {
+    "Content-Type": "application/json",
+    "X-Worker-Secret": env.GATEWAY_SECRET || "",
+    ...extra
+  };
 }
 
 export default {
@@ -100,24 +122,42 @@ export default {
       }
 
       // ---- SUPABASE AUTH EXCHANGE
+      // Verifies the JWT with Supabase before issuing a session cookie.
+      // Students can sign up with any email + password (no inbox needed) —
+      // this only checks the token is cryptographically real, not who owns the email.
       if (url.pathname === "/api/auth/exchange" && request.method === "POST") {
-        const { access_token, user_email } = await request.json();
+        const { access_token } = await request.json();
 
-        if (!access_token || !user_email) {
-          return withCors(request, "Missing token or email", 400);
+        if (!access_token) {
+          return withCors(request, "Missing token", 400);
         }
 
-        // Ideally verify token with Supabase API here.
-        // For now, we trust the client (MVP) or we could call supabase.auth.getUser(token)
-        // Since we are running in Edge, verified verification requires importing supabase-js or fetch
-        // We will do a lightweight trust for this step as requested "latest login" simple.
+        // Verify the JWT is genuine by calling Supabase
+        try {
+          const supaRes = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+              "apikey": env.SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${access_token}`
+            }
+          });
+          if (!supaRes.ok) {
+            return withCors(request, JSON.stringify({ ok: false, error: "Invalid token" }), 401, {
+              "Content-Type": "application/json"
+            });
+          }
+          const userData = await supaRes.json();
+          const userEmail = userData.email || userData.id;
 
-        // However, to be safe, we at least ensure we have a "user"
-        // Set the legacy session cookie found in other endpoints
-        return withCors(request, JSON.stringify({ ok: true }), 200, {
-          "Content-Type": "application/json",
-          "Set-Cookie": setCookie(user_email)
-        });
+          // Store the raw JWT as the session cookie (validateSession will verify it each request)
+          return withCors(request, JSON.stringify({ ok: true, user: userEmail }), 200, {
+            "Content-Type": "application/json",
+            "Set-Cookie": setCookie(access_token)
+          });
+        } catch (e) {
+          return withCors(request, JSON.stringify({ ok: false, error: e.message }), 500, {
+            "Content-Type": "application/json"
+          });
+        }
       }
 
 
@@ -200,10 +240,12 @@ export default {
 
       // ---- Proxy routes (no extra checks: cookie already guards dashboard access)
 
-      // ✅ Relay Status (Pass-through)
+      // ✅ Relay Status (Pass-through — read-only, no auth needed)
       if (url.pathname === "/api/relay_status" && request.method === "GET") {
         try {
-          const r = await fetch("https://orangepi.pidlab2026.shop/relay_status");
+          const r = await fetch("https://orangepi.pidlab2026.shop/relay_status", {
+            headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+          });
           return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
         } catch (e) {
           return withCors(request, JSON.stringify({
@@ -212,122 +254,169 @@ export default {
         }
       }
 
-      // ✅ Light Control
+      // ✅ Light Control (requires login)
       if (url.pathname === "/api/light/on" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/light/on", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/light/on", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
       if (url.pathname === "/api/light/off" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/light/off", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/light/off", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ Web Control
+      // ✅ Web Control (requires login)
       if (url.pathname === "/api/web/on" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/web/on", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/web/on", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
       if (url.pathname === "/api/web/off" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/web/off", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/web/off", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ PLC Control
+      // ✅ PLC Control (requires login)
       if (url.pathname === "/api/plc/on" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/plc/on", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/plc/on", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
       if (url.pathname === "/api/plc/off" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/plc/off", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/plc/off", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ Mode Control
+      // ✅ Mode Control (requires login)
       if (url.pathname.startsWith("/api/mode/") && request.method === "POST") {
-        // Strip /api prefix before forwarding to backend
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
         const backendPath = url.pathname.replace(/^\/api/, "");
-        const r = await fetch(`https://orangepi.pidlab2026.shop${backendPath}`, { method: "POST" });
+        const r = await fetch(`https://orangepi.pidlab2026.shop${backendPath}`, { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ Backward Compatibility for GET /api/relay
+      // ✅ Backward Compatibility for GET /api/relay (read-only, no auth)
       if (url.pathname === "/api/relay" && request.method === "GET") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/relay_status");
+        const r = await fetch("https://orangepi.pidlab2026.shop/relay_status", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
+      // --- Read-only status endpoints (no auth needed — safe to expose) ---
       if (url.pathname === "/api/setpoint_status") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/setpoint_status");
+        const r = await fetch("https://orangepi.pidlab2026.shop/setpoint_status", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/mv_manual_status") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/mv_manual_status");
+        const r = await fetch("https://orangepi.pidlab2026.shop/mv_manual_status", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/pid_params") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/pid_params");
+        const r = await fetch("https://orangepi.pidlab2026.shop/pid_params", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/control_status") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/control_status");
+        const r = await fetch("https://orangepi.pidlab2026.shop/control_status", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
+      if (url.pathname === "/api/web_ack") {
+        const r = await fetch("https://orangepi.pidlab2026.shop/web_ack", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
+        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
+      }
+
+      if (url.pathname === "/api/temp") {
+        const r = await fetch("https://orangepi.pidlab2026.shop/temp", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
+        return withCors(request, await r.text(), r.status);
+      }
+
+      // --- Legacy command aliases (requires login) ---
       if (url.pathname === "/api/start_light") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/light/on", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/light/on", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/stop_light") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/light/off", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/light/off", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/start_web") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/web/on", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/web/on", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/stop_web") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/web/off", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/web/off", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
-      if (url.pathname === "/api/web_ack") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/web_ack");
-        return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
-      }
-
       if (url.pathname === "/api/start_plc") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/plc/on", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/plc/on", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/stop_plc") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/plc/off", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/plc/off", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/manual_mode") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/mode/manual", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/mode/manual", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/auto_mode") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/mode/auto", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/mode/auto", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
       if (url.pathname === "/api/tune_mode") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/mode/tune", { method: "POST" });
-        return withCors(request, await r.text(), r.status);
-      }
-
-      if (url.pathname === "/api/temp") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/temp");
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/mode/tune", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status);
       }
 
@@ -382,105 +471,133 @@ export default {
       }
 
       if (url.pathname === "/api/setpoint" && request.method === "POST") {
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
         const body = await request.json();
         const r = await fetch("https://orangepi.pidlab2026.shop/setpoint", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: gatewayHeaders(env),
           body: JSON.stringify(body)
         });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ Setpoint Acknowledgement
+      // ✅ Setpoint Acknowledgement (read-only)
       if (url.pathname === "/api/setpoint_ack" && request.method === "GET") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/setpoint_ack");
+        const r = await fetch("https://orangepi.pidlab2026.shop/setpoint_ack", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       if (url.pathname === "/api/pid" && request.method === "POST") {
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
         const body = await request.json();
         const r = await fetch("https://orangepi.pidlab2026.shop/pid", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: gatewayHeaders(env),
           body: JSON.stringify(body)
         });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       if (url.pathname === "/api/pid_ack" && request.method === "GET") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/pid_ack");
+        const r = await fetch("https://orangepi.pidlab2026.shop/pid_ack", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
 
       if (url.pathname === "/api/mv_manual" && request.method === "POST") {
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
         const body = await request.json();
         const r = await fetch("https://orangepi.pidlab2026.shop/mv_manual", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: gatewayHeaders(env),
           body: JSON.stringify(body)
         });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ---- Manual MV Acknowledgement ----
+      // ---- Manual MV Acknowledgement (read-only) ----
       if (url.pathname === "/api/mv_manual_ack") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/mv_manual_ack");
+        const r = await fetch("https://orangepi.pidlab2026.shop/mv_manual_ack", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       // -------------------- Auto-Tune Related Routes --------------------
-      // ---- Send Tune Setpoint ----
+      // ---- Send Tune Setpoint (requires login) ----
       if (url.pathname === "/api/tune_setpoint" && request.method === "POST") {
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
         const body = await request.json();
         const r = await fetch("https://orangepi.pidlab2026.shop/tune_setpoint", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: gatewayHeaders(env),
           body: JSON.stringify(body)
         });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ---- Tune Setpoint Acknowledgement ----
+      // ---- Tune Setpoint Acknowledgement (read-only) ----
       if (url.pathname === "/api/tune_setpoint_ack" && request.method === "GET") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/tune_setpoint_ack");
+        const r = await fetch("https://orangepi.pidlab2026.shop/tune_setpoint_ack", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ---- Start Auto-Tune ----
+      // ---- Start Auto-Tune (requires login) ----
       if (url.pathname === "/api/tune_start" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/tune_start", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/tune_start", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ---- Tune Start Acknowledgement ----
+      // ---- Tune Start Acknowledgement (read-only) ----
       if (url.pathname === "/api/tune_start_ack" && request.method === "GET") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/tune_start_ack");
+        const r = await fetch("https://orangepi.pidlab2026.shop/tune_start_ack", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ---- Stop Auto-Tune ----
+      // ---- Stop Auto-Tune (requires login) ----
       if (url.pathname === "/api/tune_stop" && request.method === "POST") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/tune_stop", { method: "POST" });
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
+        const r = await fetch("https://orangepi.pidlab2026.shop/tune_stop", { method: "POST", headers: gatewayHeaders(env) });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ---- Poll Auto-Tune Status ----
+      // ---- Poll Auto-Tune Status (read-only) ----
       if (url.pathname === "/api/tune_status" && request.method === "GET") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/tune_status");
+        const r = await fetch("https://orangepi.pidlab2026.shop/tune_status", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
       if (url.pathname === "/api/tune_setpoint_status") {
-        const r = await fetch("https://orangepi.pidlab2026.shop/tune_setpoint_status");
+        const r = await fetch("https://orangepi.pidlab2026.shop/tune_setpoint_status", {
+          headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+        });
         return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
       }
 
-      // ✅ Trend History (time-series buffer)
+      // ✅ Trend History (time-series buffer — read-only)
       if (url.pathname === "/api/trend" && request.method === "GET") {
         const limit = new URL(request.url).searchParams.get("limit") || "900";
         try {
-          const r = await fetch(`https://orangepi.pidlab2026.shop/trend?limit=${limit}`);
+          const r = await fetch(`https://orangepi.pidlab2026.shop/trend?limit=${limit}`, {
+            headers: { "X-Worker-Secret": env.GATEWAY_SECRET || "" }
+          });
           return withCors(request, await r.text(), r.status, { "Content-Type": "application/json" });
         } catch (e) {
           return withCors(request, JSON.stringify({ error: e.message }), 503, { "Content-Type": "application/json" });
@@ -491,20 +608,17 @@ export default {
       // RELAY / HEATER Control (PROXIED TO GATEWAY)
       // ============================================
       if (url.pathname === "/api/relay" && request.method === "POST") {
+        const session = await validateSession(request, env);
+        if (!session) return withCors(request, "Unauthorized", 401);
         try {
           const body = await request.clone().json();
-
-          // Forward to Orange Pi Gateway
-          const gatewayUrl = "https://orangepi.pidlab2026.shop/relay";
-          const r = await fetch(gatewayUrl, {
+          const r = await fetch("https://orangepi.pidlab2026.shop/relay", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: gatewayHeaders(env),
             body: JSON.stringify(body)
           });
-
           const respText = await r.text();
           return withCors(request, respText, r.status, { "Content-Type": "application/json" });
-
         } catch (e) {
           return withCors(request, JSON.stringify({ error: e.message }), 500);
         }

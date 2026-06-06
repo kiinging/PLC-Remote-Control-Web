@@ -11,6 +11,14 @@ import requests
 import smtplib
 from email.mime.text import MIMEText
 
+# ---------------------------------------------------------------------------
+# GATEWAY_SECRET — shared secret between Cloudflare Worker and this server.
+# Set the environment variable GATEWAY_SECRET on the Orange Pi to the same
+# value you store in Cloudflare as a secret (wrangler secret put GATEWAY_SECRET).
+# If the variable is not set, the check is SKIPPED (safe for local dev/testing).
+# ---------------------------------------------------------------------------
+GATEWAY_SECRET = os.environ.get("GATEWAY_SECRET", "")  # empty = check disabled
+
 # ---------------- Boot-safe defaults (once per OS boot) ----------------
 def apply_boot_defaults(db):
     """
@@ -37,6 +45,24 @@ def apply_boot_defaults(db):
     db.set_state("setpoint", 0.0)    # ensure safe start
 
 app = Flask(__name__)
+
+# ---- Worker-secret guard -----------------------------------------------
+# All state-changing (POST) endpoints require the X-Worker-Secret header.
+# Read-only (GET) endpoints are allowed through without the secret so that
+# the heartbeat / status dashboard can still be polled from local network.
+@app.before_request
+def require_worker_secret():
+    # Skip if secret is not configured (local dev mode)
+    if not GATEWAY_SECRET:
+        return
+    # Allow GET / OPTIONS through without the secret (status reads)
+    if request.method in ("GET", "OPTIONS"):
+        return
+    # For all POST / PUT / DELETE: enforce the shared secret
+    incoming = request.headers.get("X-Worker-Secret", "")
+    if incoming != GATEWAY_SECRET:
+        return jsonify({"error": "Forbidden: invalid or missing worker secret"}), 403
+# ------------------------------------------------------------------------
 
 # Apply defaults once per boot (prevents “last saved Tune/Web/Light” problem)
 apply_boot_defaults(db)
@@ -439,33 +465,41 @@ def tune_status_route():
 def soft_shutdown_sequence(restart=False):
     """
     Orchestrate soft shutdown of Radxa before cutting power.
-    If restart is True, wait and power back on.
+    If restart is True, wait and power back on (power-cycle via ESP32 relay).
+
+    NOTE: With the new WiFi RTSP camera, there is no Linux SBC to shut down.
+    The shutdown/restart sequence only controls the ESP32 relay (Radxa power).
+    If you no longer use a Radxa, this function is effectively a no-op for the
+    camera part but still cuts the ESP32-controlled power rail if needed.
     """
-    radxa_url = f"http://{config.RADXA_IP}:{config.RADXA_PORT}"
-    
-    # Credentials for Radxa Basic Auth
-    radxa_auth = (config.RADXA_USER, config.RADXA_PASS)
+    camera_url = f"http://{config.RADXA_IP}:{config.RADXA_PORT}"
 
-    # 1. Send Shutdown Command
-    try:
-        print(f"🛑 Sending shutdown command to Radxa at {radxa_url}...")
-        requests.post(f"{radxa_url}/shutdown", auth=radxa_auth, timeout=2)
-    except Exception as e:
-        print(f"⚠️ Failed to send shutdown command (Radxa might already be down): {e}")
+    # Build auth tuple only if credentials are configured
+    camera_auth = None
+    if config.RADXA_USER and config.RADXA_PASS:
+        camera_auth = (config.RADXA_USER, config.RADXA_PASS)
 
-    # 2. Polling for 'Death' (Wait for it to go offline)
-    # Give it up to 45 seconds to shut down.
-    print("⏳ Waiting for Radxa to go offline...")
-    start_wait = time.time()
-    is_down = False
-    
-    while (time.time() - start_wait) < 45.0:
+    # 1. Send Shutdown Command (skipped if camera is the RTSP bridge = localhost)
+    is_local_bridge = config.RADXA_IP in ("127.0.0.1", "localhost")
+    if not is_local_bridge:
         try:
-            # Check health endpoint (auth required)
-            resp = requests.get(f"{radxa_url}/health", auth=radxa_auth, timeout=1)
+            print(f"🛑 Sending shutdown command to camera SBC at {camera_url}...")
+            requests.post(f"{camera_url}/shutdown", auth=camera_auth, timeout=2)
+        except Exception as e:
+            print(f"⚠️ Failed to send shutdown command: {e}")
+    else:
+        print("ℹ️  RTSP bridge is local — skipping remote shutdown command.")
+
+    # 2. Polling for 'Death' (only for remote SBC)
+    print("⏳ Waiting for camera to go offline...")
+    start_wait = time.time()
+    is_down = is_local_bridge  # if local, treat as already 'down' immediately
+
+    while not is_down and (time.time() - start_wait) < 45.0:
+        try:
+            resp = requests.get(f"{camera_url}/health", auth=camera_auth, timeout=1)
             if resp.status_code in (200, 401):
-                # 200 = still alive, 401 = still alive (auth works = server up)
-                pass
+                pass  # still alive
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
             # Connection failed -> likely down!
             print("✅ Radxa appears to be DOWN (Connection Refused/Timeout).")

@@ -105,7 +105,7 @@ def modbus_loop():
             snapshot = (web_status, mode, plc_status, rtd_temp, mv_manual, setpoint, tune_cmd, pid_pb, pid_ti, pid_td)
             
             if snapshot != last_snapshot:
-                gw_tx_seq = (gw_tx_seq + 1) & 0xFFFF
+                gw_tx_seq = (gw_tx_seq + 1) & 0xFFFF # 0, 1, 2, 3 ... 65535, 0, 1...
                 db.set_state("gw_tx_seq", gw_tx_seq)
                 last_snapshot = snapshot
 
@@ -162,18 +162,19 @@ def modbus_loop():
                     tune_done_latch = True
                     db.set_state("tune_done", True)  # keep True in DB until we explicitly clear it
 
-                # --- AUTO-RESET TUNE COMMAND & APPLY RESULTS ---
+                # --- RESET TUNE COMMAND WHEN COMPLETE ---
                 # Act on the LATCH so a brief pulse from the PLC is never missed.
+                # ✅ DESIGN INTENT:
+                #   AT results are stored ONLY in pid_pb_at / pid_ti_at / pid_td_at
+                #   (displayed as "Results" in the dashboard).
+                #   The OPERATOR decides whether to apply them by sending a PID
+                #   update command from the web UI (POST /api/pid).
+                #   We do NOT auto-write AT results into pid_pb/pid_ti/pid_td here.
                 if tune_done_latch and db.get_state("tune_status", 0) == 1:
-                    logger.info("AutoTune completion detected (latch). Applying results and resetting command.")
+                    logger.info("AutoTune complete (latch). Resetting tune command. Awaiting operator PID update.")
                     db.set_state("tune_status", 0)
-                    db.set_state("tune_done", True)  # keep True so dashboard sees it
+                    db.set_state("tune_done", True)  # keep True so dashboard sees "Results"
                     tune_done_latch = False           # clear latch
-
-                    # Store AT results into active PID fields
-                    db.set_state("pid_pb", pb_at)
-                    db.set_state("pid_ti", ti_at)
-                    db.set_state("pid_td", td_at)
 
                     # --- IMMEDIATE FLUSH: send tune_cmd=0 to PLC RIGHT NOW ---
                     # This prevents the PLC from seeing tune_cmd=1 again on the very
@@ -189,6 +190,7 @@ def modbus_loop():
                         logger.error(f"Flush-reset write error: {fw}")
                     else:
                         logger.info("Flush-reset write sent to PLC (tune_cmd=0).")
+
                 elif not tune_done_latch:
                     # Only update DB from raw PLC value when latch is not active
                     db.set_state("tune_done", bool(tune_done))

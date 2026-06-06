@@ -86,6 +86,15 @@ G_Modbus_WriteBuf[5] := G_ATDone;     // HR105  autotune finished
 G_Modbus_WriteBuf[6] := G_Tune_Err;      // HR106  autotune error
 
 // ===== Current PID parameters =====
+R2W_PB_Out(InReal := G_PID_PB_Out);
+G_Modbus_WriteBuf[7]  := R2W_PB_Out.W_High;    // HR107
+G_Modbus_WriteBuf[8]  := R2W_PB_Out.W_Low;     // HR108
+R2W_Ti_Out(InReal := G_PID_Ti_Out);
+G_Modbus_WriteBuf[9]  := R2W_Ti_Out.W_High;    // HR109
+G_Modbus_WriteBuf[10] := R2W_Ti_Out.W_Low;     // HR110
+R2W_Td_Out(InReal := G_PID_Td_Out);
+G_Modbus_WriteBuf[11] := R2W_Td_Out.W_High;    // HR111
+G_Modbus_WriteBuf[12] := R2W_Td_Out.W_Low;     // HR112
 
 
 
