@@ -333,10 +333,6 @@ export default function Dashboard() {
     const [tuneResultsReady, setTuneResultsReady] = useState(false);
 
     const changeMode = async (mode) => {
-        if (!controlStatus.web) {
-            alert("⚠️ Please Start 'Web Control' first before changing modes.");
-            return;
-        }
         if (mode === 'tune') {
             setTuneResultsReady(false);
         }
