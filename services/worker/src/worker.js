@@ -703,7 +703,7 @@ export default {
           const chatId = env.TELEGRAM_CHAT_ID;
           
           if (botToken && chatId) {
-            const message = "🚨 *Gateway Offline!*\\nYour Lab Gateway at `orangepi.pidlab2026.shop` has stopped responding to heartbeats.";
+            const message = "🚨 <b>Gateway Offline!</b>\\nYour Lab Gateway at <code>orangepi.pidlab2026.shop</code> has stopped responding to heartbeats.";
             const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
             
             await fetch(url, {
@@ -712,7 +712,7 @@ export default {
               body: JSON.stringify({
                 chat_id: chatId,
                 text: message,
-                parse_mode: "MarkdownV2"
+                parse_mode: "HTML"
               })
             });
           }
@@ -726,7 +726,7 @@ export default {
           const botToken = env.TELEGRAM_BOT_TOKEN;
           const chatId = env.TELEGRAM_CHAT_ID;
           if (botToken && chatId) {
-            const message = "✅ *Gateway Online!*\\nYour Lab Gateway has reconnected and is sending heartbeats again.";
+            const message = "✅ <b>Gateway Online!</b>\\nYour Lab Gateway has reconnected and is sending heartbeats again.";
             const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
             await fetch(url, {
               method: "POST",
@@ -734,7 +734,7 @@ export default {
               body: JSON.stringify({
                 chat_id: chatId,
                 text: message,
-                parse_mode: "MarkdownV2"
+                parse_mode: "HTML"
               })
             });
           }
