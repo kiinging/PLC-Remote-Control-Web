@@ -670,5 +670,79 @@ export default {
         "Content-Type": "application/json"
       });
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    // Watchdog logic runs every minute
+    try {
+      // 1. Ping the Gateway Heartbeat Endpoint
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+      let isOffline = false;
+      try {
+        const r = await fetch("https://orangepi.pidlab2026.shop/heartbeat", {
+          signal: controller.signal
+        });
+        if (!r.ok) isOffline = true;
+      } catch (e) {
+        // Fetch failed (network error, timeout, etc.)
+        isOffline = true;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      // 2. Check previous state from KV (using the USERS KV namespace bound to the worker)
+      // We store a flag "system:gateway_offline" = "true" or "false"
+      const prevState = await env.USERS.get("system:gateway_offline");
+
+      if (isOffline) {
+        // If it just went offline, send Telegram alert
+        if (prevState !== "true") {
+          const botToken = env.TELEGRAM_BOT_TOKEN;
+          const chatId = env.TELEGRAM_CHAT_ID;
+          
+          if (botToken && chatId) {
+            const message = "🚨 *Gateway Offline!*\\nYour Lab Gateway at `orangepi.pidlab2026.shop` has stopped responding to heartbeats.";
+            const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+            
+            await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: message,
+                parse_mode: "MarkdownV2"
+              })
+            });
+          }
+          // Update state so we don't spam
+          await env.USERS.put("system:gateway_offline", "true");
+        }
+      } else {
+        // If it's online now, reset the state
+        if (prevState === "true") {
+          // Optionally, send a "Gateway is back online" message here!
+          const botToken = env.TELEGRAM_BOT_TOKEN;
+          const chatId = env.TELEGRAM_CHAT_ID;
+          if (botToken && chatId) {
+            const message = "✅ *Gateway Online!*\\nYour Lab Gateway has reconnected and is sending heartbeats again.";
+            const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+            await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                chat_id: chatId,
+                text: message,
+                parse_mode: "MarkdownV2"
+              })
+            });
+          }
+          await env.USERS.put("system:gateway_offline", "false");
+        }
+      }
+    } catch (e) {
+      console.error("Scheduled task failed:", e);
+    }
   }
 };
